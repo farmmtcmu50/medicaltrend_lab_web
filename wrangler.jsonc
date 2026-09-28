@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "medical-trend-lab-booking",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+
+  // Public site: https://lab.medicaltrend.stream (the medicaltrend.stream zone must be on this Cloudflare account)
+  "routes": [{ "pattern": "lab.medicaltrend.stream", "custom_domain": true }],
+  "workers_dev": true,
+
+  // Vite builds the page into dist/. Only /api/* runs the Worker; everything else is served as a static asset.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "medical-trend-booking",
+      "database_id": "01ef9d68-842e-4597-9e2f-d4f77f693783",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Doctor's lab orders uploaded with a booking. Keep this bucket private (no public access / r2.dev URL).
+  "r2_buckets": [
+    { "binding": "UPLOADS", "bucket_name": "medical-trend-booking-uploads" }
+  ]
+}
