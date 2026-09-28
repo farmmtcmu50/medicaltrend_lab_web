@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #EEF3F9; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #0B4F9E; text-decoration: none; }
+  a:hover { color: #17A090; }
+  input, select, button, textarea { font-family: inherit; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif; color: #0F2540; background: #EEF3F9; min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <aside style="flex: 1 1 236px; max-width: 262px; background: linear-gradient(185deg, #062F63 0%, #08417F 55%, #0B4F9E 100%); color: #fff; padding: 22px 16px 26px; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; align-items: center; gap: 11px; padding: 0 6px">
+      <img src="uploads/MT Logo.png" alt="เมดิคอลเทรนด์" style="height: 38px; width: auto; display: block; background: #fff; border-radius: 9px; padding: 4px" />
+      <span style="display: flex; flex-direction: column; line-height: 1.25">
+        <span style="font-size: 13.5px; font-weight: 700; letter-spacing: -.01em">Booking Console</span>
+        <span style="font-size: 10.5px; color: #9FC2E0">เมดิคอลเทรนด์ · หลังบ้าน</span>
+      </span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="10">
+        <button onClick="{{ n.go }}" style="{{ n.style }}">
+          <span style="display: flex; align-items: center; gap: 10px; min-width: 0">
+            <span style="width: 7px; height: 7px; border-radius: 999px; background: {{ n.dot }}; flex-shrink: 0"></span>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ n.label }}</span>
+          </span>
+          <span style="{{ n.badgeStyle }}">{{ n.badge }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 12px">
+      <div style="padding: 13px 14px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); border-radius: 13px">
+        <div style="font-size: 10.5px; color: #9FC2E0; letter-spacing: .05em">งานค้างวันนี้</div>
+        <div style="margin-top: 5px; font-size: 22px; font-weight: 700; line-height: 1.1">{{ openJobs }} รายการ</div>
+        <div style="margin-top: 4px; font-size: 11px; color: #BFD8EF; line-height: 1.5">{{ openJobsNote }}</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+        <span style="width: 32px; height: 32px; border-radius: 999px; background: #4FE3C1; color: #062F63; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">นภ</span>
+        <span style="display: flex; flex-direction: column; line-height: 1.3; min-width: 0">
+          <span style="font-size: 12.5px; font-weight: 600">นภัสสร ก.</span>
+          <span style="font-size: 10.5px; color: #9FC2E0">ผู้จัดการสาขา · สันกำแพง</span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex: 1 1 560px; min-width: 0; padding: 22px clamp(16px, 2.4vw, 32px) 60px">
+
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px">
+      <div style="flex: 1 1 260px; min-width: 0">
+        <h1 style="margin: 0; font-size: clamp(21px, 2.2vw, 27px); font-weight: 700; letter-spacing: -.025em; line-height: 1.2">{{ viewTitle }}</h1>
+        <p style="margin: 5px 0 0; font-size: 13px; color: #536C89; line-height: 1.5">{{ viewSub }}</p>
+      </div>
+      <label style="flex: 0 1 250px; display: flex; align-items: center; gap: 8px; background: #fff; border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 9px 12px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7C93AD" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+        <input value="{{ q }}" onChange="{{ setQ }}" placeholder="ค้นหารหัส ชื่อ เบอร์โทร" style="border: 0; outline: none; width: 100%; font-size: 13px; color: #0F2540; background: transparent" />
+      </label>
+      <select value="{{ branch }}" onChange="{{ setBranch }}" style="flex: 0 1 200px; border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 10px 12px; font-size: 13px; background: #fff; color: #0F2540">
+        <sc-for list="{{ branchOptions }}" as="b" hint-placeholder-count="5">
+          <option value="{{ b.value }}">{{ b.label }}</option>
+        </sc-for>
+      </select>
+    </div>
+
+    <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 18px">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 14px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+            <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 16px; padding: 18px 18px 16px">
+              <div style="font-size: 11.5px; color: #7C93AD; letter-spacing: .04em; font-weight: 500">{{ k.label }}</div>
+              <div style="margin-top: 8px; font-size: 27px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05">{{ k.value }}</div>
+              <div style="margin-top: 7px; font-size: 11.5px; color: {{ k.deltaColor }}; font-weight: 600">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px">
+          <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">รายได้ต่อสาขา · เดือนนี้</div>
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 14px">
+              <sc-for list="{{ revenueByBranch }}" as="r" hint-placeholder-count="4">
+                <div style="display: flex; flex-direction: column; gap: 7px">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px">
+                    <span style="color: #3D5674; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.name }}</span>
+                    <span style="font-weight: 700; white-space: nowrap">฿{{ r.amount }}</span>
+                  </div>
+                  <div style="height: 8px; border-radius: 999px; background: #EEF3F9; overflow: hidden">
+                    <div style="{{ r.barStyle }}"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">แพ็กเกจ/รายการขายดี · 30 วัน</div>
+            <div style="margin-top: 14px; display: flex; flex-direction: column">
+              <sc-for list="{{ topSellers }}" as="t" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #EEF3F9">
+                  <span style="display: flex; align-items: center; gap: 11px; min-width: 0">
+                    <span style="width: 22px; height: 22px; border-radius: 7px; background: #EAF3FF; color: #0B4F9E; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{ t.rank }}</span>
+                    <span style="font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ t.name }}</span>
+                  </span>
+                  <span style="font-size: 12px; color: #536C89; white-space: nowrap">{{ t.count }} ครั้ง · ฿{{ t.amount }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">งานวันนี้แยกตามสถานะ</div>
+            <button onClick="{{ goBookings }}" style="border: 1.5px solid #CFE0F1; background: #fff; color: #0B4F9E; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 999px; cursor: pointer" style-hover="background: #EAF3FF">ดูรายการจองทั้งหมด</button>
+          </div>
+          <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px">
+            <sc-for list="{{ statusCounts }}" as="s" hint-placeholder-count="6">
+              <button onClick="{{ s.go }}" style="{{ s.style }}">
+                <span style="font-size: 21px; font-weight: 700; letter-spacing: -.02em">{{ s.count }}</span>
+                <span style="font-size: 11.5px; font-weight: 600">{{ s.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBookings }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <sc-for list="{{ statusFilters }}" as="s" hint-placeholder-count="6">
+            <button onClick="{{ s.go }}" style="{{ s.style }}">{{ s.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+          <div style="overflow-x: auto">
+            <div style="min-width: 940px">
+              <div style="display: grid; grid-template-columns: 104px minmax(180px, 1.4fr) 92px minmax(150px, 1fr) 128px 58px 104px 136px 74px; gap: 12px; padding: 13px 20px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #7C93AD">
+                <span>รหัสจอง</span>
+                <span>ลูกค้า</span>
+                <span>ช่องทาง</span>
+                <span>สาขา</span>
+                <span>วัน · เวลา</span>
+                <span style="text-align: center">คน</span>
+                <span style="text-align: right">ยอดรวม</span>
+                <span>สถานะ</span>
+                <span></span>
+              </div>
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+                <div style="display: grid; grid-template-columns: 104px minmax(180px, 1.4fr) 92px minmax(150px, 1fr) 128px 58px 104px 136px 74px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #F1F5FA; align-items: center; font-size: 12.5px">
+                  <span style="font-weight: 700; color: #0B4F9E; font-feature-settings: 'tnum'">{{ r.code }}</span>
+                  <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                    <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.customer }}</span>
+                    <span style="font-size: 11px; color: #7C93AD">{{ r.phone }}</span>
+                  </span>
+                  <span style="{{ r.channelStyle }}">{{ r.channel }}</span>
+                  <span style="color: #3D5674; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.branch }}</span>
+                  <span style="display: flex; flex-direction: column; gap: 2px">
+                    <span>{{ r.date }}</span>
+                    <span style="font-size: 11px; color: #7C93AD">{{ r.time }}</span>
+                  </span>
+                  <span style="text-align: center; font-weight: 600">{{ r.people }}</span>
+                  <span style="text-align: right; font-weight: 700">฿{{ r.total }}</span>
+                  <span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span>
+                  <button onClick="{{ r.open }}" style="border: 1.5px solid #CFE0F1; background: #fff; color: #0B4F9E; font-size: 11.5px; font-weight: 700; padding: 7px 10px; border-radius: 9px; cursor: pointer" style-hover="background: #EAF3FF">เปิด</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; color: #7C93AD">
+            <span>{{ rowsNote }}</span>
+            <span style="display: flex; gap: 7px">
+              <button style="border: 1.5px solid #DFE8F2; background: #fff; color: #536C89; font-size: 12px; padding: 7px 13px; border-radius: 9px; cursor: pointer">ก่อนหน้า</button>
+              <button style="border: 1.5px solid #DFE8F2; background: #fff; color: #536C89; font-size: 12px; padding: 7px 13px; border-radius: 9px; cursor: pointer">ถัดไป</button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <button onClick="{{ goBookings }}" style="align-self: start; display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: #0B4F9E; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5" /><path d="m11 19-7-7 7-7" /></svg>
+          กลับไปรายการจอง
+        </button>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 20px; padding: 22px; display: flex; flex-wrap: wrap; gap: 20px; align-items: start">
+          <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+              <span style="font-size: 20px; font-weight: 700; letter-spacing: -.02em">{{ d.code }}</span>
+              <span style="{{ d.statusStyle }}">{{ d.statusLabel }}</span>
+              <span style="{{ d.channelStyle }}">{{ d.channel }}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 18px; font-size: 12.5px">
+              <sc-for list="{{ d.facts }}" as="f" hint-placeholder-count="6">
+                <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                  <span style="font-size: 11px; color: #7C93AD">{{ f.label }}</span>
+                  <span style="font-weight: 600; line-height: 1.45">{{ f.value }}</span>
+                </span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex: 0 1 300px; display: flex; flex-direction: column; gap: 9px">
+            <div style="font-size: 11px; color: #7C93AD; letter-spacing: .04em">การจัดการ</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px">
+              <sc-for list="{{ d.actions }}" as="a" hint-placeholder-count="3">
+                <button onClick="{{ a.run }}" style="{{ a.style }}">{{ a.label }}</button>
+              </sc-for>
+            </div>
+            <div style="margin-top: 6px; font-size: 11px; color: #7C93AD; letter-spacing: .04em">แจ้งลูกค้า</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px">
+              <sc-for list="{{ d.notify }}" as="n" hint-placeholder-count="4">
+                <button onClick="{{ n.run }}" style="{{ n.style }}">{{ n.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start">
+          <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">ผู้รับบริการ {{ d.peopleCount }} คน</div>
+            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 11px">
+              <sc-for list="{{ d.people }}" as="p" hint-placeholder-count="2">
+                <div style="border: 1.5px solid #E9F0F8; border-radius: 14px; padding: 14px; background: #FBFDFF">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+                    <span style="font-size: 13.5px; font-weight: 700">{{ p.name }}</span>
+                    <span style="font-size: 11.5px; color: #7C93AD">{{ p.meta }}</span>
+                  </div>
+                  <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px">
+                    <sc-for list="{{ p.items }}" as="it" hint-placeholder-count="3">
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+                        <span style="color: #3D5674; line-height: 1.45">{{ it.name }}</span>
+                        <span style="font-weight: 600; white-space: nowrap">฿{{ it.price }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top: 11px; padding-top: 10px; border-top: 1px dashed #DFE8F2; display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+                    <span style="font-size: 11.5px; color: #7C93AD">{{ p.note }}</span>
+                    <span style="font-size: 13.5px; font-weight: 700; color: #0B4F9E; white-space: nowrap">฿{{ p.sum }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <div style="background: linear-gradient(170deg, #062F63, #0B4F9E 65%, #106B94); color: #fff; border-radius: 18px; padding: 20px">
+              <div style="font-size: 13px; color: #9FC2E0; letter-spacing: .04em">สรุปค่าบริการ</div>
+              <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 11px; font-size: 13px">
+                <sc-for list="{{ d.lines }}" as="l" hint-placeholder-count="4">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.14)">
+                    <span style="color: #DCEBFA">{{ l.label }}</span>
+                    <span style="font-weight: 600; white-space: nowrap">{{ l.value }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top: 16px; display: flex; align-items: end; justify-content: space-between; gap: 12px">
+                <span style="display: flex; flex-direction: column">
+                  <span style="font-size: 11.5px; color: #9FC2E0">ยอดรวมทั้งสิ้น</span>
+                  <span style="font-size: 30px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1">฿{{ d.total }}</span>
+                </span>
+                <span style="{{ d.paidStyle }}">{{ d.paidLabel }}</span>
+              </div>
+            </div>
+
+            <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+              <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">ไทม์ไลน์งานและตัวอย่าง</div>
+              <div style="margin-top: 16px; display: flex; flex-direction: column">
+                <sc-for list="{{ d.timeline }}" as="t" hint-placeholder-count="7">
+                  <div style="display: flex; gap: 13px; align-items: start">
+                    <span style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0">
+                      <span style="{{ t.dotStyle }}"></span>
+                      <span style="{{ t.lineStyle }}"></span>
+                    </span>
+                    <span style="display: flex; flex-direction: column; gap: 2px; padding-bottom: 14px; min-width: 0">
+                      <span style="font-size: 12.5px; font-weight: 600; color: {{ t.color }}">{{ t.label }}</span>
+                      <span style="font-size: 11.5px; color: #8FA6C0">{{ t.at }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px">
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="7">
+            <button onClick="{{ d.go }}" style="{{ d.style }}">
+              <span style="font-size: 10.5px; opacity: .7">{{ d.dow }}</span>
+              <span style="font-size: 17px; font-weight: 700; letter-spacing: -.02em">{{ d.num }}</span>
+              <span style="font-size: 10.5px; opacity: .8">{{ d.count }} คิว</span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+          <div style="display: grid; grid-template-columns: 78px 1fr 1fr; gap: 1px; background: #E9F0F8">
+            <span style="background: #F7FAFD; padding: 12px 14px; font-size: 11px; font-weight: 700; color: #7C93AD; letter-spacing: .05em">เวลา</span>
+            <span style="background: #F7FAFD; padding: 12px 14px; font-size: 11px; font-weight: 700; color: #7C93AD; letter-spacing: .05em">เจาะที่บ้าน</span>
+            <span style="background: #F7FAFD; padding: 12px 14px; font-size: 11px; font-weight: 700; color: #7C93AD; letter-spacing: .05em">ที่แล็บ</span>
+            <sc-for list="{{ slots }}" as="s" hint-placeholder-count="8">
+              <span style="background: #fff; padding: 14px; font-size: 12px; font-weight: 600; color: #536C89; font-feature-settings: 'tnum'">{{ s.time }}</span>
+              <span style="background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 7px">
+                <sc-for list="{{ s.home }}" as="c" hint-placeholder-count="1">
+                  <button onClick="{{ c.open }}" style="{{ c.style }}">
+                    <span style="font-weight: 700">{{ c.code }} · {{ c.customer }}</span>
+                    <span style="font-size: 11px; opacity: .85">{{ c.sub }}</span>
+                  </button>
+                </sc-for>
+              </span>
+              <span style="background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 7px">
+                <sc-for list="{{ s.lab }}" as="c" hint-placeholder-count="1">
+                  <button onClick="{{ c.open }}" style="{{ c.style }}">
+                    <span style="font-weight: 700">{{ c.code }} · {{ c.customer }}</span>
+                    <span style="font-size: 11px; opacity: .85">{{ c.sub }}</span>
+                  </button>
+                </sc-for>
+              </span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAssign }}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start">
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+          <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">รอจ่ายงาน {{ unassignedCount }} รายการ</div>
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ unassigned }}" as="u" hint-placeholder-count="3">
+              <div style="border: 1.5px solid #E9F0F8; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap">
+                  <span style="font-size: 13px; font-weight: 700">{{ u.code }} · {{ u.customer }}</span>
+                  <span style="font-size: 11.5px; color: #7C93AD">{{ u.when }}</span>
+                </div>
+                <div style="font-size: 12px; color: #536C89; line-height: 1.5">{{ u.where }}</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 7px">
+                  <sc-for list="{{ u.techOptions }}" as="t" hint-placeholder-count="3">
+                    <button onClick="{{ t.run }}" style="{{ t.style }}">จ่ายให้ {{ t.name }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noUnassigned }}" hint-placeholder-val="{{ false }}">
+              <div style="border: 1.5px dashed #DFE8F2; border-radius: 14px; padding: 22px; text-align: center; font-size: 12.5px; color: #7C93AD">จ่ายงานครบทุกรายการแล้ว</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+          <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">ทีมนักเทคนิคการแพทย์วันนี้</div>
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 11px">
+            <sc-for list="{{ techs }}" as="t" hint-placeholder-count="4">
+              <div style="border: 1.5px solid #E9F0F8; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center; gap: 11px">
+                  <span style="width: 34px; height: 34px; border-radius: 999px; background: #EAF3FF; color: #0B4F9E; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{ t.initials }}</span>
+                  <span style="display: flex; flex-direction: column; min-width: 0; flex: 1">
+                    <span style="font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ t.name }}</span>
+                    <span style="font-size: 11px; color: #7C93AD">{{ t.role }}</span>
+                  </span>
+                  <span style="{{ t.loadStyle }}">{{ t.load }}</span>
+                </div>
+                <div style="height: 7px; border-radius: 999px; background: #EEF3F9; overflow: hidden">
+                  <div style="{{ t.barStyle }}"></div>
+                </div>
+                <div style="font-size: 11.5px; color: #536C89; line-height: 1.5">{{ t.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRoute }}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start">
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+            <span style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">เส้นทางของ {{ routeTech }}</span>
+            <span style="font-size: 12px; color: #536C89">{{ routeSummary }}</span>
+          </div>
+          <div style="margin-top: 16px; display: flex; flex-direction: column">
+            <sc-for list="{{ stops }}" as="s" hint-placeholder-count="4">
+              <div style="display: flex; gap: 13px; align-items: start">
+                <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0">
+                  <div style="{{ s.dotStyle }}">{{ s.n }}</div>
+                  <div style="{{ s.lineStyle }}"></div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 18px; min-width: 0; flex: 1">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap">
+                    <div style="font-size: 13px; font-weight: 700">{{ s.time }} · {{ s.customer }}</div>
+                    <div style="font-size: 11.5px; color: #7C93AD">{{ s.km }}</div>
+                  </div>
+                  <div style="font-size: 12px; color: #536C89; line-height: 1.5">{{ s.address }}</div>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px">
+                    <a href="{{ s.mapUrl }}" target="_blank" rel="noopener" style="font-size: 11.5px; font-weight: 700; border: 1.5px solid #CFE0F1; padding: 6px 11px; border-radius: 999px">เปิดใน Google Maps</a>
+                    <a href="{{ s.telUrl }}" style="font-size: 11.5px; font-weight: 700; border: 1.5px solid #CFE0F1; padding: 6px 11px; border-radius: 999px">โทร {{ s.phone }}</a>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px">
+          <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">แผนที่จุดเจาะ</div>
+            <p style="margin: 9px 0 0; font-size: 12px; color: #536C89; line-height: 1.6">พื้นที่นี้จะฝังแผนที่จริง (Google Maps Embed) เมื่อเชื่อมระบบหลังบ้าน — ตอนนี้เป็นภาพร่างลำดับจุดเจาะเทียบระยะทางจากสาขา</p>
+            <div style="margin-top: 14px; border: 1.5px dashed #DFE8F2; border-radius: 14px; background: #F7FAFD; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+              <sc-for list="{{ pins }}" as="p" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 11px">
+                  <div style="{{ p.chipStyle }}">{{ p.n }}</div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px">
+                    <div style="font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ p.label }}</div>
+                    <div style="height: 6px; border-radius: 999px; background: #E4ECF5; overflow: hidden">
+                      <div style="{{ p.barStyle }}"></div>
+                    </div>
+                  </div>
+                  <div style="font-size: 11.5px; color: #7C93AD; white-space: nowrap">{{ p.km }} กม.</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">อุปกรณ์ที่ต้องเตรียม</div>
+            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; color: #3D5674">
+              <sc-for list="{{ kit }}" as="k" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid #F1F5FA">
+                  <span>{{ k.name }}</span>
+                  <span style="font-weight: 700; color: #0F2540">{{ k.qty }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isUsers }}" hint-placeholder-val="{{ false }}">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(316px, 1fr)); gap: 16px; align-items: start">
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+          <div>
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">สร้างบัญชีผู้ใช้งานใหม่</div>
+            <div style="margin-top: 5px; font-size: 12px; color: #7C93AD; line-height: 1.55">กรอกข้อมูลตามที่ปรากฏในใบอนุญาตประกอบวิชาชีพ ระบบจะส่งคำเชิญตั้งรหัสผ่านทางอีเมล</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="font-size: 11.5px; font-weight: 600; color: #536C89; letter-spacing: .03em">สิทธิ์การใช้งาน</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(136px, 1fr)); gap: 8px">
+              <sc-for list="{{ f.roleOptions }}" as="r" hint-placeholder-count="4">
+                <button onClick="{{ r.select }}" style="{{ r.style }}">
+                  <span>{{ r.label }}</span>
+                  <span style="font-size: 10.5px; font-weight: 500; opacity: .72; line-height: 1.4">{{ r.sub }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px">
+            <label style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 11.5px; font-weight: 600; color: #536C89">ชื่อ-นามสกุล</span>
+              <input value="{{ f.name }}" onChange="{{ f.setName }}" placeholder="เช่น ธนกฤต วงศ์อนันต์" style="border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 11px 13px; font-size: 13px; color: #0F2540; outline: none; background: #fff; min-width: 0" />
+            </label>
+            <sc-if value="{{ f.licenseVisible }}" hint-placeholder-val="{{ true }}">
+              <label style="display: flex; flex-direction: column; gap: 6px">
+                <span style="font-size: 11.5px; font-weight: 600; color: #536C89">เลขใบอนุญาต (ทนพ./ทนพญ.)</span>
+                <input value="{{ f.license }}" onChange="{{ f.setLicense }}" placeholder="เช่น ทนพ. 12345" style="border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 11px 13px; font-size: 13px; color: #0F2540; outline: none; background: #fff; min-width: 0" />
+              </label>
+            </sc-if>
+            <label style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 11.5px; font-weight: 600; color: #536C89">อีเมลสำหรับเข้าระบบ</span>
+              <input value="{{ f.email }}" onChange="{{ f.setEmail }}" placeholder="name@medicaltrend.co.th" style="border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 11px 13px; font-size: 13px; color: #0F2540; outline: none; background: #fff; min-width: 0" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 11.5px; font-weight: 600; color: #536C89">เบอร์โทร</span>
+              <input value="{{ f.phone }}" onChange="{{ f.setPhone }}" placeholder="08X-XXX-XXXX" style="border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 11px 13px; font-size: 13px; color: #0F2540; outline: none; background: #fff; min-width: 0" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 6px; grid-column: 1 / -1">
+              <span style="font-size: 11.5px; font-weight: 600; color: #536C89">สาขาที่ดูแล</span>
+              <select value="{{ f.branch }}" onChange="{{ f.setBranch }}" style="border: 1.5px solid #DFE8F2; border-radius: 11px; padding: 11px 13px; font-size: 13px; color: #0F2540; background: #fff; min-width: 0">
+                <sc-for list="{{ staffBranchOptions }}" as="b" hint-placeholder-count="4">
+                  <option value="{{ b.value }}">{{ b.label }}</option>
+                </sc-for>
+              </select>
+            </label>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{ f.toggles }}" as="t" hint-placeholder-count="2">
+              <button onClick="{{ t.run }}" style="{{ t.style }}">
+                <span style="{{ t.boxStyle }}">{{ t.mark }}</span>
+                <span style="line-height: 1.45">{{ t.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="padding: 14px; background: #F7FAFD; border: 1.5px solid #E9F0F8; border-radius: 13px">
+            <div style="font-size: 11.5px; font-weight: 700; color: #536C89">สิทธิ์ที่ได้รับ · {{ f.roleLabel }}</div>
+            <div style="margin-top: 9px; display: flex; flex-direction: column; gap: 7px">
+              <sc-for list="{{ f.perms }}" as="p" hint-placeholder-count="3">
+                <div style="display: flex; align-items: start; gap: 9px; font-size: 12.5px; color: #3D5674; line-height: 1.45">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#17A090" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px"><path d="m20 6-11 11-5-5" /></svg>
+                  <span>{{ p }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+            <button onClick="{{ f.submit }}" style="{{ f.submitStyle }}">สร้างบัญชีและส่งคำเชิญ</button>
+            <button onClick="{{ f.reset }}" style="border: 1.5px solid #DFE8F2; background: #fff; color: #536C89; font-size: 12.5px; font-weight: 700; padding: 12px 18px; border-radius: 12px; cursor: pointer">ล้างฟอร์ม</button>
+          </div>
+          <div style="font-size: 11.5px; color: #8FA6C0; line-height: 1.55">บัญชีทุกรายเข้าถึงข้อมูลสุขภาพของลูกค้า ต้องยืนยันตัวตนสองชั้นและมีบันทึกการเข้าใช้งานตาม PDPA</div>
+        </div>
+
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 20px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+            <div style="font-size: 14px; font-weight: 700; letter-spacing: -.01em">บัญชีในระบบ {{ staffCount }} ราย</div>
+            <div style="font-size: 11.5px; color: #7C93AD">{{ staffNote }}</div>
+          </div>
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ staff }}" as="u" hint-placeholder-count="6">
+              <div style="border: 1.5px solid #E9F0F8; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 11px">
+                <div style="display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 11px; align-items: center">
+                  <div style="width: 36px; height: 36px; border-radius: 999px; background: #EAF3FF; color: #0B4F9E; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center">{{ u.initials }}</div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                    <div style="font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ u.name }}</div>
+                    <div style="font-size: 11.5px; color: #7C93AD; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ u.license }} · {{ u.email }}</div>
+                  </div>
+                  <div style="{{ u.statusStyle }}">{{ u.statusLabel }}</div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 11.5px; color: #536C89">
+                  <span style="{{ u.roleStyle }}">{{ u.roleLabel }}</span>
+                  <span>{{ u.branch }}</span>
+                  <span style="color: #9FB3C8">เข้าใช้งานล่าสุด {{ u.last }}</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 7px">
+                  <button onClick="{{ u.reset }}" style="font-size: 11.5px; font-weight: 700; padding: 8px 12px; border-radius: 999px; cursor: pointer; border: 1.5px solid #CFE0F1; background: #fff; color: #0B4F9E">ส่งลิงก์ตั้งรหัสผ่าน</button>
+                  <button onClick="{{ u.toggle }}" style="font-size: 11.5px; font-weight: 700; padding: 8px 12px; border-radius: 999px; cursor: pointer; border: 1.5px solid #DFE8F2; background: #F7FAFD; color: #536C89">{{ u.toggleLabel }}</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSamples }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+        <div style="overflow-x: auto">
+          <div style="min-width: 900px">
+            <div style="display: grid; grid-template-columns: 150px 132px minmax(150px, 1fr) 130px 118px 108px 124px; gap: 12px; padding: 13px 20px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #7C93AD">
+              <span>รหัสตัวอย่าง</span>
+              <span>การจอง</span>
+              <span>ผู้รับบริการ</span>
+              <span>เก็บเมื่อ</span>
+              <span>รับเข้าแล็บ</span>
+              <span>ผลออก</span>
+              <span style="text-align: right">สถานะ</span>
+            </div>
+            <sc-for list="{{ samples }}" as="r" hint-placeholder-count="4">
+              <div style="display: grid; grid-template-columns: 150px 132px minmax(150px, 1fr) 130px 118px 108px 124px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #F1F5FA; align-items: center; font-size: 12.5px">
+                <span style="font-weight: 700; color: #0F2540">{{ r.sampleId }}</span>
+                <span style="color: #0B4F9E; font-weight: 600">{{ r.code }}</span>
+                <span style="color: #3D5674; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.person }}</span>
+                <span style="color: #3D5674">{{ r.collected }}</span>
+                <span style="color: #3D5674">{{ r.received }}</span>
+                <span style="color: #3D5674">{{ r.reported }}</span>
+                <span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 14px 20px; font-size: 12px; color: #7C93AD; border-top: 1px solid #F1F5FA">{{ samplesNote }}</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPayments }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+        <div style="overflow-x: auto">
+          <div style="min-width: 920px">
+            <div style="display: grid; grid-template-columns: 132px minmax(170px, 1fr) 176px 112px 102px 134px 124px; gap: 12px; padding: 13px 20px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #7C93AD">
+              <span>รหัสจอง</span>
+              <span>ลูกค้า</span>
+              <span>วิธีชำระ</span>
+              <span style="text-align: right">ยอดรวม</span>
+              <span style="text-align: right">ค่าเดินทาง</span>
+              <span>เอกสาร</span>
+              <span style="text-align: right">สถานะ</span>
+            </div>
+            <sc-for list="{{ payments }}" as="r" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: 132px minmax(170px, 1fr) 176px 112px 102px 134px 124px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #F1F5FA; align-items: center; font-size: 12.5px">
+                <span style="font-weight: 700; color: #0B4F9E">{{ r.code }}</span>
+                <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.customer }}</span>
+                <span style="color: #3D5674; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.method }}</span>
+                <span style="text-align: right; font-weight: 700">{{ r.total }}</span>
+                <span style="text-align: right; color: #3D5674">{{ r.travel }}</span>
+                <span style="color: #3D5674">{{ r.doc }}</span>
+                <span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 14px 20px; font-size: 12px; color: #7C93AD; border-top: 1px solid #F1F5FA">{{ paymentsNote }}</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPackages }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+        <div style="overflow-x: auto">
+          <div style="min-width: 840px">
+            <div style="display: grid; grid-template-columns: minmax(220px, 1.6fr) 152px 112px minmax(150px, 1fr) 124px; gap: 12px; padding: 13px 20px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #7C93AD">
+              <span>แพ็กเกจ</span>
+              <span>รายการตรวจ</span>
+              <span style="text-align: right">ราคาขาย</span>
+              <span>สาขาที่เปิดขาย</span>
+              <span style="text-align: right">สถานะ</span>
+            </div>
+            <sc-for list="{{ packages }}" as="r" hint-placeholder-count="8">
+              <div style="display: grid; grid-template-columns: minmax(220px, 1.6fr) 152px 112px minmax(150px, 1fr) 124px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #F1F5FA; align-items: center; font-size: 12.5px">
+                <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.name }}</span>
+                <span style="color: #3D5674">{{ r.items }}</span>
+                <span style="text-align: right; font-weight: 700">{{ r.price }}</span>
+                <span style="color: #3D5674; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.branches }}</span>
+                <span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 14px 20px; font-size: 12px; color: #7C93AD; border-top: 1px solid #F1F5FA">{{ packagesNote }}</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCustomers }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+        <div style="overflow-x: auto">
+          <div style="min-width: 840px">
+            <div style="display: grid; grid-template-columns: minmax(200px, 1.5fr) 142px 132px 122px 122px 134px; gap: 12px; padding: 13px 20px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #7C93AD">
+              <span>ลูกค้า</span>
+              <span>เบอร์โทร</span>
+              <span style="text-align: center">ครั้งที่ใช้บริการ</span>
+              <span style="text-align: right">ยอดสะสม</span>
+              <span>ล่าสุด</span>
+              <span style="text-align: right">ช่องทางหลัก</span>
+            </div>
+            <sc-for list="{{ customers }}" as="r" hint-placeholder-count="6">
+              <div style="display: grid; grid-template-columns: minmax(200px, 1.5fr) 142px 132px 122px 122px 134px; gap: 12px; padding: 15px 20px; border-bottom: 1px solid #F1F5FA; align-items: center; font-size: 12.5px">
+                <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.name }}</span>
+                <span style="color: #3D5674">{{ r.phone }}</span>
+                <span style="text-align: center; font-weight: 600">{{ r.visits }}</span>
+                <span style="text-align: right; font-weight: 700">{{ r.spend }}</span>
+                <span style="color: #3D5674">{{ r.last }}</span>
+                <span style="{{ r.channelStyle }}">{{ r.channel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 14px 20px; font-size: 12px; color: #7C93AD; border-top: 1px solid #F1F5FA">{{ customersNote }}</div>
+      </div>
+    </sc-if>
+
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 80; background: #062F63; color: #fff; font-size: 13px; font-weight: 600; padding: 13px 20px; border-radius: 12px; box-shadow: 0 22px 44px -20px rgba(4,28,58,.6); animation: fadeUp .22s ease both; max-width: min(92vw, 460px); text-align: center; line-height: 1.5">{{ toast }}</div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#17A090&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;#17A090&quot;, &quot;#0B4F9E&quot;, &quot;#5B45C9&quot;, &quot;#E8A93B&quot;], &quot;section&quot;: &quot;ธีม&quot;}, &quot;density&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;สมดุล&quot;, &quot;options&quot;: [&quot;สมดุล&quot;, &quot;แน่น&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;ตาราง&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'dash',
+    q: '',
+    branch: 'all',
+    status: 'all',
+    open: null,
+    day: 1,
+    toast: '',
+    rows: null,
+    staff: null,
+    form: {name: '', license: '', email: '', phone: '', role: 'tech', branch: '', notify: true, temp: true}
+  };
+
+  componentDidMount() {
+    this.setState(st => ({
+      rows: this.seed(),
+      staff: this.staffSeed(),
+      form: Object.assign({}, st.form, {branch: this.branchList()[0]})
+    }));
+  }
+
+  fmt(n) { return (n || 0).toLocaleString('en-US'); }
+
+  accent() { return this.props.accent ?? '#17A090'; }
+
+  rowPad() { return (this.props.density ?? 'สมดุล') === 'แน่น' ? '11px 20px' : '15px 20px'; }
+
+  meta() {
+    return {
+      pending: {label: 'รอยืนยัน', c: '#A26A00', bg: '#FFF4E0'},
+      confirmed: {label: 'ยืนยันแล้ว', c: '#0B4F9E', bg: '#EAF3FF'},
+      assigned: {label: 'จ่ายงานแล้ว', c: '#1466C7', bg: '#E9F2FE'},
+      enroute: {label: 'กำลังเดินทาง', c: '#5B45C9', bg: '#F0EDFF'},
+      collected: {label: 'เจาะแล้ว', c: '#0F7A6B', bg: '#E4F6F2'},
+      lab: {label: 'ส่งแล็บแล้ว', c: '#0F7A6B', bg: '#E4F6F2'},
+      result: {label: 'ผลออกแล้ว', c: '#0B6E60', bg: '#DFF5F0'},
+      done: {label: 'ปิดงาน', c: '#5A7189', bg: '#F0F4F9'},
+      cancelled: {label: 'ยกเลิก', c: '#A3242A', bg: '#FDECEC'}
+    };
+  }
+
+  flow() { return ['pending', 'confirmed', 'assigned', 'enroute', 'collected', 'lab', 'result', 'done']; }
+
+  branchList() {
+    return [
+      'ศูนย์แล็บ เมดิคอลเทรนด์ — สันกำแพง',
+      'ราชพฤกษ์แล็บ — หางดง',
+      'เมดิคอลเทรนด์แล็บ ไอบลิส — วัดเกตุ',
+      'เมดิคอลเทรนด์ เฮลธ์แคร์ สหคลินิก — พะเยา'
+    ];
+  }
+
+  techList() {
+    return [
+      {name: 'ธนกฤต ว. (ทนพ.)', role: 'ทนพ. · สันกำแพง', cap: 6},
+      {name: 'ปิยะดา ส. (ทนพญ.)', role: 'ทนพญ. · หางดง', cap: 5},
+      {name: 'ศิรประภา ม. (ทนพญ.)', role: 'ทนพญ. · วัดเกตุ', cap: 5},
+      {name: 'อธิป ค. (ทนพ.)', role: 'ทนพ. · พะเยา', cap: 4}
+    ];
+  }
+
+  staffSeed() {
+    const B = this.branchList();
+    return [
+      {name: 'ธนกฤต วงศ์อนันต์', license: 'ทนพ. 12345', role: 'tech', email: 'thanakrit@medicaltrend.co.th', phone: '081-556-7788', branch: B[0], status: 'active', last: 'วันนี้ 06:40 น.'},
+      {name: 'ปิยะดา สุขเกษม', license: 'ทนพญ. 22981', role: 'tech', email: 'piyada@medicaltrend.co.th', phone: '089-220-4411', branch: B[1], status: 'active', last: 'วันนี้ 07:05 น.'},
+      {name: 'ศิรประภา มณีรัตน์', license: 'ทนพญ. 30117', role: 'tech', email: 'siraprapha@medicaltrend.co.th', phone: '062-889-1200', branch: B[2], status: 'active', last: 'เมื่อวาน 18:20 น.'},
+      {name: 'อธิป คำแสน', license: 'ทนพ. 41250', role: 'tech', email: 'athip@medicaltrend.co.th', phone: '084-330-9977', branch: B[3], status: 'invited', last: 'ยังไม่เข้าใช้งาน'},
+      {name: 'นภัสสร กันทะวงศ์', license: '—', role: 'manager', email: 'napassorn@medicaltrend.co.th', phone: '053-112-889', branch: B[0], status: 'active', last: 'วันนี้ 08:10 น.'},
+      {name: 'ชลดา ภูริพัฒน์', license: '—', role: 'admin', email: 'chonlada@medicaltrend.co.th', phone: '080-114-2266', branch: B[1], status: 'suspended', last: '3 ก.ย. 2026'}
+    ];
+  }
+
+  roleMeta() {
+    return {
+      tech: {label: 'นักเทคนิคการแพทย์', c: '#0B6E60', bg: '#DFF5F0', perms: ['ดูงานที่ได้รับมอบหมาย', 'บันทึกการเจาะและส่งตัวอย่าง', 'เปิดเส้นทางนำทาง']},
+      admin: {label: 'แอดมิน/รับสาย', c: '#0B4F9E', bg: '#EAF3FF', perms: ['จัดคิวและยืนยันนัด', 'แจ้งลูกค้าทุกช่องทาง', 'ออกใบเสร็จ']},
+      manager: {label: 'ผู้จัดการสาขา', c: '#5B45C9', bg: '#F0EDFF', perms: ['จ่ายงานให้ทีม', 'ดูรายได้สาขา', 'จัดการผู้ใช้งานในสาขา']},
+      exec: {label: 'ผู้บริหาร', c: '#A26A00', bg: '#FFF4E0', perms: ['ดูภาพรวมทุกสาขา', 'รายงานยอดขาย', 'อ่านข้อมูลเท่านั้น']}
+    };
+  }
+
+  seed() {
+    const B = this.branchList();
+    const P = (name, meta, items, note) => ({name: name, meta: meta, items: items, note: note || ''});
+    return [
+      {
+        code: 'MT-260908-01', customer: 'คุณอรวรรณ พิบูลย์', phone: '081-234-5678', channel: 'home',
+        branch: B[0], date: '8 ก.ย. 2026', time: '07:30 น.', slot: '07:00', day: 1,
+        address: '112/5 หมู่บ้านศิรินเฮ้าส์ ต.สันกลาง อ.สันกำแพง เชียงใหม่', distance: 14, travel: 100,
+        status: 'assigned', tech: 'ธนกฤต ว. (ทนพ.)', paid: 'pending', pay: 'โอนก่อนเข้าบริการ',
+        people: [
+          P('อรวรรณ พิบูลย์', 'หญิง · 54 ปี · ผู้สูงอายุ', [{name: 'P4 Supreme Check-up', price: 4900}, {name: 'Vitamin D Total', price: 1200}], 'ผู้ป่วยเบาหวาน งดน้ำงดอาหารแล้ว'),
+          P('สมชาย พิบูลย์', 'ชาย · 58 ปี · ทั่วไป', [{name: 'P3 Extra Check-up', price: 2900}], 'ต้องการผลด่วน')
+        ]
+      },
+      {
+        code: 'MT-260908-02', customer: 'คุณกิตติพงษ์ ใจดี', phone: '089-887-1200', channel: 'lab',
+        branch: B[1], date: '8 ก.ย. 2026', time: '08:00 น.', slot: '08:00', day: 1,
+        address: 'เข้ารับบริการที่สาขา', distance: 0, travel: 0,
+        status: 'confirmed', tech: '', paid: 'paid', pay: 'บัตรเครดิต',
+        people: [P('กิตติพงษ์ ใจดี', 'ชาย · 34 ปี · ทั่วไป', [{name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 5 รายการ', price: 880}, {name: 'ตรวจ HPV DNA 15 Genotype', price: 890}], 'ขอห้องตรวจส่วนตัว')]
+      },
+      {
+        code: 'MT-260908-03', customer: 'คุณพิมพ์ชนก ศรีวรรณ', phone: '062-449-0987', channel: 'home',
+        branch: B[2], date: '8 ก.ย. 2026', time: '09:00 น.', slot: '09:00', day: 1,
+        address: '45 ซ.เจริญราษฎร์ 4 ต.วัดเกต อ.เมือง เชียงใหม่', distance: 6, travel: 0,
+        status: 'pending', tech: '', paid: 'pending', pay: 'ชำระปลายทาง',
+        people: [P('พิมพ์ชนก ศรีวรรณ', 'หญิง · 29 ปี · ทั่วไป', [{name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', price: 3500}], 'แพ้เข็ม ขอทีมชำนาญ')]
+      },
+      {
+        code: 'MT-260908-04', customer: 'บริษัท ลานนาเทค จำกัด', phone: '053-112-889', channel: 'home',
+        branch: B[0], date: '8 ก.ย. 2026', time: '10:30 น.', slot: '10:00', day: 1,
+        address: '99 อาคารลานนาเทค ถ.มหิดล ต.หายยา อ.เมือง เชียงใหม่', distance: 11, travel: 25,
+        status: 'enroute', tech: 'ธนกฤต ว. (ทนพ.)', paid: 'invoice', pay: 'วางบิลองค์กร 30 วัน',
+        people: [
+          P('พนักงานกลุ่ม A (6 คน)', 'ตรวจสุขภาพประจำปี', [{name: 'P2 Standard Check-up × 6', price: 8940}], 'ออกใบเสร็จนามบริษัท'),
+          P('พนักงานกลุ่ม B (4 คน)', 'ตรวจสุขภาพประจำปี', [{name: 'P1 Starter Check-up × 4', price: 3960}], '')
+        ]
+      },
+      {
+        code: 'MT-260907-11', customer: 'คุณวรินทร ธนกิจ', phone: '086-555-1414', channel: 'home',
+        branch: B[1], date: '7 ก.ย. 2026', time: '07:00 น.', slot: '07:00', day: 0,
+        address: '8/8 หมู่บ้านสิริทาวน์ ต.หนองควาย อ.หางดง เชียงใหม่', distance: 18, travel: 200,
+        status: 'lab', tech: 'ปิยะดา ส. (ทนพญ.)', paid: 'paid', pay: 'พร้อมเพย์',
+        people: [P('วรินทร ธนกิจ', 'ชาย · 47 ปี · ทั่วไป', [{name: 'Advance Heart & Vascular', price: 5900}], 'ผลส่งอีเมล')]
+      },
+      {
+        code: 'MT-260907-09', customer: 'คุณสุดารัตน์ อินตา', phone: '084-771-2020', channel: 'lab',
+        branch: B[3], date: '7 ก.ย. 2026', time: '09:30 น.', slot: '09:00', day: 0,
+        address: 'เข้ารับบริการที่สาขา', distance: 0, travel: 0,
+        status: 'result', tech: 'อธิป ค. (ทนพ.)', paid: 'paid', pay: 'เงินสด',
+        people: [P('สุดารัตน์ อินตา', 'หญิง · 38 ปี · ทั่วไป', [{name: 'Marriage for Female', price: 2590}], 'คู่สมรสตรวจพร้อมกัน')]
+      },
+      {
+        code: 'MT-260909-02', customer: 'คุณเมธาวี ปัญญา', phone: '098-220-3311', channel: 'home',
+        branch: B[2], date: '9 ก.ย. 2026', time: '08:30 น.', slot: '08:00', day: 2,
+        address: '77 ซ.ช้างคลาน 3 ต.ช้างคลาน อ.เมือง เชียงใหม่', distance: 9, travel: 0,
+        status: 'confirmed', tech: '', paid: 'pending', pay: 'โอนก่อนเข้าบริการ',
+        people: [
+          P('เมธาวี ปัญญา', 'หญิง · 31 ปี · ทั่วไป', [{name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค · 7 เชื้อ', price: 1600}], ''),
+          P('ณัฐวุฒิ ปัญญา', 'ชาย · 33 ปี · ทั่วไป', [{name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค · 7 เชื้อ', price: 1600}], '')
+        ]
+      },
+      {
+        code: 'MT-260909-05', customer: 'คุณจารุวรรณ แสงทอง', phone: '081-909-8877', channel: 'home',
+        branch: B[3], date: '9 ก.ย. 2026', time: '13:00 น.', slot: '13:00', day: 2,
+        address: '210 ม.4 ต.แม่กา อ.เมือง พะเยา', distance: 22, travel: 300,
+        status: 'pending', tech: '', paid: 'pending', pay: 'ชำระปลายทาง',
+        people: [P('จารุวรรณ แสงทอง', 'หญิง · 71 ปี · ผู้ป่วยติดเตียง', [{name: 'P5 Beyond Check-up (M)', price: 6900}], 'ต้องใช้ทีม 2 คน มีผู้ดูแลที่บ้าน')]
+      },
+      {
+        code: 'MT-260906-04', customer: 'คุณอนันต์ วิริยะ', phone: '087-334-1188', channel: 'lab',
+        branch: B[0], date: '6 ก.ย. 2026', time: '10:00 น.', slot: '10:00', day: 0,
+        address: 'เข้ารับบริการที่สาขา', distance: 0, travel: 0,
+        status: 'cancelled', tech: '', paid: 'refund', pay: 'คืนเงินแล้ว',
+        people: [P('อนันต์ วิริยะ', 'ชาย · 42 ปี · ทั่วไป', [{name: 'P3 Extra Check-up', price: 2900}], 'ลูกค้าเลื่อนไม่มีกำหนด')]
+      }
+    ];
+  }
+
+  sumOf(b) {
+    return b.people.reduce((a, p) => a + p.items.reduce((x, i) => x + i.price, 0), 0) + (b.travel || 0);
+  }
+
+  pill(m) {
+    return 'display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:6px 10px;border-radius:999px;white-space:nowrap;color:' +
+      m.c + ';background:' + m.bg;
+  }
+
+  channelPill(ch) {
+    return ch === 'home'
+      ? 'display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:6px 10px;border-radius:999px;white-space:nowrap;color:#0B6E60;background:#DFF5F0'
+      : 'display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;padding:6px 10px;border-radius:999px;white-space:nowrap;color:#0B4F9E;background:#EAF3FF';
+  }
+
+  toast(msg) {
+    this.setState({toast: msg});
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({toast: ''}), 2600);
+  }
+
+  setStatus(code, st, msg) {
+    this.setState(s => ({rows: (s.rows || []).map(r => r.code === code ? Object.assign({}, r, {status: st}) : r)}));
+    if (msg) this.toast(msg);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const M = this.meta();
+    const all = s.rows || this.seed();
+    const acc = this.accent();
+    const q = s.q.trim().toLowerCase();
+
+    const matches = r =>
+      (s.branch === 'all' || r.branch === s.branch) &&
+      (!q || (r.code + ' ' + r.customer + ' ' + r.phone).toLowerCase().indexOf(q) >= 0);
+
+    const scoped = all.filter(matches);
+    const listed = scoped.filter(r => s.status === 'all' || r.status === s.status);
+    const today = all.filter(r => r.day === 1);
+    const openStatuses = ['pending', 'confirmed', 'assigned', 'enroute'];
+
+    const views = {
+      dash: ['ภาพรวมวันนี้', 'สรุปคิว รายได้ และงานค้างของทุกสาขา · ข้อมูลอัปเดตอัตโนมัติจากหน้าเว็บจอง'],
+      bookings: ['รายการจองทั้งหมด', 'ค้นหา กรองตามสถานะและสาขา แล้วกดเปิดเพื่อจัดการรายการนั้น'],
+      detail: ['รายละเอียดการจอง', 'ตรวจรายการของผู้รับบริการแต่ละคน ยืนยันนัด จ่ายงาน และแจ้งลูกค้า'],
+      calendar: ['ปฏิทินคิวรายวัน', 'ดูคิวเจาะที่บ้านและที่แล็บแยกช่วงเวลา กดที่คิวเพื่อเปิดรายละเอียด'],
+      assign: ['จ่ายงานให้ทีม', 'จับคู่งานเจาะที่บ้านกับนักเทคนิคการแพทย์ตามภาระงานและพื้นที่'],
+      route: ['แผนที่จุดเจาะและเส้นทาง', 'ลำดับจุดเจาะของทีมวันนี้ พร้อมลิงก์นำทางและรายการอุปกรณ์'],
+      samples: ['สถานะตัวอย่าง', 'ติดตามตัวอย่างจากจุดเจาะถึงผลออก พร้อมเวลารับเข้าแล็บ'],
+      payments: ['ชำระเงินและใบเสร็จ', 'สถานะการชำระของแต่ละรายการ ออกใบเสร็จหรือใบกำกับภาษี'],
+      packages: ['จัดการแพ็กเกจและราคา', 'ราคาซิงก์จาก Master Price List 2026 — แก้ที่ชีตแล้วหน้าเว็บอัปเดตทันที'],
+      customers: ['ฐานข้อมูลลูกค้า', 'ประวัติการตรวจ ยอดสะสม และช่องทางติดต่อของลูกค้าแต่ละราย'],
+      users: ['ผู้ใช้งานระบบ', 'สร้างบัญชีนักเทคนิคการแพทย์และเจ้าหน้าที่ กำหนดสิทธิ์และสาขาที่ดูแล']
+    };
+    const v = views[s.view] || views.dash;
+
+    const navDefs = [
+      ['dash', 'ภาพรวมวันนี้', ''],
+      ['bookings', 'รายการจอง', String(all.length)],
+      ['calendar', 'ปฏิทินคิว', String(today.length)],
+      ['assign', 'จ่ายงานให้ทีม', String(all.filter(r => r.channel === 'home' && !r.tech && r.status !== 'cancelled').length)],
+      ['route', 'แผนที่และเส้นทาง', ''],
+      ['samples', 'สถานะตัวอย่าง', ''],
+      ['payments', 'ชำระเงิน/ใบเสร็จ', String(all.filter(r => r.paid === 'pending').length)],
+      ['dashsplit', '', ''],
+      ['packages', 'แพ็กเกจและราคา', ''],
+      ['customers', 'ฐานข้อมูลลูกค้า', ''],
+      ['users', 'ผู้ใช้งานระบบ', String((s.staff || this.staffSeed()).length)]
+    ];
+
+    const nav = navDefs.filter(n => n[0] !== 'dashsplit').map(n => {
+      const on = s.view === n[0] || (n[0] === 'bookings' && s.view === 'detail');
+      return {
+        label: n[1],
+        badge: n[2],
+        dot: on ? '#4FE3C1' : 'rgba(255,255,255,.3)',
+        go: () => this.setState({view: n[0], status: 'all'}),
+        style: 'display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;cursor:pointer;font-size:13px;font-weight:' +
+          (on ? '700' : '500') + ';padding:11px 12px;border-radius:11px;color:' + (on ? '#062F63' : '#DCEBFA') +
+          ';background:' + (on ? '#fff' : 'transparent'),
+        badgeStyle: n[2]
+          ? 'font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:' + (on ? '#EAF3FF' : 'rgba(255,255,255,.16)') + ';color:' + (on ? '#0B4F9E' : '#DCEBFA')
+          : 'display:none'
+      };
+    });
+
+    const cur = all.find(r => r.code === s.open) || all[0];
+    const stTotal = this.sumOf(cur);
+    const flow = this.flow();
+    const stIndex = flow.indexOf(cur.status);
+    const times = ['07:00', '07:30', '08:00', '08:30', '09:00', '10:00', '13:00', '15:00'];
+
+    const pillEnd = m => this.pill(m) + ';justify-self:end';
+
+    const sampleSrc = scoped.filter(r => ['collected', 'lab', 'result', 'done'].indexOf(r.status) >= 0);
+    const payMeta = {
+      paid: {label: 'ชำระแล้ว', c: '#0B6E60', bg: '#DFF5F0'},
+      pending: {label: 'รอชำระ', c: '#A26A00', bg: '#FFF4E0'},
+      invoice: {label: 'วางบิล', c: '#0B4F9E', bg: '#EAF3FF'},
+      refund: {label: 'คืนเงินแล้ว', c: '#5A7189', bg: '#F0F4F9'}
+    };
+    const pkgSrc = [
+      ['P1 Starter Check-up', '18 รายการ', 990, 'ทุกสาขา', 'เปิดขาย'],
+      ['P2 Standard Check-up', '24 รายการ', 1490, 'ทุกสาขา', 'เปิดขาย'],
+      ['P3 Extra Check-up', '32 รายการ', 2900, 'ทุกสาขา', 'เปิดขาย'],
+      ['P4 Supreme Check-up', '40 รายการ', 4900, 'ทุกสาขา', 'เปิดขาย'],
+      ['Marriage for Female', '12 รายการ', 2590, 'เชียงใหม่', 'เปิดขาย'],
+      ['Advance Heart & Vascular', '15 รายการ', 5900, 'สันกำแพง · หางดง', 'เปิดขาย'],
+      ['ตรวจสารก่อภูมิแพ้ 107 ชนิด', 'IgE 107 ชนิด', 3500, 'ทุกสาขา', 'เปิดขาย'],
+      ['แพ็กเกจ STD 5 รายการ', '5 รายการ', 880, 'ทุกสาขา', 'โปรโมชัน']
+    ];
+    const custMap = {};
+    all.forEach(r => {
+      const k = r.customer;
+      custMap[k] = custMap[k] || {name: k, phone: r.phone, visits: 0, spend: 0, last: r.date, channel: r.channel};
+      custMap[k].visits += 1;
+      custMap[k].spend += this.sumOf(r);
+    });
+    const custList = Object.keys(custMap).map(k => custMap[k]).filter(c => !q || (c.name + c.phone).toLowerCase().indexOf(q) >= 0);
+
+    const RM = this.roleMeta();
+    const SM = {
+      active: {label: 'ใช้งานอยู่', c: '#0B6E60', bg: '#DFF5F0'},
+      invited: {label: 'รอตอบรับคำเชิญ', c: '#A26A00', bg: '#FFF4E0'},
+      suspended: {label: 'ระงับใช้งาน', c: '#A3242A', bg: '#FDECEC'}
+    };
+    const setForm = patch => this.setState(st => ({form: Object.assign({}, st.form, patch)}));
+    const staffAll = s.staff || this.staffSeed();
+    const staff = staffAll.filter(u =>
+      (s.branch === 'all' || u.branch === s.branch) &&
+      (!q || (u.name + ' ' + u.email + ' ' + u.license).toLowerCase().indexOf(q) >= 0)
+    );
+
+    const revBase = this.branchList().map((b, i) => ({
+      name: b,
+      raw: all.filter(r => r.branch === b && r.status !== 'cancelled').reduce((a, r) => a + this.sumOf(r), 0) + [186000, 148000, 121000, 92000][i]
+    }));
+    const revMax = Math.max.apply(null, revBase.map(r => r.raw));
+
+    const homeStops = today.filter(r => r.channel === 'home' && r.status !== 'cancelled');
+    const stopMax = Math.max.apply(null, homeStops.map(r => r.distance).concat([1]));
+
+    return {
+      q: s.q,
+      setQ: e => this.setState({q: e.target.value}),
+      branch: s.branch,
+      setBranch: e => this.setState({branch: e.target.value}),
+      branchOptions: [{value: 'all', label: 'ทุกสาขา'}].concat(this.branchList().map(b => ({value: b, label: b}))),
+      nav: nav,
+      viewTitle: v[0],
+      viewSub: v[1],
+      openJobs: all.filter(r => openStatuses.indexOf(r.status) >= 0).length,
+      openJobsNote: 'รอยืนยัน ' + all.filter(r => r.status === 'pending').length + ' · รอจ่ายงาน ' + all.filter(r => r.channel === 'home' && !r.tech && r.status !== 'cancelled').length,
+      toast: s.toast,
+
+      isDash: s.view === 'dash',
+      isBookings: s.view === 'bookings',
+      isDetail: s.view === 'detail',
+      isCalendar: s.view === 'calendar',
+      isAssign: s.view === 'assign',
+      isRoute: s.view === 'route',
+      isSamples: s.view === 'samples',
+      isPayments: s.view === 'payments',
+      isPackages: s.view === 'packages',
+      isCustomers: s.view === 'customers',
+      isUsers: s.view === 'users',
+      staffBranchOptions: this.branchList().map(b => ({value: b, label: b})),
+
+      f: {
+        name: s.form.name,
+        license: s.form.license,
+        email: s.form.email,
+        phone: s.form.phone,
+        branch: s.form.branch,
+        setName: e => setForm({name: e.target.value}),
+        setLicense: e => setForm({license: e.target.value}),
+        setEmail: e => setForm({email: e.target.value}),
+        setPhone: e => setForm({phone: e.target.value}),
+        setBranch: e => setForm({branch: e.target.value}),
+        licenseVisible: s.form.role === 'tech',
+        roleOptions: Object.keys(RM).map(k => ({
+          label: RM[k].label,
+          select: () => setForm({role: k}),
+          style: 'display:flex;flex-direction:column;gap:3px;align-items:start;text-align:left;font-size:12.5px;font-weight:700;padding:12px 14px;border-radius:12px;cursor:pointer;border:1.5px solid ' +
+            (s.form.role === k ? '#1466C7' : '#DFE8F2') + ';background:' + (s.form.role === k ? '#F1F7FF' : '#fff') + ';color:' + (s.form.role === k ? '#0B4F9E' : '#3D5674'),
+          sub: RM[k].perms[0]
+        })),
+        perms: RM[s.form.role].perms,
+        roleLabel: RM[s.form.role].label,
+        toggles: [
+          {label: 'ส่งอีเมลเชิญให้ตั้งรหัสผ่านเอง', on: s.form.notify, run: () => setForm({notify: !s.form.notify})},
+          {label: 'บังคับเปลี่ยนรหัสผ่านครั้งแรกที่เข้าใช้', on: s.form.temp, run: () => setForm({temp: !s.form.temp})}
+        ].map(t2 => ({
+          label: t2.label,
+          run: t2.run,
+          style: 'display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:1.5px solid #E9F0F8;background:#FBFDFF;border-radius:12px;padding:12px 14px;cursor:pointer;font-size:12.5px;color:#3D5674',
+          boxStyle: 'width:19px;height:19px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:1.5px solid ' +
+            (t2.on ? acc : '#CFDCEA') + ';background:' + (t2.on ? acc : '#fff'),
+          mark: t2.on ? '✓' : ''
+        })),
+        canSubmit: !!(s.form.name.trim() && s.form.email.trim()),
+        submitStyle: 'border:0;border-radius:12px;padding:13px 22px;font-size:13.5px;font-weight:700;cursor:' +
+          (s.form.name.trim() && s.form.email.trim() ? 'pointer' : 'not-allowed') + ';background:' +
+          (s.form.name.trim() && s.form.email.trim() ? '#0B4F9E' : '#DFE8F2') + ';color:' +
+          (s.form.name.trim() && s.form.email.trim() ? '#fff' : '#9FB3C8'),
+        submit: () => {
+          const fm = this.state.form;
+          if (!fm.name.trim() || !fm.email.trim()) return;
+          this.setState(st => ({
+            staff: [{
+              name: fm.name.trim(),
+              license: fm.role === 'tech' ? (fm.license.trim() || 'รอกรอกเลขใบอนุญาต') : '—',
+              role: fm.role,
+              email: fm.email.trim(),
+              phone: fm.phone.trim() || '—',
+              branch: fm.branch || this.branchList()[0],
+              status: fm.notify ? 'invited' : 'active',
+              last: fm.notify ? 'ยังไม่เข้าใช้งาน' : 'สร้างเมื่อวันนี้'
+            }].concat(st.staff || this.staffSeed()),
+            form: {name: '', license: '', email: '', phone: '', role: fm.role, branch: fm.branch, notify: fm.notify, temp: fm.temp}
+          }));
+          this.toast('สร้างบัญชี ' + fm.name.trim() + ' แล้ว' + (fm.notify ? ' · ส่งอีเมลเชิญไปที่ ' + fm.email.trim() : ' · รหัสผ่านชั่วคราว MT@' + Math.floor(1000 + Math.random() * 9000)));
+        },
+        reset: () => setForm({name: '', license: '', email: '', phone: ''})
+      },
+
+      staffCount: staff.length,
+      staff: staff.map((u, i) => ({
+        name: u.name,
+        initials: u.name.slice(0, 2),
+        license: u.license,
+        email: u.email,
+        phone: u.phone,
+        branch: u.branch,
+        roleLabel: RM[u.role].label,
+        roleStyle: this.pill(RM[u.role]),
+        last: u.last,
+        statusLabel: SM[u.status].label,
+        statusStyle: this.pill(SM[u.status]) + ';justify-self:end',
+        toggleLabel: u.status === 'suspended' ? 'เปิดใช้งาน' : 'ระงับใช้งาน',
+        toggle: () => {
+          this.setState(st => ({
+            staff: (st.staff || this.staffSeed()).map((x, j) => j === i ? Object.assign({}, x, {status: x.status === 'suspended' ? 'active' : 'suspended'}) : x)
+          }));
+          this.toast(u.name + ' → ' + (u.status === 'suspended' ? 'เปิดใช้งานแล้ว' : 'ระงับการใช้งานแล้ว'));
+        },
+        reset: () => this.toast('ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่ ' + u.email + ' แล้ว')
+      })),
+      staffNote: staff.filter(u => u.status === 'active').length + ' บัญชีใช้งานอยู่ · รอตอบรับคำเชิญ ' +
+        staff.filter(u => u.status === 'invited').length + ' · ระงับ ' + staff.filter(u => u.status === 'suspended').length,
+
+
+      samples: sampleSrc.map((r, i) => ({
+        sampleId: 'SP-' + r.code.slice(3).replace('-', '') + '-' + (i + 1),
+        code: r.code,
+        person: r.people[0].name + (r.people.length > 1 ? ' +' + (r.people.length - 1) : ''),
+        collected: r.time + ' · ' + r.date.slice(0, 8),
+        received: r.status === 'collected' ? 'รอรับเข้า' : '11:20 น.',
+        reported: r.status === 'result' || r.status === 'done' ? '16:40 น.' : '—',
+        statusLabel: M[r.status].label,
+        statusStyle: pillEnd(M[r.status])
+      })),
+      samplesNote: sampleSrc.length + ' ตัวอย่างอยู่ในกระบวนการ · เวลาที่แสดงเป็นเวลารับเข้าห้องปฏิบัติการกลาง',
+
+      payments: scoped.map(r => ({
+        code: r.code,
+        customer: r.customer,
+        method: r.pay,
+        total: '฿' + this.fmt(this.sumOf(r)),
+        travel: r.travel ? '฿' + this.fmt(r.travel) : 'ฟรี',
+        doc: r.paid === 'invoice' ? 'ใบกำกับภาษี' : 'ใบเสร็จรับเงิน',
+        statusLabel: payMeta[r.paid].label,
+        statusStyle: pillEnd(payMeta[r.paid])
+      })),
+      paymentsNote: 'รอชำระ ' + scoped.filter(r => r.paid === 'pending').length + ' รายการ · ยอดรวมที่ชำระแล้วเดือนนี้ ฿' + this.fmt(scoped.filter(r => r.paid === 'paid').reduce((a, r) => a + this.sumOf(r), 0)),
+
+      packages: pkgSrc.map(p => ({
+        name: p[0],
+        items: p[1],
+        price: '฿' + this.fmt(p[2]),
+        branches: p[3],
+        statusLabel: p[4],
+        statusStyle: pillEnd(p[4] === 'โปรโมชัน' ? {c: '#0B6E60', bg: '#DFF5F0'} : {c: '#0B4F9E', bg: '#EAF3FF'})
+      })),
+      packagesNote: 'ซิงก์ล่าสุดจาก Master Price List 2026 เมื่อ 7 ก.ย. 2026 เวลา 22:10 น. · แก้ราคาที่ชีตแล้วหน้าเว็บจองอัปเดตทันที',
+
+      customers: custList.map(c => ({
+        name: c.name,
+        phone: c.phone,
+        visits: String(c.visits),
+        spend: '฿' + this.fmt(c.spend),
+        last: c.last,
+        channel: c.channel === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ',
+        channelStyle: this.channelPill(c.channel) + ';justify-self:end'
+      })),
+      customersNote: custList.length + ' ราย · เชื่อม LINE OA แล้ว ' + Math.max(1, custList.length - 2) + ' ราย',
+
+      goBookings: () => this.setState({view: 'bookings', status: 'all'}),
+
+      kpis: [
+        {label: 'การจองวันนี้', value: today.length + ' รายการ', delta: '+2 จากเมื่อวาน', deltaColor: '#0B6E60'},
+        {label: 'รอยืนยัน', value: all.filter(r => r.status === 'pending').length + ' รายการ', delta: 'เก่าสุดค้าง 42 นาที', deltaColor: '#A26A00'},
+        {label: 'รายได้เดือนนี้', value: '฿' + this.fmt(revBase.reduce((a, r) => a + r.raw, 0)), delta: '+12.4% MoM', deltaColor: '#0B6E60'},
+        {label: 'ยอดเฉลี่ยต่อการจอง', value: '฿' + this.fmt(Math.round(all.reduce((a, r) => a + this.sumOf(r), 0) / all.length)), delta: 'เจาะที่บ้านสูงกว่าแล็บ 38%', deltaColor: '#536C89'}
+      ],
+      revenueByBranch: revBase.map(r => ({
+        name: r.name,
+        amount: this.fmt(r.raw),
+        barStyle: 'height:100%;width:' + Math.round(r.raw / revMax * 100) + '%;border-radius:999px;background:linear-gradient(90deg,#0B4F9E,' + acc + ')'
+      })),
+      topSellers: [
+        {rank: 1, name: 'P2 Standard Check-up', count: 86, amount: this.fmt(128140)},
+        {rank: 2, name: 'แพ็กเกจ STD 5 รายการ', count: 64, amount: this.fmt(56320)},
+        {rank: 3, name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', count: 22, amount: this.fmt(77000)},
+        {rank: 4, name: 'P4 Supreme Check-up', count: 14, amount: this.fmt(68600)},
+        {rank: 5, name: 'HPV DNA 15 Genotype', count: 31, amount: this.fmt(27590)}
+      ],
+      statusCounts: ['pending', 'confirmed', 'assigned', 'enroute', 'collected', 'result'].map(k => ({
+        label: M[k].label,
+        count: all.filter(r => r.status === k).length,
+        go: () => this.setState({view: 'bookings', status: k}),
+        style: 'display:flex;flex-direction:column;gap:5px;align-items:start;padding:14px;border-radius:13px;cursor:pointer;border:1.5px solid ' +
+          M[k].bg + ';background:' + M[k].bg + ';color:' + M[k].c
+      })),
+
+      statusFilters: [{k: 'all', label: 'ทั้งหมด'}].concat(this.flow().concat(['cancelled']).map(k => ({k: k, label: M[k].label}))).map(f => {
+        const on = s.status === f.k;
+        return {
+          label: f.label,
+          go: () => this.setState({status: f.k}),
+          style: 'font-size:12px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;border:1.5px solid ' +
+            (on ? '#1466C7' : '#DFE8F2') + ';background:' + (on ? '#1466C7' : '#fff') + ';color:' + (on ? '#fff' : '#536C89')
+        };
+      }),
+      rows: listed.map(r => ({
+        code: r.code,
+        customer: r.customer,
+        phone: r.phone,
+        channel: r.channel === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ',
+        channelStyle: this.channelPill(r.channel),
+        branch: r.branch,
+        date: r.date,
+        time: r.time,
+        people: r.people.length,
+        total: this.fmt(this.sumOf(r)),
+        statusLabel: M[r.status].label,
+        statusStyle: this.pill(M[r.status]),
+        open: () => this.setState({view: 'detail', open: r.code})
+      })),
+      rowsNote: 'แสดง ' + listed.length + ' จาก ' + all.length + ' รายการ',
+
+      d: {
+        code: cur.code,
+        statusLabel: M[cur.status].label,
+        statusStyle: this.pill(M[cur.status]),
+        channel: cur.channel === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ',
+        channelStyle: this.channelPill(cur.channel),
+        facts: [
+          {label: 'ลูกค้า', value: cur.customer},
+          {label: 'เบอร์ติดต่อ', value: cur.phone},
+          {label: 'วัน เวลา', value: cur.date + ' · ' + cur.time},
+          {label: 'สาขาที่ดูแล', value: cur.branch},
+          {label: cur.channel === 'home' ? 'ที่อยู่เข้าบริการ' : 'สถานที่', value: cur.address},
+          {label: 'นักเทคนิคการแพทย์', value: cur.tech || 'ยังไม่จ่ายงาน'}
+        ],
+        actions: [
+          {label: 'ยืนยันนัด', st: 'confirmed'},
+          {label: 'จ่ายงาน', st: 'assigned'},
+          {label: 'บันทึกว่าเจาะแล้ว', st: 'collected'},
+          {label: 'ส่งแล็บ', st: 'lab'},
+          {label: 'ปิดงาน', st: 'done'},
+          {label: 'ยกเลิก', st: 'cancelled'}
+        ].map(a => ({
+          label: a.label,
+          run: () => this.setStatus(cur.code, a.st, cur.code + ' → ' + M[a.st].label),
+          style: 'font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;cursor:pointer;border:1.5px solid ' +
+            (a.st === 'cancelled' ? '#F3CFD1;background:#fff;color:#A3242A' : cur.status === a.st ? '#1466C7;background:#1466C7;color:#fff' : '#CFE0F1;background:#fff;color:#0B4F9E')
+        })),
+        notify: [
+          {label: 'LINE OA', msg: 'ส่งข้อความยืนยันผ่าน LINE OA ไปที่ ' + cur.customer + ' แล้ว'},
+          {label: 'SMS', msg: 'ส่ง SMS ยืนยันนัดไปที่ ' + cur.phone + ' แล้ว'},
+          {label: 'อีเมล', msg: 'ส่งอีเมลใบยืนยันการจอง ' + cur.code + ' แล้ว'},
+          {label: 'โทรออก', msg: 'เปิดสายโทรออกไปที่ ' + cur.phone}
+        ].map(n => ({
+          label: n.label,
+          run: () => this.toast(n.msg),
+          style: 'font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;cursor:pointer;border:1.5px solid #DFE8F2;background:#F7FAFD;color:#3D5674'
+        })),
+        peopleCount: cur.people.length,
+        people: cur.people.map(p => ({
+          name: p.name,
+          meta: p.meta,
+          note: p.note || 'ไม่มีหมายเหตุ',
+          items: p.items.map(i => ({name: i.name, price: this.fmt(i.price)})),
+          sum: this.fmt(p.items.reduce((a, i) => a + i.price, 0))
+        })),
+        lines: cur.people.map((p, i) => ({
+          label: 'คนที่ ' + (i + 1) + ' · ' + p.name,
+          value: '฿' + this.fmt(p.items.reduce((a, x) => a + x.price, 0))
+        })).concat(cur.channel === 'home' ? [{label: 'ค่าเดินทาง (' + cur.distance + ' กม.)', value: cur.travel ? '฿' + this.fmt(cur.travel) : 'ฟรี'}] : []),
+        total: this.fmt(stTotal),
+        paidLabel: cur.paid === 'paid' ? 'ชำระแล้ว · ' + cur.pay : cur.paid === 'invoice' ? 'วางบิลองค์กร' : cur.paid === 'refund' ? 'คืนเงินแล้ว' : 'รอชำระ · ' + cur.pay,
+        paidStyle: 'font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:999px;white-space:nowrap;background:' +
+          (cur.paid === 'paid' ? 'rgba(79,227,193,.2);color:#4FE3C1' : 'rgba(255,255,255,.14);color:#DCEBFA'),
+        timeline: flow.map((k, i) => {
+          const done = stIndex >= i && cur.status !== 'cancelled';
+          return {
+            label: M[k].label,
+            at: done ? (i <= 1 ? '7 ก.ย. 21:0' + (4 + i) + ' น.' : cur.date.slice(0, 8) + ' · ' + (['07:30', '08:10', '09:05', '11:20', '16:40', '17:10'][i - 2] || '—') + ' น.') : 'ยังไม่ถึงขั้นตอนนี้',
+            color: done ? '#0F2540' : '#9FB3C8',
+            dotStyle: 'width:11px;height:11px;border-radius:999px;flex-shrink:0;background:' + (done ? acc : '#E4ECF5') +
+              (stIndex === i ? ';box-shadow:0 0 0 4px rgba(23,160,144,.18)' : ''),
+            lineStyle: i === flow.length - 1 ? 'display:none' : 'width:2px;flex:1;min-height:22px;background:' + (stIndex > i ? acc : '#E9F0F8')
+          };
+        })
+      },
+
+      days: ['ส 6', 'อา 7', 'จ 8', 'อ 9', 'พ 10', 'พฤ 11', 'ศ 12'].map((lbl, i) => {
+        const dn = i === 1 ? 0 : i === 2 ? 1 : i === 3 ? 2 : -1;
+        const cnt = all.filter(r => r.day === dn).length;
+        const on = s.day === i;
+        return {
+          dow: lbl.split(' ')[0],
+          num: lbl.split(' ')[1],
+          count: cnt,
+          go: () => this.setState({day: i}),
+          style: 'display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;padding:11px 12px;border-radius:13px;cursor:pointer;border:1.5px solid ' +
+            (on ? '#1466C7' : '#DFE8F2') + ';background:' + (on ? '#1466C7' : '#fff') + ';color:' + (on ? '#fff' : '#3D5674')
+        };
+      }),
+      slots: times.map(tm => {
+        const dn = s.day === 1 ? 0 : s.day === 2 ? 1 : s.day === 3 ? 2 : -1;
+        const inSlot = all.filter(r => r.slot === tm && r.day === dn && matches(r));
+        const chip = r => ({
+          code: r.code.slice(-2),
+          customer: r.customer.replace('คุณ', ''),
+          sub: r.people.length + ' คน · ' + (r.tech ? r.tech.split(' ')[0] : 'ยังไม่จ่ายงาน'),
+          open: () => this.setState({view: 'detail', open: r.code}),
+          style: 'display:flex;flex-direction:column;gap:2px;align-items:start;text-align:left;font-size:12px;padding:10px 12px;border-radius:11px;cursor:pointer;border:1.5px solid ' +
+            M[r.status].bg + ';background:' + M[r.status].bg + ';color:' + M[r.status].c
+        });
+        return {
+          time: tm,
+          home: inSlot.filter(r => r.channel === 'home').map(chip),
+          lab: inSlot.filter(r => r.channel === 'lab').map(chip)
+        };
+      }),
+
+      unassigned: all.filter(r => r.channel === 'home' && !r.tech && r.status !== 'cancelled').map(r => ({
+        code: r.code,
+        customer: r.customer,
+        when: r.date + ' · ' + r.time,
+        where: r.address + ' · ' + r.distance + ' กม. จากสาขา',
+        techOptions: this.techList().slice(0, 3).map(t2 => ({
+          name: t2.name.split(' ')[0],
+          run: () => {
+            this.setState(st => ({rows: (st.rows || []).map(x => x.code === r.code ? Object.assign({}, x, {tech: t2.name, status: 'assigned'}) : x)}));
+            this.toast('จ่ายงาน ' + r.code + ' ให้ ' + t2.name + ' แล้ว · แจ้งเตือนเข้า LINE ทีมงาน');
+          },
+          style: 'font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:999px;cursor:pointer;border:1.5px solid #CFE0F1;background:#fff;color:#0B4F9E'
+        }))
+      })),
+      unassignedCount: all.filter(r => r.channel === 'home' && !r.tech && r.status !== 'cancelled').length,
+      noUnassigned: all.filter(r => r.channel === 'home' && !r.tech && r.status !== 'cancelled').length === 0,
+      techs: this.techList().map(t2 => {
+        const jobs = all.filter(r => r.tech === t2.name && r.status !== 'cancelled').length;
+        const pct = Math.min(100, Math.round(jobs / t2.cap * 100));
+        return {
+          name: t2.name,
+          role: t2.role,
+          initials: t2.name.slice(0, 2),
+          load: jobs + '/' + t2.cap + ' คิว',
+          loadStyle: 'font-size:11px;font-weight:700;padding:5px 9px;border-radius:999px;white-space:nowrap;background:' +
+            (pct >= 80 ? '#FFF4E0;color:#A26A00' : '#E4F6F2;color:#0B6E60'),
+          barStyle: 'height:100%;width:' + Math.max(6, pct) + '%;border-radius:999px;background:' + (pct >= 80 ? '#E8A93B' : acc),
+          note: jobs ? 'งานถัดไป ' + (all.find(r => r.tech === t2.name) || {time: '—'}).time + ' · ว่างรับเพิ่มได้ ' + Math.max(0, t2.cap - jobs) + ' คิว' : 'ยังไม่มีงานวันนี้ · รับได้ ' + t2.cap + ' คิว'
+        };
+      }),
+
+      routeTech: 'ธนกฤต ว. (ทนพ.)',
+      routeSummary: homeStops.length + ' จุด · รวม ' + homeStops.reduce((a, r) => a + r.distance, 0) + ' กม. · เริ่ม 07:00 น.',
+      stops: homeStops.map((r, i) => ({
+        n: i + 1,
+        time: r.time,
+        customer: r.customer,
+        address: r.address,
+        km: r.distance + ' กม.',
+        phone: r.phone,
+        mapUrl: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.address),
+        telUrl: 'tel:' + r.phone.replace(/-/g, ''),
+        dotStyle: 'width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:' + acc,
+        lineStyle: i === homeStops.length - 1 ? 'display:none' : 'width:2px;flex:1;min-height:26px;background:#E9F0F8'
+      })),
+      pins: homeStops.map((r, i) => ({
+        n: i + 1,
+        label: r.customer + ' · ' + r.branch.split('—')[1],
+        km: r.distance,
+        chipStyle: 'width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#EAF3FF;color:#0B4F9E',
+        barStyle: 'display:block;height:100%;width:' + Math.round(r.distance / stopMax * 100) + '%;border-radius:999px;background:' + acc
+      })),
+      kit: [
+        {name: 'ชุดเจาะเลือด (Vacutainer set)', qty: homeStops.length * 2 + ' ชุด'},
+        {name: 'หลอด EDTA / Clot / Fluoride', qty: '18 หลอด'},
+        {name: 'กระเป๋าควบคุมอุณหภูมิ 2–8°C', qty: '2 ใบ'},
+        {name: 'ใบยินยอมและสติกเกอร์บาร์โค้ด', qty: homeStops.length + ' ชุด'}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

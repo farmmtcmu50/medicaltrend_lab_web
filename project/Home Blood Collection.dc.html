@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #F5F8FC; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #0B4F9E; text-decoration: none; }
+  a:hover { color: #17A090; }
+  input, select, button { font-family: inherit; }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(23,184,166,.45); } 70% { box-shadow: 0 0 0 14px rgba(23,184,166,0); } 100% { box-shadow: 0 0 0 0 rgba(23,184,166,0); } }
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif; color: #0F2540; background: #F5F8FC; min-height: 100vh">
+
+  <header style="position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.88); backdrop-filter: blur(12px); border-bottom: 1px solid #E2EAF3">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 28px">
+      <div style="display: flex; align-items: center; gap: 14px; margin-right: auto">
+        <img src="uploads/MT Center copy.png" alt="Medical Trend — ศูนย์แล็บ ตรวจเลือด ตรวจสุขภาพ" style="height: 54px; width: auto; display: block; flex-shrink: 0" />
+        <div style="display: flex; flex-direction: column; line-height: 1.25; padding-left: 14px; border-left: 1px solid #E2EAF3">
+          <span style="font-weight: 700; font-size: 14px; letter-spacing: -.01em">Lab Network &amp; Home Service</span>
+          <span style="font-size: 11px; color: #6B7F99; letter-spacing: .04em">{{ t.hdrSub }}</span>
+        </div>
+      </div>
+      <nav style="display: flex; gap: 26px; font-size: 14px; color: #3D5674; font-weight: 500">
+        <a href="#features" style="color: #3D5674" style-hover="color: #0B4F9E">{{ t.navServices }}</a>
+        <a href="#pricing" style="color: #3D5674" style-hover="color: #0B4F9E">{{ t.navPricing }}</a>
+        <a href="#how" style="color: #3D5674" style-hover="color: #0B4F9E">{{ t.navHow }}</a>
+        <a href="#branches" style="color: #3D5674" style-hover="color: #0B4F9E">{{ t.navBranches }}</a>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 14px">
+        <a href="tel:0952472631" style="font-size: 13px; color: #6B7F99; font-weight: 500">{{ t.call }} 095 247 2631</a>
+        <div style="display: flex; gap: 2px; padding: 3px; background: #EEF3F9; border-radius: 999px">
+          <button onClick="{{ setTh }}" style="{{ langThStyle }}">TH</button>
+          <button onClick="{{ setEn }}" style="{{ langEnStyle }}">EN</button>
+        </div>
+        <button style="border: 0; background: #0B4F9E; color: #fff; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 999px; cursor: pointer; transition: background .18s" style-hover="background: #17A090">{{ t.login }}</button>
+      </div>
+    </div>
+  </header>
+
+  <section style="position: relative; overflow: hidden; background: linear-gradient(165deg, #062F63 0%, #0B4F9E 48%, #10739E 100%)">
+    <div style="position: absolute; inset: 0; background-image: radial-gradient(circle at 82% 18%, rgba(23,184,166,.38), transparent 46%), radial-gradient(circle at 8% 88%, rgba(11,79,158,.6), transparent 40%)"></div>
+    <div style="position: absolute; inset: 0; opacity: .16; background-image: linear-gradient(#ffffff33 1px, transparent 1px), linear-gradient(90deg, #ffffff33 1px, transparent 1px); background-size: 56px 56px"></div>
+
+    <div style="position: relative; max-width: 1200px; margin: 0 auto; padding: 76px 24px 96px; display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 56px; align-items: start">
+      <div style="max-width: 560px">
+        <div style="display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.24); color: #CDE9FF; font-size: 13px; font-weight: 500">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #4FE3C1; animation: pulseRing 2.4s infinite"></span>
+          {{ t.heroBadge }}
+        </div>
+        <h1 style="margin: 22px 0 0; font-size: clamp(38px, 4.6vw, 60px); line-height: 1.05; letter-spacing: -.03em; font-weight: 700; color: #fff; text-wrap: balance">{{ t.heroH1a }}<br />{{ t.heroH1b }}</h1>
+        <p style="margin: 22px 0 0; font-size: 18px; line-height: 1.62; color: #C6DCF2; max-width: 480px; text-wrap: pretty">{{ t.heroP }}</p>
+        <div style="margin-top: 36px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; max-width: 460px">
+          <div style="border-left: 2px solid rgba(79,227,193,.55); padding-left: 14px">
+            <div style="font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.02em">{{ t.statBranches }}</div>
+            <div style="font-size: 12.5px; color: #9FC2E0; line-height: 1.4">{{ t.statBranchesSub }}</div>
+          </div>
+          <div style="border-left: 2px solid rgba(79,227,193,.55); padding-left: 14px">
+            <div style="font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.02em">12,400+</div>
+            <div style="font-size: 12.5px; color: #9FC2E0; line-height: 1.4">{{ t.statCasesSub }}</div>
+          </div>
+          <div style="border-left: 2px solid rgba(79,227,193,.55); padding-left: 14px">
+            <div style="font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.02em">{{ t.statHours }}</div>
+            <div style="font-size: 12.5px; color: #9FC2E0; line-height: 1.4">{{ t.statHoursSub }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #fff; border-radius: 22px; padding: 10px; box-shadow: 0 32px 70px -24px rgba(4,28,58,.55), 0 0 0 1px rgba(255,255,255,.35)">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 12px 14px">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #0B4F9E; padding: 5px 10px; border-radius: 999px">STEP 1</span>
+          <span style="font-size: 13px; font-weight: 600; color: #3D5674">{{ t.step1Title }}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #EEF3F9; border-radius: 15px; padding: 5px">
+          <button onClick="{{ selectLab }}" style="{{ labTabStyle }}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 3h6M10 3v6.5L5.6 17a3 3 0 0 0 2.6 4.5h7.6A3 3 0 0 0 18.4 17L14 9.5V3" /><path d="M7 15h10" /></svg>
+            {{ t.tabLab }}
+          </button>
+          <button onClick="{{ selectHome }}" style="{{ homeTabStyle }}">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V20h13V9.5" /><path d="M12 12.5v4M10 14.5h4" /></svg>
+            {{ t.tabHome }}
+          </button>
+        </div>
+
+        <div style="padding: 24px 20px 20px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px">
+            <h2 style="margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.015em">{{ panelTitle }}</h2>
+            <span style="font-size: 12px; color: #17A090; font-weight: 600">{{ t.freeConsult }}</span>
+          </div>
+
+          <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; flex-direction: column; gap: 16px; animation: riseIn .32s ease both">
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.addrLabel }}</label>
+                <div style="position: relative; display: flex; align-items: center">
+                  <svg style="position: absolute; left: 13px; color: #8FA6C0" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+                  <input value="{{ address }}" onChange="{{ onAddress }}" placeholder="{{ t.addrPh }}" style="width: 100%; padding: 13px 44px 13px 38px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 14px; color: #0F2540; outline: none; transition: border-color .16s, box-shadow .16s" style-focus="border-color: #1466C7; box-shadow: 0 0 0 3px rgba(20,102,199,.14)" />
+                  <button title="{{ t.useLoc }}" onClick="{{ usePin }}" style="position: absolute; right: 7px; width: 30px; height: 30px; border: 0; border-radius: 9px; background: #E8F6F3; color: #0E8C7C; display: grid; place-items: center; cursor: pointer" style-hover="background: #D2EFE9">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="5" /></svg>
+                  </button>
+                </div>
+                <div style="font-size: 11.5px; color: #8FA6C0; margin-top: 6px">{{ zoneNote }}</div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.patientType }}</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
+                  <button onClick="{{ pickGeneral }}" style="{{ generalStyle }}">
+                    <span style="font-size: 13.5px; font-weight: 600">{{ t.pGen }}</span>
+                    <span style="font-size: 10.5px; opacity: .72">{{ t.pGenSub }}</span>
+                  </button>
+                  <button onClick="{{ pickElderly }}" style="{{ elderlyStyle }}">
+                    <span style="font-size: 13.5px; font-weight: 600">{{ t.pEld }}</span>
+                    <span style="font-size: 10.5px; opacity: .72">{{ t.pEldSub }}</span>
+                  </button>
+                  <button onClick="{{ pickBedridden }}" style="{{ bedriddenStyle }}">
+                    <span style="font-size: 13.5px; font-weight: 600">{{ t.pBed }}</span>
+                    <span style="font-size: 10.5px; opacity: .72">{{ t.pBedSub }}</span>
+                  </button>
+                </div>
+                <div style="font-size: 11.5px; color: #17A090; margin-top: 7px; font-weight: 500">{{ patientNote }}</div>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.rxLabel }}</label>
+                <button onClick="{{ pickFile }}" style="{{ uploadStyle }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5" /><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" /></svg>
+                  <span style="font-weight: 600; font-size: 13.5px">{{ uploadLabel }}</span>
+                  <span style="font-size: 11.5px; opacity: .7">{{ t.rxHint }}</span>
+                </button>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+                <div>
+                  <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.dateLabel }}</label>
+                  <input type="date" value="{{ visitDate }}" onChange="{{ onDate }}" style="width: 100%; padding: 12px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 13.5px; color: #0F2540; outline: none" style-focus="border-color: #1466C7" />
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.slotLabel }}</label>
+                  <select value="{{ slot }}" onChange="{{ onSlot }}" style="width: 100%; padding: 12px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 13.5px; color: #0F2540; outline: none; background: #fff" style-focus="border-color: #1466C7">
+                    <option value="06:00–08:00">06:00–08:00 ({{ t.fasting }})</option>
+                    <option value="08:00–10:00">08:00–10:00</option>
+                    <option value="10:00–12:00">10:00–12:00</option>
+                    <option value="16:00–18:00">16:00–18:00</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isLab }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px; animation: riseIn .32s ease both">
+              <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.branchPick }}</label>
+                <select style="width: 100%; padding: 13px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 14px; color: #0F2540; outline: none; background: #fff" style-focus="border-color: #1466C7">
+                  <option>{{ t.br1 }}</option>
+                  <option>{{ t.br2 }}</option>
+                  <option>{{ t.br3 }}</option>
+                  <option>{{ t.br4 }}</option>
+                </select>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+                <div>
+                  <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.dateLabel }}</label>
+                  <input type="date" value="{{ visitDate }}" onChange="{{ onDate }}" style="width: 100%; padding: 12px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 13.5px; outline: none" style-focus="border-color: #1466C7" />
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 7px">{{ t.slotLabel }}</label>
+                  <select value="{{ slot }}" onChange="{{ onSlot }}" style="width: 100%; padding: 12px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 13.5px; outline: none; background: #fff" style-focus="border-color: #1466C7">
+                    <option value="06:00–08:00">06:00–08:00 ({{ t.fasting }})</option>
+                    <option value="08:00–10:00">08:00–10:00</option>
+                    <option value="10:00–12:00">10:00–12:00</option>
+                    <option value="16:00–18:00">16:00–18:00</option>
+                  </select>
+                </div>
+              </div>
+              <div style="background: #F1F6FC; border: 1px solid #DCE8F5; border-radius: 12px; padding: 13px 14px; font-size: 12.5px; color: #3D5674; line-height: 1.55">{{ t.labNote }}</div>
+            </div>
+          </sc-if>
+
+          <div style="margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 14px; border: 1.5px solid #DCE5EF; border-radius: 12px; background: #F7FAFD">
+            <span style="display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 12.5px; font-weight: 600; color: #3D5674">{{ t.peopleLabel }}</span>
+              <span style="font-size: 11.5px; color: #8FA6C0">{{ t.peopleHint }}</span>
+            </span>
+            <span style="display: flex; align-items: center; gap: 4px; background: #fff; border: 1.5px solid #DCE5EF; border-radius: 999px; padding: 4px">
+              <button onClick="{{ decPeople }}" title="{{ t.dec }}" style="width: 34px; height: 34px; border: 0; border-radius: 999px; background: #EAF3FF; color: #0B4F9E; font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer" style-hover="background: #DCE8F5">−</button>
+              <span style="min-width: 44px; text-align: center; font-size: 15px; font-weight: 700; color: #0F2540">{{ peopleCount }}</span>
+              <button onClick="{{ incPeople }}" title="{{ t.inc }}" style="width: 34px; height: 34px; border: 0; border-radius: 999px; background: #EAF3FF; color: #0B4F9E; font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer" style-hover="background: #DCE8F5">+</button>
+            </span>
+          </div>
+
+          <sc-if value="{{ multiPeople }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top: 10px; padding: 13px 14px; border: 1.5px solid #DCE5EF; border-radius: 12px; background: #fff">
+              <div style="font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 9px">{{ t.addingFor }}</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 7px">
+                <sc-for list="{{ personChips }}" as="p" hint-placeholder-count="2">
+                  <button onClick="{{ p.select }}" style="{{ p.style }}">{{ p.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-top: 18px; border-top: 1px dashed #DCE5EF">
+            <div>
+              <div style="font-size: 11.5px; color: #6B7F99">{{ t.estimate }}</div>
+              <div style="font-size: 22px; font-weight: 700; letter-spacing: -.02em">฿{{ totalText }}</div>
+            </div>
+            <a href="#popular" style="display: inline-flex; align-items: center; gap: 8px; background: #EAF3FF; color: #0B4F9E; font-size: 14px; font-weight: 600; padding: 13px 20px; border-radius: 12px" style-hover="background: #DCE8F5; color: #0B4F9E">
+              {{ t.toStep2 }}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14" /><path d="m6 13 6 6 6-6" /></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="max-width: 1200px; margin: 0 auto; padding: 84px 24px 20px">
+    <div style="display: flex; align-items: end; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 36px">
+      <div>
+        <div style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">Why MediTrend</div>
+        <h2 style="margin: 12px 0 0; font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -.025em; line-height: 1.12">{{ t.featH2a }}<br />{{ t.featH2b }}</h2>
+      </div>
+      <p style="margin: 0; max-width: 380px; font-size: 15px; line-height: 1.65; color: #536C89; text-wrap: pretty">{{ t.featP }}</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 18px">
+      <sc-for list="{{ features }}" as="f" hint-placeholder-count="6">
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 26px 24px 24px; transition: box-shadow .2s, transform .2s, border-color .2s" style-hover="box-shadow: 0 22px 44px -26px rgba(11,79,158,.4); transform: translateY(-3px); border-color: #CFE0F1">
+          <div style="width: 44px; height: 44px; border-radius: 13px; background: #EAF3FF; color: #0B4F9E; display: grid; place-items: center; margin-bottom: 18px">{{ f.icon }}</div>
+          <h3 style="margin: 0 0 8px; font-size: 16.5px; font-weight: 700; letter-spacing: -.01em">{{ f.title }}</h3>
+          <div style="font-size: 12px; color: #8FA6C0; margin-bottom: 10px; letter-spacing: .02em">{{ f.en }}</div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.62; color: #536C89; text-wrap: pretty">{{ f.body }}</p>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="popular" style="max-width: 1200px; margin: 0 auto; padding: 76px 24px 0">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px">
+      <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #0B4F9E; padding: 5px 10px; border-radius: 999px">STEP 2</span>
+      <span style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">Popular tests</span>
+    </div>
+    <div style="display: flex; align-items: end; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 28px">
+      <h2 style="margin: 0; font-size: clamp(26px, 2.6vw, 34px); font-weight: 700; letter-spacing: -.025em; line-height: 1.15">{{ t.popH2 }}</h2>
+      <p style="margin: 0; max-width: 420px; font-size: 14.5px; line-height: 1.65; color: #536C89; text-wrap: pretty">{{ t.popP }} {{ activeLabel }}</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 18px">
+      <sc-for list="{{ popular }}" as="p" hint-placeholder-count="4">
+        <div style="{{ p.cardStyle }}">
+          <button onClick="{{ p.openPoster }}" title="{{ t.viewDetail }}" style="position: relative; display: block; width: 100%; padding: 0; border: 0; background: #EAF3FF; cursor: zoom-in; aspect-ratio: 1 / 1; overflow: hidden">
+            {{ p.thumb }}
+          </button>
+          <div style="padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 10px; flex: 1">
+            <div style="font-size: 15px; font-weight: 700; letter-spacing: -.01em; line-height: 1.35">{{ p.name }}</div>
+            <div style="font-size: 12.5px; color: #536C89; line-height: 1.55; text-wrap: pretty">{{ p.detail }}</div>
+            <sc-if value="{{ p.hasTiers }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-top: auto; padding-top: 4px">
+                <sc-for list="{{ p.tiers }}" as="t" hint-placeholder-count="4">
+                  <button onClick="{{ t.select }}" style="{{ t.style }}">
+                    <span style="font-weight: 700">{{ t.label }}</span>
+                    <span style="opacity: .72">฿{{ t.priceText }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ p.single }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 6px">
+                <span style="display: flex; flex-direction: column">
+                  <sc-if value="{{ p.hasWas }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size: 11.5px; color: #93AEC4; text-decoration: line-through">฿{{ p.wasText }}</span>
+                  </sc-if>
+                  <span style="font-size: 20px; font-weight: 700; letter-spacing: -.02em; color: #0B4F9E">฿{{ p.priceText }}</span>
+                </span>
+                <button onClick="{{ p.select }}" style="{{ p.btnStyle }}">{{ p.btnLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="pricing" style="max-width: 1200px; margin: 0 auto; padding: 76px 24px 88px">
+    <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 26px; overflow: hidden">
+      <div style="padding: 42px 40px">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #0B4F9E; padding: 5px 10px; border-radius: 999px">STEP 3</span>
+          <span style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">Package selection</span>
+        </div>
+        <h2 style="margin: 0 0 10px; font-size: clamp(26px, 2.6vw, 34px); font-weight: 700; letter-spacing: -.025em; line-height: 1.15">{{ t.pkgH2 }}</h2>
+        <p style="margin: 0 0 30px; font-size: 14.5px; line-height: 1.65; color: #536C89">{{ t.pkgP }}</p>
+
+        <div style="margin-bottom: 22px; padding: 16px; border: 1.5px solid #E4ECF5; background: #F7FAFD; border-radius: 14px">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px">
+            <span style="font-size: 12.5px; font-weight: 700; color: #3D5674">{{ t.recipients }} · {{ peopleCountText }}</span>
+            <span style="font-size: 11.5px; color: #8FA6C0">{{ t.eachPick }}</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch">
+            <sc-for list="{{ personTabs }}" as="p" hint-placeholder-count="2">
+              <div onClick="{{ p.select }}" style="{{ p.style }}">
+                <span style="display: flex; align-items: center; gap: 8px">
+                  <span style="font-size: 13.5px; font-weight: 700">{{ p.label }}</span>
+                  <sc-if value="{{ p.canRemove }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ p.remove }}" title="{{ t.removePerson }}" style="border: 0; background: transparent; color: inherit; opacity: .62; font-size: 14px; line-height: 1; cursor: pointer; padding: 0">×</button>
+                  </sc-if>
+                </span>
+                <span style="font-size: 10.5px; opacity: .72">{{ p.sub }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ canAddPerson }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ addPerson }}" style="display: flex; align-items: center; gap: 7px; padding: 9px 15px; border: 1.5px dashed #C6D6E8; background: #fff; border-radius: 12px; font-size: 13px; font-weight: 600; color: #0B4F9E; cursor: pointer" style-hover="background: #EAF3FF">{{ t.addPersonLbl }}</button>
+            </sc-if>
+          </div>
+        </div>
+
+        <label style="display: block; font-size: 12.5px; font-weight: 600; color: #3D5674; margin-bottom: 10px">{{ t.pkgFor }} {{ activeLabel }} — {{ t.multiOk }}</label>
+        <button onClick="{{ clearPkg }}" style="{{ noPkgStyle }}">
+          <span style="display: flex; flex-direction: column; align-items: flex-start; gap: 3px">
+            <span style="font-size: 14.5px; font-weight: 600">{{ t.noPkg }}</span>
+            <span style="font-size: 11.5px; opacity: .68">{{ t.noPkgSub }}</span>
+          </span>
+          <span style="font-size: 17px; font-weight: 700; line-height: 1">{{ noPkgMark }}</span>
+        </button>
+        <div style="display: flex; flex-direction: column; gap: 9px; margin-bottom: 26px; max-height: 302px; overflow-y: auto; padding-right: 4px">
+          <sc-for list="{{ packages }}" as="p" hint-placeholder-count="4">
+            <div onClick="{{ p.select }}" style="{{ p.style }}">
+              <span style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0">
+                <span style="font-size: 14.5px; font-weight: 600">{{ p.name }}</span>
+                <span style="font-size: 11.5px; opacity: .68">{{ p.detail }}</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 12px; flex-shrink: 0">
+                <sc-if value="{{ p.hasPoster }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ p.openPoster }}" style="display: inline-flex; align-items: center; gap: 6px; border: 1px solid #CFE0F1; background: #fff; color: #0B4F9E; font-size: 11.5px; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap" style-hover="background: #EAF3FF">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                    {{ t.viewTests }}
+                  </button>
+                </sc-if>
+                <span style="font-size: 15px; font-weight: 700; white-space: nowrap">฿{{ p.priceText }}</span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px">
+          <label style="font-size: 12.5px; font-weight: 600; color: #3D5674">{{ t.distLabel }}</label>
+          <span style="font-size: 13px; font-weight: 700; color: #0B4F9E">{{ distanceText }} {{ t.km }}</span>
+        </div>
+        <sc-if value="{{ hasPicked }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-bottom: 26px; padding: 16px; border: 1.5px solid #CFE9E4; background: #F4FBF9; border-radius: 14px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px">
+              <span style="font-size: 12.5px; font-weight: 700; color: #0A6E62">{{ t.singlesOf }} {{ activeLabel }} · {{ pickedCount }}</span>
+              <button onClick="{{ clearPicked }}" style="border: 0; background: transparent; color: #6B7F99; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: underline">{{ t.clearAll }}</button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px">
+              <sc-for list="{{ pickedChips }}" as="p" hint-placeholder-count="3">
+                <button onClick="{{ p.remove }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 12px; border: 1px solid #BFE5DE; background: #fff; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #0A6E62; cursor: pointer" style-hover="background: #E8F6F3">
+                  {{ p.name }}
+                  <span style="color: #17A090">฿{{ p.priceText }}</span>
+                  <span style="color: #93AEC4; font-size: 14px; line-height: 1">×</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <input type="range" min="1" max="40" step="1" value="{{ distance }}" onChange="{{ onDistance }}" style="width: 100%; accent-color: #1466C7; height: 6px; cursor: pointer" />
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: #8FA6C0; margin-top: 6px">
+          <span>1 {{ t.km }}</span><span>{{ t.cityFree }}</span><span>40 {{ t.km }}</span>
+        </div>
+        </sc-if>
+
+
+      </div>
+    </div>
+    <div id="tests" style="margin-top: 44px; padding-top: 40px; border-top: 1px solid #E4ECF5">
+      <div style="display: flex; align-items: end; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 28px">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #fff; background: #0B4F9E; padding: 5px 10px; border-radius: 999px">STEP 4</span>
+            <span style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">Test menu · retail price</span>
+          </div>
+          <h3 style="margin: 12px 0 0; font-size: clamp(24px, 2.4vw, 32px); font-weight: 700; letter-spacing: -.025em; line-height: 1.15">{{ t.testsH3 }}</h3>
+        </div>
+        <p style="margin: 0; max-width: 400px; font-size: 15px; line-height: 1.65; color: #536C89; text-wrap: pretty">{{ t.testsP }}</p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px">
+        <div style="position: relative; display: flex; align-items: center; flex: 1 1 260px; max-width: 340px">
+          <svg style="position: absolute; left: 13px; color: #8FA6C0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
+          <input value="{{ testQuery }}" onChange="{{ onTestQuery }}" placeholder="{{ t.searchPh }}" style="width: 100%; padding: 12px 14px 12px 38px; border: 1.5px solid #DCE5EF; border-radius: 12px; font-size: 14px; outline: none; transition: border-color .16s" style-focus="border-color: #1466C7" />
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <sc-for list="{{ testCats }}" as="c" hint-placeholder-count="8">
+            <button onClick="{{ c.select }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; font-weight: 700; color: #fff; background: #17A090; padding: 6px 12px; border-radius: 999px; margin-left: auto">{{ t.pickingFor }} {{ activeLabel }}</span>
+        <span style="font-size: 12.5px; color: #8FA6C0; font-weight: 500">{{ testCountText }}</span>
+      </div>
+
+      <div style="border: 1px solid #E4ECF5; border-radius: 18px; overflow: hidden">
+        <div style="display: grid; grid-template-columns: minmax(200px, 2.2fr) minmax(110px, .85fr) minmax(84px, .6fr) minmax(84px, .55fr) 40px; gap: 16px; padding: 14px 22px; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: #6B7F99; text-transform: uppercase">
+          <span>{{ t.colTest }}</span><span>{{ t.colCat }}</span><span>{{ t.colTat }}</span><span style="text-align: right">{{ t.colPrice }}</span><span></span>
+        </div>
+        <sc-for list="{{ visibleTests }}" as="t" hint-placeholder-count="12">
+          <div onClick="{{ t.toggle }}" style="{{ t.rowStyle }}" style-hover="background: #F1F7FF">
+            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+              <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -.01em">{{ t.name }}</span>
+              <span style="font-size: 12.5px; color: #8FA6C0; line-height: 1.45">{{ t.th }}</span>
+            </div>
+            <span style="font-size: 12px; font-weight: 600; color: #0B4F9E; background: #EAF3FF; padding: 5px 10px; border-radius: 999px; justify-self: start">{{ t.cat }}</span>
+            <span style="font-size: 13px; color: #536C89">{{ t.turnaround }}</span>
+            <span style="font-size: 15px; font-weight: 700; text-align: right; letter-spacing: -.01em">฿{{ t.priceText }}</span>
+            <span style="{{ t.btnStyle }}">{{ t.btnLabel }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ noTests }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 40px 22px; text-align: center; font-size: 14px; color: #8FA6C0">{{ t.noResults }}</div>
+        </sc-if>
+        <sc-if value="{{ hasMoreTests }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ showMoreTests }}" style="width: 100%; border: 0; background: #F7FAFD; color: #0B4F9E; font-size: 14px; font-weight: 600; padding: 16px; cursor: pointer; transition: background .16s" style-hover="background: #EAF3FF">{{ moreTestsLabel }}</button>
+        </sc-if>
+      </div>
+      <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: #8FA6C0; line-height: 1.6">
+        <span style="{{ syncBadgeStyle }}">{{ syncBadge }}</span>
+        <span>{{ syncNote }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="book" style="max-width: 1200px; margin: 0 auto; padding: 0 24px 88px">
+    <div style="background: linear-gradient(150deg, #062F63, #0B4F9E 62%, #106B94); border-radius: 26px; padding: 40px; color: #fff; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 36px; align-items: center">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #062F63; background: #4FE3C1; padding: 5px 10px; border-radius: 999px">STEP 5</span>
+          <span style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #9FC2E0; text-transform: uppercase">Confirm booking</span>
+        </div>
+        <h2 style="margin: 0 0 14px; font-size: clamp(26px, 2.6vw, 34px); font-weight: 700; letter-spacing: -.025em; line-height: 1.15">{{ t.confirmH2 }}</h2>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #C6DCF2; line-height: 1.6">
+          <span>{{ cartLabel }}</span>
+          <sc-for list="{{ bookingLines }}" as="b" hint-placeholder-count="2">
+            <span>{{ b.text }}</span>
+          </sc-for>
+          <span>{{ channelSummary }}</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px">
+        <div style="font-size: 13px; color: #9FC2E0; font-weight: 500; letter-spacing: .04em">{{ t.costSummary }}</div>
+        <div style="display: flex; flex-direction: column; gap: 14px; font-size: 14.5px">
+          <sc-for list="{{ lineItems }}" as="li" hint-placeholder-count="4">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 13px; border-bottom: 1px solid rgba(255,255,255,.14)">
+              <span style="display: flex; flex-direction: column; gap: 3px">
+                <span style="color: #E4F1FF">{{ li.label }}</span>
+                <span style="font-size: 11.5px; color: #93B6D6">{{ li.note }}</span>
+              </span>
+              <span style="font-weight: 600; white-space: nowrap; color: #fff">{{ li.value }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: end; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.16)">
+          <span style="font-size: 13px; color: #9FC2E0">{{ t.grandTotal }}</span>
+          <span style="font-size: 38px; font-weight: 700; letter-spacing: -.03em; line-height: 1.05">฿{{ totalText }}</span>
+        </div>
+        <button style="width: 100%; border: 0; background: #17B8A6; color: #042F2A; font-size: 16.5px; font-weight: 700; padding: 19px; border-radius: 14px; cursor: pointer; transition: background .18s" style-hover="background: #4FE3C1">{{ ctaLabel }} · {{ visitDate }} {{ slot }}</button>
+        <div style="font-size: 12px; color: #93B6D6; text-align: center; line-height: 1.6">{{ t.cancelNote }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="background: #fff; border-top: 1px solid #E4ECF5; border-bottom: 1px solid #E4ECF5">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 84px 24px">
+      <div style="max-width: 620px; margin-bottom: 46px">
+        <div style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">How it works</div>
+        <h2 style="margin: 12px 0 12px; font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -.025em; line-height: 1.12">{{ t.howH2 }}</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.65; color: #536C89">{{ t.howP }}</p>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4px">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="5">
+          <div style="position: relative; padding: 0 22px 0 0">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px">
+              <div style="width: 38px; height: 38px; border-radius: 50%; background: #0B4F9E; color: #fff; display: grid; place-items: center; font-size: 14.5px; font-weight: 700; flex-shrink: 0">{{ s.n }}</div>
+              <div style="flex: 1; height: 2px; background: repeating-linear-gradient(90deg, #C9DCEF 0 6px, transparent 6px 12px)"></div>
+            </div>
+            <div style="color: #17A090; margin-bottom: 12px">{{ s.icon }}</div>
+            <h3 style="margin: 0 0 7px; font-size: 16px; font-weight: 700; letter-spacing: -.01em">{{ s.title }}</h3>
+            <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #536C89; text-wrap: pretty">{{ s.body }}</p>
+            <div style="margin-top: 12px; font-size: 11.5px; font-weight: 600; color: #8FA6C0; letter-spacing: .03em">{{ s.time }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <section id="branches" style="max-width: 1200px; margin: 0 auto; padding: 84px 24px">
+    <div style="display: flex; align-items: end; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 36px">
+      <div>
+        <div style="font-size: 12.5px; font-weight: 600; letter-spacing: .14em; color: #17A090; text-transform: uppercase">Our branches</div>
+        <h2 style="margin: 12px 0 0; font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -.025em; line-height: 1.12">{{ t.brH2 }}</h2>
+      </div>
+      <p style="margin: 0; max-width: 380px; font-size: 15px; line-height: 1.65; color: #536C89; text-wrap: pretty">{{ t.brP }}</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 18px">
+      <sc-for list="{{ branches }}" as="b" hint-placeholder-count="4">
+        <div style="background: #fff; border: 1px solid #E4ECF5; border-radius: 18px; padding: 26px 24px; display: flex; flex-direction: column; gap: 14px; transition: box-shadow .2s, transform .2s, border-color .2s" style-hover="box-shadow: 0 22px 44px -26px rgba(11,79,158,.4); transform: translateY(-3px); border-color: #CFE0F1">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px">
+            <div style="height: 82px; width: 118px; background-image: url('{{ b.logo }}'); background-size: contain; background-repeat: no-repeat; background-position: left center"></div>
+            <span style="font-size: 11px; font-weight: 600; color: #0A6E62; background: #E8F6F3; padding: 5px 10px; border-radius: 999px; flex-shrink: 0">{{ b.tag }}</span>
+          </div>
+          <div>
+            <h3 style="margin: 0 0 8px; font-size: 16.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.35">{{ b.name }}</h3>
+            <div style="font-size: 13px; color: #536C89; line-height: 1.6">{{ b.address }}</div>
+            <div style="font-size: 12.5px; color: #17A090; margin-top: 5px; font-weight: 500">{{ b.landmark }}</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 9px; font-size: 13px; color: #3D5674; line-height: 1.5; margin-top: auto; padding-top: 14px; border-top: 1px solid #EEF3F9">
+            <a href="{{ b.tel }}" style="display: flex; align-items: center; gap: 9px; color: #0B4F9E; font-weight: 600">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h2A1.5 1.5 0 0 1 9 5.3l.5 3a1.5 1.5 0 0 1-.7 1.5l-1.3.8a11 11 0 0 0 5 5l.8-1.3a1.5 1.5 0 0 1 1.5-.7l3 .5a1.5 1.5 0 0 1 1.2 1.5v2a1.5 1.5 0 0 1-1.5 1.5A15 15 0 0 1 4 5.5Z" /></svg>
+              {{ b.phone }}
+            </a>
+            <a href="{{ b.mailto }}" style="display: flex; align-items: center; gap: 9px; color: #536C89; word-break: break-all">
+              <svg style="flex-shrink: 0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z" /><path d="m4 7 8 6 8-6" /></svg>
+              {{ b.email }}
+            </a>
+            <a href="{{ b.map }}" target="_blank" rel="noopener" style="display: flex; align-items: center; gap: 9px; color: #17A090; font-weight: 600">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+              {{ t.viewMap }}
+            </a>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <sc-if value="{{ posterOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePoster }}" style="position: fixed; inset: 0; z-index: 90; background: rgba(4,28,58,.72); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 24px; animation: riseIn .2s ease both">
+      <div style="background: #fff; border-radius: 20px; padding: 16px; box-shadow: 0 40px 90px -30px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 12px; max-height: 92vh; overflow-y: auto">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 2px 4px 0; position: sticky; top: -16px; background: #fff; z-index: 1">
+          <span style="font-size: 15px; font-weight: 700; letter-spacing: -.01em">{{ posterTitle }}</span>
+          <button onClick="{{ closePoster }}" style="width: 32px; height: 32px; border: 0; border-radius: 10px; background: #EEF3F9; color: #3D5674; font-size: 17px; cursor: pointer" style-hover="background: #DCE8F5">×</button>
+        </div>
+        {{ posterImg }}
+      </div>
+    </div>
+  </sc-if>
+
+  <footer style="background: #062F63; color: #9FC2E0">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 56px 24px 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 36px">
+      <div>
+        <div style="background: #fff; border-radius: 14px; padding: 14px 16px; display: inline-block; margin-bottom: 16px">
+          <img src="uploads/MT Logo.png" alt="บริษัท เมดิคอลเทรนด์ จำกัด" style="height: 76px; width: auto; display: block" />
+        </div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.65; max-width: 280px">{{ t.footAbout }}</p>
+      </div>
+      <div>
+        <div style="color: #fff; font-size: 13.5px; font-weight: 600; margin-bottom: 12px">{{ t.footServices }}</div>
+        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 13px">
+          <a href="#branches" style="color: #9FC2E0">{{ t.fs1 }}</a>
+          <a href="#pricing" style="color: #9FC2E0">{{ t.fs2 }}</a>
+          <a href="#pricing" style="color: #9FC2E0">{{ t.fs3 }}</a>
+          <a href="#pricing" style="color: #9FC2E0">{{ t.fs4 }}</a>
+        </div>
+      </div>
+      <div>
+        <div style="color: #fff; font-size: 13.5px; font-weight: 600; margin-bottom: 12px">{{ t.footHelp }}</div>
+        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 13px">
+          <a href="#how" style="color: #9FC2E0">{{ t.navHow }}</a>
+          <a href="#features" style="color: #9FC2E0">{{ t.faq }}</a>
+          <a href="#features" style="color: #9FC2E0">{{ t.pdpa }}</a>
+        </div>
+      </div>
+      <div>
+        <div style="color: #fff; font-size: 13.5px; font-weight: 600; margin-bottom: 12px">{{ t.contact }}</div>
+        <div style="display: flex; flex-direction: column; gap: 9px; font-size: 13px">
+          <a href="tel:0952472631" style="color: #9FC2E0">{{ t.call }} 095 247 2631</a>
+          <a href="mailto:medicaltrend.lab@gmail.com" style="color: #9FC2E0">medicaltrend.lab@gmail.com</a>
+          <span>{{ t.cmPy }}</span>
+        </div>
+      </div>
+    </div>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px 40px">
+      <div style="background: #fff; border-radius: 16px; padding: 22px 26px; display: flex; align-items: center; gap: 34px; flex-wrap: wrap; justify-content: center">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: .12em; color: #6B7F99; text-transform: uppercase">Our group</span>
+        <img src="uploads/MT Center.png" alt="Medical Trend Head Quarter — ศูนย์แล็บ ตรวจเลือด ตรวจสุขภาพ" style="height: 84px; width: auto; object-fit: contain" />
+        <img src="uploads/PRL Logo-a9809fea.png" alt="Ratchaphruek Lab — ราชพฤกษ์แล็บ ตรวจเลือด เชียงใหม่" style="height: 84px; width: auto; object-fit: contain" />
+        <img src="uploads/iBliss Logo.png" alt="Medical Trend iBliss Polyclinic" style="height: 84px; width: auto; object-fit: contain" />
+        <img src="uploads/MTH Logo-5cfd98d1.png" alt="บริษัท เมดิคอลเทรนด์ เฮลธ์แคร์ จำกัด" style="height: 84px; width: auto; object-fit: contain" />
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(255,255,255,.12)">
+      <div style="max-width: 1200px; margin: 0 auto; padding: 18px 24px; font-size: 12px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+        <span>© 2026 {{ t.coName }}</span>
+        <span>{{ t.demoPrice }}</span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+  <sc-if value="{{ barVisible }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(6,47,99,.96); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,.14); box-shadow: 0 -18px 40px -22px rgba(4,28,58,.6)">
+      <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap">
+        <div style="display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap">
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 11px; color: #9FC2E0; letter-spacing: .04em">{{ t.grandTotal }}</span>
+            <span style="font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.025em; line-height: 1.1">฿{{ totalText }}</span>
+          </span>
+          <span style="font-size: 12px; color: #9FC2E0; line-height: 1.5">{{ barSummary }}</span>
+        </div>
+        <a href="#book" style="display: inline-flex; align-items: center; gap: 8px; background: #4FE3C1; color: #062F63; font-size: 14px; font-weight: 700; padding: 13px 22px; border-radius: 12px; white-space: nowrap" style-hover="background: #7BEDD3; color: #062F63">
+          {{ t.goConfirm }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+        </a>
+      </div>
+    </div>
+    <div style="height: 96px"></div>
+  </sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;baseVisitFee&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:350,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:1200,&quot;step&quot;:50,&quot;unit&quot;:&quot;฿&quot;,&quot;section&quot;:&quot;Pricing rules&quot;},&quot;perKmRate&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:25,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:5,&quot;unit&quot;:&quot;฿/km&quot;,&quot;section&quot;:&quot;Pricing rules&quot;}}">
+const ic = (d, extra) => React.createElement('svg', {width: extra && extra.size || 22, height: extra && extra.size || 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round'}, d.map((p, i) => React.createElement('path', {key: i, d: p})));
+
+const DICT = {"th":{"hdrSub":"4 สาขา · เชียงใหม่ · พะเยา","navServices":"บริการของเรา","navPricing":"ราคาและรายการตรวจ","navHow":"ขั้นตอนการใช้บริการ","navBranches":"สาขา","call":"โทร","login":"เข้าสู่ระบบ","heroBadge":"4 สาขาพร้อมให้บริการ · ทีมเจาะเลือดถึงบ้านว่าง 6 ทีมวันนี้","heroH1a":"ศูนย์แล็บตรวจเลือด 4 สาขา","heroH1b":"ทั่วเชียงใหม่และพะเยา","heroP":"เดินเข้ารับบริการที่สาขาใกล้บ้าน หรือเลือกให้ทีมนักเทคนิคการแพทย์เจาะเลือดถึงบ้าน ตรวจด้วยเครื่องมือและมาตรฐานห้องปฏิบัติการเดียวกันทุกช่องทาง ผลตรวจออนไลน์ภายใน 24–48 ชั่วโมง","statBranches":"4 สาขา","statBranchesSub":"เชียงใหม่ 3 · พะเยา 1","statCasesSub":"เคสตรวจที่สาขาและที่บ้าน","statHours":"24 ชม.","statHoursSub":"รับผลตรวจออนไลน์","step1Title":"เลือกช่องทางรับบริการ","tabLab":"จองที่แล็บ","tabHome":"จองบริการถึงบ้าน","freeConsult":"ฟรีค่าปรึกษา","addrLabel":"ที่อยู่ / ปักหมุดตำแหน่งบ้าน","addrPh":"เช่น 199/4 ถ.นิมมานเหมินท์ ต.สุเทพ อ.เมือง เชียงใหม่","useLoc":"ใช้ตำแหน่งปัจจุบัน","patientType":"ประเภทผู้รับบริการ","pGen":"ทั่วไป","pGenSub":"General","pEld":"ผู้สูงอายุ","pEldSub":"Elderly","pBed":"ติดเตียง","pBedSub":"Bedridden","rxLabel":"ใบสั่งตรวจจากแพทย์ (ถ้ามี)","rxHint":"PDF, JPG · ไม่เกิน 10 MB","dateLabel":"วันที่","slotLabel":"ช่วงเวลา","fasting":"งดน้ำงดอาหาร","branchPick":"เลือกสาขา","br1":"ศูนย์แล็บ เมดิคอลเทรนด์ — สันกำแพง","br2":"ราชพฤกษ์แล็บเชียงใหม่ — หางดง","br3":"เมดิคอลเทรนด์แล็บ ไอบลิส สหคลินิก — วัดเกตุ","br4":"เมดิคอลเทรนด์ เฮลธ์แคร์ สหคลินิก — พะเยา","labNote":"เดินเข้ารับบริการที่สาขาได้ทันที ไม่มีค่าเดินทาง เฉลี่ยรอคิว 8 นาที","peopleLabel":"จำนวนผู้รับบริการ","peopleHint":"แต่ละคนเลือกรายการตรวจของตัวเองได้ใน STEP 3","dec":"ลดจำนวน","inc":"เพิ่มจำนวน","addingFor":"กำลังเพิ่มรายการตรวจให้","estimate":"ประมาณการค่าบริการ","toStep2":"ต่อที่ STEP 2 รายการตรวจยอดนิยม","featH2a":"มาตรฐานเดียวกัน","featH2b":"ทั้งที่สาขาและที่บ้านคุณ","featP":"ทุกเคสเจาะโดยนักเทคนิคการแพทย์ที่มีใบประกอบวิชาชีพ ตัวอย่างเลือดส่งเข้าห้องแล็บที่รับรองมาตรฐาน MOPH Standard ภายใน 2 ชั่วโมง","popH2":"รายการตรวจยอดนิยม","popP":"รายการที่ลูกค้าเลือกมากที่สุด ราคาตามโปรโมชันปัจจุบัน กดเลือกเพื่อเพิ่มให้","viewDetail":"ดูรายละเอียด","pkgH2":"เลือกตรวจแบบ Package เพื่อความคุ้มค่า","pkgP":"แพ็กเกจรวมรายการตรวจหลักไว้แล้ว ราคาคุ้มกว่าเลือกทีละรายการ เลือกแล้วระบบสรุปราคารวมทันที","recipients":"ผู้รับบริการ","eachPick":"แต่ละคนเลือกแพ็กเกจและรายการตรวจของตัวเองได้","removePerson":"ลบผู้รับบริการ","addPersonLbl":"+ เพิ่มผู้รับบริการ","pkgFor":"แพ็กเกจตรวจของ","multiOk":"เลือกได้มากกว่า 1 ชุด","noPkg":"ไม่ประสงค์ตรวจเป็น Package","noPkgSub":"เลือกรายการตรวจเดี่ยวเองใน STEP 4","viewTests":"ดูรายการตรวจ","distLabel":"ระยะทางจากสาขา","km":"กม.","cityFree":"ในเขตเมือง 10 กม. ฟรี","singlesOf":"รายการตรวจเดี่ยวของ","clearAll":"ล้างทั้งหมด","testsH3":"หรือเลือกตรวจเป็นรายการเดี่ยว","testsP":"ราคาต่อรายการ (Retail) ดึงสดจาก Master Price List 2026 ตรวจได้ทั้งที่สาขาและแบบเจาะเลือดถึงบ้าน","searchPh":"ค้นหารายการตรวจ เช่น CBC, ตับ, ไทรอยด์","pickingFor":"กำลังเลือกให้","colTest":"รายการตรวจ","colCat":"หมวด","colTat":"เวลารอผล","colPrice":"ราคา","noResults":"ไม่พบรายการตรวจที่ค้นหา","confirmH2":"ยืนยันการจอง","costSummary":"สรุปค่าใช้จ่าย","grandTotal":"ราคารวมทั้งสิ้น (รวม VAT)","cancelNote":"ยกเลิกฟรีก่อนถึงเวลานัด 6 ชั่วโมง · ชำระผ่านบัตร พร้อมเพย์ หรือปลายทาง","howH2":"บริการถึงบ้าน 5 ขั้นตอน","howP":"ตั้งแต่กดจองจนถึงคุยผลกับนักเทคนิคการแพทย์ ทุกขั้นตอนติดตามได้ในแอป","brH2":"สาขาที่ให้บริการ","brP":"เครือข่ายแล็บในกลุ่มเมดิคอลเทรนด์ · ทีมเจาะเลือดตามบ้านออกจากสาขาที่ใกล้ที่อยู่ของคุณที่สุด ตัวอย่างเลือดจึงถึงห้องปฏิบัติการเร็วที่สุด","viewMap":"ดูแผนที่ Google Maps","footAbout":"บริษัท เมดิคอลเทรนด์ จำกัด · เมดิคอลเทรนด์ คลินิกเทคนิคการแพทย์ · ห้องปฏิบัติการมาตรฐาน MOPH Standard","footServices":"บริการ","fs1":"ตรวจเลือดที่สาขา","fs2":"เจาะเลือดตามบ้าน","fs3":"ตรวจสุขภาพองค์กร","fs4":"ดูแลผู้ป่วยติดเตียง","footHelp":"ช่วยเหลือ","faq":"คำถามที่พบบ่อย","pdpa":"นโยบายข้อมูลส่วนบุคคล (PDPA)","contact":"ติดต่อ","cmPy":"เชียงใหม่ · พะเยา","coName":"บริษัท เมดิคอลเทรนด์ จำกัด","demoPrice":"ราคาที่แสดงเป็นตัวอย่างสำหรับการออกแบบ","goConfirm":"ไปยืนยันการจอง"},"en":{"hdrSub":"4 branches · Chiang Mai · Phayao","navServices":"Services","navPricing":"Pricing & Tests","navHow":"How it works","navBranches":"Branches","call":"Call","login":"Sign in","heroBadge":"4 branches open · 6 home collection teams available today","heroH1a":"Blood testing labs in 4 branches","heroH1b":"across Chiang Mai and Phayao","heroP":"Walk in to your nearest branch, or have a licensed medical technologist collect blood at home. Same equipment and lab standards on every channel, with online results in 24–48 hours.","statBranches":"4 branches","statBranchesSub":"Chiang Mai 3 · Phayao 1","statCasesSub":"cases at branches and homes","statHours":"24 hrs","statHoursSub":"online results","step1Title":"Choose a service channel","tabLab":"Book at lab","tabHome":"Book home service","freeConsult":"Free consultation","addrLabel":"Address / pin your location","addrPh":"e.g. 199/4 Nimmanhaemin Rd, Suthep, Mueang, Chiang Mai","useLoc":"Use current location","patientType":"Patient type","pGen":"General","pGenSub":"ทั่วไป","pEld":"Elderly","pEldSub":"ผู้สูงอายุ","pBed":"Bedridden","pBedSub":"ติดเตียง","rxLabel":"Doctor's lab order (optional)","rxHint":"PDF, JPG · up to 10 MB","dateLabel":"Date","slotLabel":"Time slot","fasting":"fasting","branchPick":"Select branch","br1":"Medical Trend Lab Center — San Kamphaeng","br2":"Ratchaphruek Lab Chiang Mai — Hang Dong","br3":"Medical Trend Lab iBliss Polyclinic — Wat Ket","br4":"Medical Trend Healthcare Polyclinic — Phayao","labNote":"Walk in any time. No travel fee, average wait 8 minutes.","peopleLabel":"Number of people","peopleHint":"Each person picks their own tests in STEP 3","dec":"Decrease","inc":"Increase","addingFor":"Adding tests for","estimate":"Estimated cost","toStep2":"Continue to STEP 2 · Popular tests","featH2a":"One standard,","featH2b":"at our branches and in your home","featP":"Every case is collected by a licensed medical technologist, and samples reach our MOPH Standard certified lab within 2 hours.","popH2":"Popular tests","popP":"Our most-booked tests at current promotional prices. Tap to add for","viewDetail":"View details","pkgH2":"Choose a package for better value","pkgP":"Packages bundle the core tests at a lower price than ordering one by one. Your total updates as soon as you select.","recipients":"People","eachPick":"Each person can choose their own packages and tests","removePerson":"Remove person","addPersonLbl":"+ Add person","pkgFor":"Packages for","multiOk":"you can select more than one","noPkg":"No package","noPkgSub":"Pick single tests in STEP 4","viewTests":"View tests","distLabel":"Distance from branch","km":"km","cityFree":"Free within 10 km in town","singlesOf":"Single tests for","clearAll":"Clear all","testsH3":"Or choose individual tests","testsP":"Per-test retail prices pulled live from Master Price List 2026. Available at branches and for home collection.","searchPh":"Search tests, e.g. CBC, liver, thyroid","pickingFor":"Selecting for","colTest":"Test","colCat":"Category","colTat":"Turnaround","colPrice":"Price","noResults":"No matching tests","confirmH2":"Confirm booking","costSummary":"Cost summary","grandTotal":"Grand total (incl. VAT)","cancelNote":"Free cancellation up to 6 hours before your appointment · Pay by card, PromptPay or on-site","howH2":"Home service in 5 steps","howP":"From booking to reviewing results with a medical technologist, every step can be tracked in the app.","brH2":"Our branches","brP":"Part of the Medical Trend lab network. Home collection teams leave from the branch nearest you, so samples reach the lab as fast as possible.","viewMap":"Open in Google Maps","footAbout":"Medical Trend Co., Ltd. · Medical Trend Medical Technology Clinic · MOPH Standard laboratory","footServices":"Services","fs1":"Blood tests at branches","fs2":"Home blood collection","fs3":"Corporate health checks","fs4":"Bedridden patient care","footHelp":"Help","faq":"FAQ","pdpa":"Privacy policy (PDPA)","contact":"Contact","cmPy":"Chiang Mai · Phayao","coName":"Medical Trend Co., Ltd.","demoPrice":"Prices shown are sample values for design","goConfirm":"Go to confirmation"}};
+
+class Component extends DCLogic {
+  state = {
+    mode: 'lab',
+    patient: 'general',
+    address: '',
+    file: '',
+    distance: 8,
+    people: 1,
+    visitDate: '2026-09-02',
+    slot: '06:00–08:00',
+    testQuery: '',
+    testCat: 'ทั้งหมด',
+    showAllTests: false,
+    liveTests: null,
+    livePkgs: null,
+    persons: [{pks: {}, picked: {}}],
+    active: 0,
+    poster: null,
+    posterTitle: '',
+    syncState: 'loading',
+    lang: (() => { try { return localStorage.getItem('mt_lang') || 'th'; } catch (e) { return 'th'; } })()
+  };
+
+  SHEET_ID = '1YNt4ugp0EVdl7g4yXsMWGYwW-kyl-adVhFT6YaYcMs0';
+
+  componentDidMount() { this.pullSheet(); }
+
+  csvRows(text) {
+    const rows = [];
+    let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) {
+        if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === ',') { row.push(cell); cell = ''; }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (ch !== '\r') cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  async pullSheet() {
+    const url = 'https://docs.google.com/spreadsheets/d/' + this.SHEET_ID +
+      '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Master Capital');
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      const rows = this.csvRows(await res.text());
+      const head = rows[0].map(h => h.trim());
+      const col = n => head.indexOf(n);
+      const iName = col('รายชื่อการทดสอบ'), iCat = col('ประเภท'), iDesc = col('คำอธิบาย'),
+        iRetail = col('Retail'), iWait = col('เวลารอผล');
+      if (iName < 0 || iRetail < 0) throw new Error('columns');
+      const parsed = rows.slice(1).map(r => ({
+        n: (r[iName] || '').trim(),
+        c: (r[iCat] || '').trim() || 'อื่นๆ',
+        th: (r[iDesc] || '').trim(),
+        p: Number(String(r[iRetail] || '').replace(/[^0-9.]/g, '')),
+        t: this.thaiWait((r[iWait] || '').trim())
+      })).filter(t => t.n && t.p > 0);
+      if (!parsed.length) throw new Error('empty');
+      let livePkgs = parsed.filter(t => t.c.toLowerCase() === 'package')
+        .map(t => ({name: t.n.replace(/^Package\s+/i, ''), detail: t.th, price: t.p}));
+      livePkgs = livePkgs.concat(this.extraPkgs().filter(x =>
+        !livePkgs.some(p => p.name.toLowerCase() === x.name.toLowerCase())));
+      this.setState({
+        liveTests: parsed.filter(t => t.c.toLowerCase() !== 'package'),
+        livePkgs: livePkgs.length ? livePkgs : null,
+        syncState: 'live'
+      });
+    } catch (e) {
+      this.setState({syncState: 'offline'});
+    }
+  }
+
+  thaiWait(v) {
+    if (!v) return '—';
+    return v.replace(/Hours?/i, 'ชั่วโมง').replace(/Days?/i, 'วัน').replace(/Mins?/i, 'นาที');
+  }
+
+  pkgs() {
+    return [
+      {name: 'P1 · ตรวจพื้นฐาน', detail: 'CBC, UA, น้ำตาล, ไต, ไขมัน, ตับ — 14 รายการ', price: 690},
+      {name: 'P3 · ตรวจสุขภาพครบชุด', detail: 'เพิ่ม HbA1c, โปรตีน, ไวรัสตับอักเสบ, สารบ่งชี้มะเร็ง — 26 รายการ', price: 1790},
+      {name: 'P5 · ตรวจเข้มข้น', detail: 'เพิ่มไทรอยด์, วิตามินดี, PSA, CA 19-9 — 34 รายการ', price: 4590},
+      {name: 'Hormone F · ฮอร์โมนผู้หญิง', detail: 'TSH, FT3, FT4, E2, FSH, LH, Cortisol, DHEAS — 11 รายการ', price: 3990},
+      {name: 'Ultimate · ตรวจละเอียดสูงสุด', detail: 'ครบทุกระบบ + Allergy 107, Antioxidant, Homocysteine — 40 รายการ', price: 10900},
+      {name: 'Thyroid Function Test Basic', detail: 'TSH, Free T3, Free T4 — 3 รายการ', price: 690},
+      {name: 'Thyroid Function Test Full', detail: 'TSH, Free T3, Free T4, Total T3, Total T4 — 5 รายการ', price: 990}
+    ];
+  }
+
+  extraPkgs() {
+    return [
+      {name: 'Signature ชาย', detail: 'ตรวจสุขภาพผู้ชายระดับ Signature เพิ่ม Cystatin C, GGT, Homocysteine, Cortisol และ Ferritin — 41 รายการ', price: 6990},
+      {name: 'Signature หญิง', detail: 'ตรวจสุขภาพผู้หญิงระดับ Signature เพิ่ม Cystatin C, GGT, Homocysteine, Cortisol และ Ferritin — 42 รายการ', price: 6990},
+      {name: 'Ultimate ชาย', detail: 'ตรวจสุขภาพผู้ชายแบบครอบคลุมสูงสุด เพิ่ม Insulin, HOMA-IR, Apo A1/Apo B, NT-proBNP, Vitamin B12, Folate — 51 รายการ', price: 12900},
+      {name: 'Ultimate หญิง', detail: 'ตรวจสุขภาพผู้หญิงแบบครอบคลุมสูงสุด เพิ่ม Insulin, HOMA-IR, Apo A1/Apo B, NT-proBNP, Vitamin B12, Folate — 52 รายการ', price: 12900}
+    ];
+  }
+
+  pkgRank(name) {
+    const n = (name || '').toLowerCase();
+    const explicit = n.match(/^p(\d+)\b/);
+    if (explicit) return Number(explicit[1]);
+    const female = /female|หญิง|\bf\b/.test(n), male = /male|ชาย|\bm\b/.test(n);
+    if (/starter/.test(n)) return 1;
+    if (/standard/.test(n)) return 2;
+    if (/extra/.test(n)) return 3;
+    if (/supreme/.test(n)) return 4;
+    if (/beyond/.test(n)) return female ? 6 : 5;
+    if (/signature/.test(n)) return female ? 8 : 7;
+    if (/ultimate/.test(n)) return female ? 10 : male ? 9 : 10;
+    return 99;
+  }
+
+  posterFor(name) {
+    const n = (name || '').toLowerCase();
+    const male = /male|ชาย|\bm\b/.test(n), female = /female|หญิง|\bf\b/.test(n);
+    if (/starter/.test(n)) return 'uploads/P1%20Starter_0.png';
+    if (/standard/.test(n)) return 'uploads/P2%20Standard_0.png';
+    if (/extra/.test(n)) return 'uploads/P3%20Extra.png';
+    if (/supreme/.test(n)) return 'uploads/P4%20Supreme_0.png';
+    if (/beyond/.test(n)) return female ? 'uploads/P6%20Beyond%20F_0.png' : male ? 'uploads/P5%20Beyond%20M_0.png' : '';
+    if (/signature/.test(n)) return female ? 'uploads/P8%20Signature%20F_0.png' : male ? 'uploads/P7%20Signature%20M_0.png' : '';
+    if (/ultimate/.test(n)) return female ? 'uploads/P10%20Ultimate%20F_0.png' : male ? 'uploads/P9%20Ultimate%20M_0.png' : '';
+    if (/allerg|ภูมิแพ้|ก่อภูมิ|ige/.test(n)) return 'uploads/Allergy.jpg';
+    if (/hpv/.test(n)) return 'uploads/HPV15.jpg';
+    if (/14 โรค|realtime pcr|เชื้อ/.test(n)) return 'uploads/STD14.jpg';
+    if (/เพศสัมพันธ์|std/.test(n)) return 'uploads/STD%20880%20square.png';
+    if (/tumor|มะเร็ง|บ่งชี้|plus|screen|คัดกรอง|พลัส/.test(n)) {
+      const plus = /plus|พลัส/.test(n);
+      if (female) return plus ? 'uploads/Tumor%20Plus%20Female.png' : 'uploads/Tumor%20Screen%20Female.png';
+      if (male) return plus ? 'uploads/Tumor%20Plus%20Male.png' : 'uploads/Tumor%20Screen%20Male.png';
+    }
+    if (/marriage|ก่อนแต่ง|ก่อนสมรส|สมรส/.test(n)) {
+      if (female) return 'uploads/Marriage%20for%20Female.png';
+      if (male) return 'uploads/Marriage%20for%20Male.png';
+    }
+    if (/heart|vascular|หัวใจ|หลอดเลือด/.test(n)) return 'uploads/Advance%20Heart%20Vascular.jpg';
+    if (/thyroid|ไทรอยด/.test(n)) return /full|เต็ม|ครบ|990|5\s*รายการ/.test(n) ? 'uploads/Thyroid%20Full.png' : 'uploads/Thyroid%20Basic.png';
+    return '';
+  }
+
+  popularTests() {
+    return [
+      {nameEn: "Allergy test, 107 allergens", detailEn: "Specific IgE, 107 allergens · results in 1 business day · Class 0–6 international scale", name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', detail: 'IgE Specific Allergens 107 ชนิด · รายงานผล 1 วันทำการ · Class 0–6 ตามมาตรฐานสากล', price: 3500, poster: 'uploads/Allergy.jpg'},
+      {nameEn: "STD package, 5 tests", detailEn: "HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · results within 1 hour", name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 5 รายการ', detail: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, was: 1260, poster: 'uploads/STD%20880%20square.png'},
+      {nameEn: "HPV DNA test, 15 genotypes", detailEn: "Self-collected, no exam chair needed · all 15 genotypes reported within 3 business days", name: 'ตรวจ HPV DNA 15 Genotype', detail: 'เก็บตัวอย่างด้วยตัวเอง ไม่ต้องขึ้นขาหยั่ง · รายงานผลแยกครบ 15 genotypes ภายใน 3 วันทำการ', price: 890, poster: 'uploads/HPV15.jpg'},
+      {nameEn: "STD test, 14 infections", detailEn: "Realtime PCR, choose only the pathogens you need · results within 3 days", name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค', detail: 'Realtime PCR เลือกตรวจเฉพาะเชื้อที่ต้องการได้ · ผลออกภายใน 3 วัน', poster: 'uploads/STD14.jpg', group: 'std14', tiers: [
+        {label: '3 เชื้อ', price: 1200}, {label: '7 เชื้อ', price: 1600}, {label: '11 เชื้อ', price: 1800}, {label: '14 เชื้อ', price: 2100}
+      ]}
+    ];
+  }
+
+  tests() {
+    return [
+      {c: 'Chem', n: 'Albumin', th: 'ระดับโปรตีนอัลบูมินในเลือด', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'ALT (SGPT)', th: 'เอนไซม์การอักเสบของเซลล์ตับ', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'AST (SGOT)', th: 'เอนไซม์ตับและกล้ามเนื้อหัวใจ', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Alkaline Phosphatase (ALP)', th: 'เอนไซม์ตับ ท่อน้ำดี และกระดูก', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'BUN', th: 'ไนโตรเจนจากยูเรียในเลือด', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Creatinine (Serum)', th: 'ประเมินการทำงานของไต', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Cholesterol', th: 'ระดับคอเลสเตอรอลในเลือด', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Bilirubin (Total)', th: 'ระดับบิลิรูบินรวมในเลือด', p: 80, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Calcium', th: 'ระดับแคลเซียมในเลือด', p: 150, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Electrolyte (Na, K, Cl, CO2)', th: 'ระดับเกลือแร่ในเลือด', p: 400, t: '4 ชั่วโมง'},
+      {c: 'Chem', n: 'Amylase (Serum)', th: 'เอนไซม์อะไมเลสในเลือด', p: 250, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'CPK (CK)', th: 'เอนไซม์ครีเอตินไคเนสในเลือด', p: 450, t: '2 ชั่วโมง'},
+      {c: 'Chem', n: 'Cystatin C', th: 'ประเมินการทำงานของไตแบบละเอียด', p: 650, t: '3 ชั่วโมง'},
+      {c: 'Chem', n: 'C-peptide', th: 'ระดับซีเปปไทด์ในเลือด', p: 1400, t: '2 วัน'},
+      {c: 'Hemato', n: 'CBC', th: 'ความสมบูรณ์ของเม็ดเลือด', p: 150, t: '1 ชั่วโมง'},
+      {c: 'Hemato', n: 'ESR', th: 'อัตราการตกของเม็ดเลือดแดง', p: 100, t: '2 ชั่วโมง'},
+      {c: 'Hemato', n: 'Blood Group ABO', th: 'การตรวจหมู่เลือด ABO', p: 50, t: '1 ชั่วโมง'},
+      {c: 'Hemato', n: 'Blood Group Rh', th: 'การตรวจหมู่เลือด Rh', p: 50, t: '1 ชั่วโมง'},
+      {c: 'Hemato', n: 'DCIP / Hb E Screening', th: 'คัดกรองฮีโมโกลบิน อี (ธาลัสซีเมีย)', p: 150, t: '2 ชั่วโมง'},
+      {c: 'Hemato', n: 'aPTT', th: 'ประเมินระบบการแข็งตัวของเลือด', p: 300, t: '4 ชั่วโมง'},
+      {c: 'Hormone', n: 'Cortisol', th: 'ระดับฮอร์โมนคอร์ติซอลในเลือด', p: 450, t: '2 ชั่วโมง'},
+      {c: 'Hormone', n: 'Estradiol (E2)', th: 'ระดับฮอร์โมนเอสตราไดออล', p: 450, t: '2 ชั่วโมง'},
+      {c: 'Hormone', n: 'beta-hCG', th: 'ระดับฮอร์โมนเบต้าเอชซีจีในเลือด', p: 400, t: '3 ชั่วโมง'},
+      {c: 'Hormone', n: 'DHEA-S', th: 'ระดับฮอร์โมนดีเอชอีเอเอส', p: 900, t: '3 วัน'},
+      {c: 'Hormone', n: 'Anti-Mullerian Hormone (AMH)', th: 'ประเมินปริมาณไข่สำรองในรังไข่', p: 2400, t: '2 วัน'},
+      {c: 'Tumor', n: 'AFP', th: 'สารบ่งชี้มะเร็งตับ', p: 350, t: '2 ชั่วโมง'},
+      {c: 'Tumor', n: 'CEA', th: 'สารบ่งชี้มะเร็งลำไส้ใหญ่และทางเดินอาหาร', p: 350, t: '2 ชั่วโมง'},
+      {c: 'Tumor', n: 'CA-125', th: 'สารบ่งชี้มะเร็งรังไข่', p: 450, t: '3 ชั่วโมง'},
+      {c: 'Tumor', n: 'CA-153', th: 'สารบ่งชี้มะเร็งเต้านม', p: 450, t: '3 ชั่วโมง'},
+      {c: 'Tumor', n: 'CA 19-9', th: 'สารบ่งชี้มะเร็งตับอ่อนและทางเดินน้ำดี', p: 450, t: '3 ชั่วโมง'},
+      {c: 'Infectious', n: 'Anti-HBs', th: 'ภูมิคุ้มกันต่อไวรัสตับอักเสบ บี', p: 150, t: '2 ชั่วโมง'},
+      {c: 'Infectious', n: 'Anti-HCV', th: 'ภูมิคุ้มกันต่อไวรัสตับอักเสบ ซี', p: 350, t: '2 ชั่วโมง'},
+      {c: 'Infectious', n: 'Anti-HAV IgG/IgM', th: 'ภูมิคุ้มกันต่อไวรัสตับอักเสบ เอ', p: 600, t: '2 ชั่วโมง'},
+      {c: 'Infectious', n: 'Dengue NS1', th: 'แอนติเจนไวรัสเดงกีระยะแรก', p: 400, t: '2 ชั่วโมง'},
+      {c: 'Infectious', n: 'Dengue IgG/IgM', th: 'ภูมิคุ้มกันต่อไวรัสเดงกี', p: 400, t: '2 ชั่วโมง'},
+      {c: 'Infectious', n: 'CD4 Count', th: 'จำนวนเซลล์ซีดี 4 ในเลือด', p: 550, t: '7 วัน'},
+      {c: 'Immuno', n: 'C-reactive Protein (CRP)', th: 'ระดับโปรตีนซีอาร์พีในเลือด', p: 300, t: '2 ชั่วโมง'},
+      {c: 'Immuno', n: 'C3 Complement', th: 'ระดับคอมพลีเมนต์ซี 3', p: 600, t: '3 วัน'},
+      {c: 'Cardiac', n: 'D-Dimer', th: 'ประเมินภาวะลิ่มเลือดอุดตัน', p: 900, t: '2 ชั่วโมง'},
+      {c: 'Cardiac', n: 'CK-MB', th: 'เอนไซม์ซีเคเอ็มบีในเลือด', p: 800, t: '2 วัน'},
+      {c: 'Autoimmune', n: 'ANA / ANF', th: 'ภูมิคุ้มกันที่ทำลายเนื้อเยื่อตนเอง', p: 500, t: '3 วัน'},
+      {c: 'Autoimmune', n: 'Anti-CCP', th: 'วินิจฉัยโรคข้ออักเสบรูมาตอยด์', p: 1500, t: '3 วัน'},
+      {c: 'Autoimmune', n: 'Anti-TPO', th: 'ภูมิคุ้มกันต่อเอนไซม์ไทรอยด์', p: 600, t: '2 วัน'},
+      {c: 'Autoimmune', n: 'Anti-dsDNA', th: 'วินิจฉัยโรคพุ่มพวง (SLE)', p: 600, t: '3 วัน'},
+      {c: 'Vitamin', n: 'Antioxidants 10 Vitamins', th: 'วิตามินต้านอนุมูลอิสระ 10 ชนิด', p: 6900, t: '7 วัน'},
+      {c: 'Vitamin', n: 'Antioxidant Minerals (Se, Cu, Zn)', th: 'แร่ธาตุต้านอนุมูลอิสระ', p: 1800, t: '7 วัน'},
+      {c: 'Special', n: 'Allergy IgE Specific Allergen 107', th: 'ภูมิแพ้ต่อสารก่อภูมิแพ้ 107 ชนิด', p: 3500, t: '2 วัน'},
+      {c: 'Special', n: 'Allergy Food Intolerance 60 (IgG)', th: 'การแพ้อาหารแฝง 60 ชนิด', p: 6900, t: '7 วัน'}
+    ];
+  }
+
+  setLang(l) {
+    try { localStorage.setItem('mt_lang', l); } catch (e) {}
+    document.documentElement.lang = l;
+    this.setState({lang: l});
+  }
+
+  langBtn(on) {
+    return 'border:0;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:all .16s;' +
+      (on ? 'background:#0B4F9E;color:#fff;' : 'background:transparent;color:#5B7391;');
+  }
+
+  tab(active) {
+    return 'display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:0;border-radius:11px;font-size:14.5px;font-weight:600;cursor:pointer;transition:all .2s;' +
+      (active
+        ? 'background:#0B4F9E;color:#fff;box-shadow:0 8px 18px -10px rgba(11,79,158,.9);'
+        : 'background:transparent;color:#5B7391;');
+  }
+
+  chip(active) {
+    return 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:11px 6px;border-radius:12px;cursor:pointer;transition:all .18s;border:1.5px solid ' +
+      (active ? '#17B8A6;background:#E8F6F3;color:#0A6E62;' : '#DCE5EF;background:#fff;color:#3D5674;');
+  }
+
+  fmt(n) { return n.toLocaleString('en-US'); }
+
+  travelFee() {
+    const base = this.props.baseVisitFee ?? 350;
+    const perKm = this.props.perKmRate ?? 25;
+    const d = this.state.distance;
+    return this.state.mode === 'lab' ? 0 : base + (d > 10 ? (d - 10) * perKm : 0);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const isHome = s.mode === 'home';
+    const en = s.lang === 'en';
+    const L = (a, b) => en ? b : a;
+    const pw = n => en ? (n === 1 ? ' person' : ' people') : ' ท่าน';
+    const pkgs = (s.livePkgs || this.pkgs()).slice().sort((a, b) => this.pkgRank(a.name) - this.pkgRank(b.name));
+    const persons = s.persons;
+    const act = Math.min(s.active, persons.length - 1);
+    const cur = persons[act];
+    const pkgNames = p => Object.keys(p.pks || {});
+    const pickedList = Object.keys(cur.picked).map(k => cur.picked[k]);
+    const pickedSum = pickedList.reduce((a, t) => a + t.p, 0);
+    const personSum = p => {
+      const pk = pkgNames(p).reduce((a, k) => a + (p.pks[k] || 0), 0);
+      return pk + Object.keys(p.picked).reduce((a, k) => a + p.picked[k].p, 0);
+    };
+    const peopleTotal = persons.reduce((a, p) => a + personSum(p), 0);
+    const travel = this.travelFee();
+    const total = peopleTotal + travel;
+    const setPerson = (i, patch) => this.setState(st => ({
+      persons: st.persons.map((p, j) => j === i ? Object.assign({}, p, patch) : p)
+    }));
+
+    const all = s.liveTests || this.tests();
+    const cats = ['ทั้งหมด'].concat(all.map(t => t.c).filter((c, i, a) => a.indexOf(c) === i));
+    const q = s.testQuery.trim().toLowerCase();
+    const filtered = all.filter(t =>
+      (s.testCat === 'ทั้งหมด' || t.c === s.testCat) &&
+      (!q || t.n.toLowerCase().indexOf(q) > -1 || t.th.indexOf(s.testQuery.trim()) > -1));
+    const shown = s.showAllTests ? filtered : filtered.slice(0, 12);
+
+    return {
+      t: DICT[s.lang] || DICT.th,
+      setTh: () => this.setLang('th'),
+      setEn: () => this.setLang('en'),
+      langThStyle: this.langBtn(!en),
+      langEnStyle: this.langBtn(en),
+      isHome, isLab: !isHome,
+      selectLab: () => this.setState({mode: 'lab'}),
+      selectHome: () => this.setState({mode: 'home'}),
+      labTabStyle: this.tab(!isHome),
+      homeTabStyle: this.tab(isHome),
+      panelTitle: isHome ? L('นัดทีมเจาะเลือดถึงบ้าน', "Book a home collection team") : L('นัดเข้ารับบริการที่สาขา', "Book a branch visit"),
+      ctaLabel: isHome ? L('จองบริการถึงบ้าน', "Book home service") : L('จองคิวที่แล็บ', "Book lab queue"),
+      channelSummary: isHome
+        ? L('เจาะเลือดถึงบ้าน · ', "Home collection · ") + (s.address || L('ยังไม่ระบุที่อยู่', "No address yet")) + L(' · ระยะทาง ', " · distance ") + s.distance + L(' กม.', ' km')
+        : L('เข้ารับบริการที่สาขา · ไม่มีค่าเดินทาง', "Branch visit · no travel fee"),
+      cartLabel: persons.length + pw(persons.length) + ' · ' + s.visitDate + ' ' + s.slot,
+      barVisible: total > 0,
+      barSummary: persons.length + pw(persons.length) + ' · ' +
+        persons.reduce((a, p) => a + Object.keys(p.pks || {}).length, 0) + L(' แพ็กเกจ · ', " packages · ") +
+        persons.reduce((a, p) => a + Object.keys(p.picked || {}).length, 0) + L(' รายการเดี่ยว', ' single tests') +
+        (isHome && travel ? L(' · ค่าเดินทาง ฿', " · travel ฿") + this.fmt(travel) : ''),
+      peopleCount: persons.length,
+      multiPeople: persons.length > 1,
+      personChips: persons.map((p, i) => ({
+        label: L('คนที่ ', 'Person ') + (i + 1),
+        select: () => this.setState({active: i}),
+        style: 'font-size:12.5px;font-weight:700;padding:9px 15px;border-radius:999px;cursor:pointer;border:1.5px solid ' +
+          (i === act ? '#1466C7' : '#DCE5EF') + ';background:' + (i === act ? '#1466C7' : '#fff') + ';color:' + (i === act ? '#fff' : '#3D5674')
+      })),
+      incPeople: () => this.setState(st => st.persons.length >= 8 ? st : ({persons: st.persons.concat([{pks: {}, picked: {}}])})),
+      decPeople: () => this.setState(st => st.persons.length <= 1 ? st : ({
+        persons: st.persons.slice(0, -1),
+        active: Math.min(st.active, st.persons.length - 2)
+      })),
+
+      popular: this.popularTests().map(p => {
+        const toggle = (key, price, group) => () => {
+          const nx = Object.assign({}, cur.pks);
+          if (nx[key] !== undefined) { delete nx[key]; } else {
+            if (group) Object.keys(nx).forEach(k => { if (k.indexOf(p.name) === 0) delete nx[k]; });
+            nx[key] = price;
+          }
+          setPerson(act, {pks: nx});
+        };
+        const on = p.tiers ? Object.keys(cur.pks).some(k => k.indexOf(p.name) === 0) : cur.pks[p.name] !== undefined;
+        return {
+          name: en && p.nameEn || p.name,
+          detail: en && p.detailEn || p.detail,
+          thumb: React.createElement('img', {
+            src: p.poster, alt: p.name,
+            style: {width: '100%', height: '100%', objectFit: 'cover', display: 'block'}
+          }),
+          hasTiers: !!p.tiers,
+          single: !p.tiers,
+          hasWas: !!p.was,
+          wasText: p.was ? this.fmt(p.was) : '',
+          priceText: p.price ? this.fmt(p.price) : '',
+          cardStyle: 'display:flex;flex-direction:column;background:#fff;border:1.5px solid ' + (on ? '#1466C7' : '#E4ECF5') +
+            ';border-radius:18px;overflow:hidden;transition:border-color .2s, box-shadow .2s;box-shadow:' +
+            (on ? '0 22px 44px -28px rgba(11,79,158,.45)' : '0 1px 0 rgba(4,28,58,.03)'),
+          btnLabel: on ? L('เลือกแล้ว ✓', "Selected ✓") : L('เลือกรายการนี้', "Select"),
+          btnStyle: 'border:1.5px solid ' + (on ? '#1466C7' : '#CFE0F1') + ';background:' + (on ? '#1466C7' : '#fff') +
+            ';color:' + (on ? '#fff' : '#0B4F9E') + ';font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap',
+          select: toggle(p.name, p.price),
+          openPoster: () => this.setState({poster: p.poster, posterTitle: p.name}),
+          tiers: (p.tiers || []).map(t => {
+            const key = p.name + ' · ' + t.label;
+            const sel = cur.pks[key] !== undefined;
+            return {
+              label: L(t.label, t.label.replace('เชื้อ', 'pathogens')),
+              priceText: this.fmt(t.price),
+              select: toggle(key, t.price, p.group),
+              style: 'display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 12px;border-radius:999px;cursor:pointer;border:1.5px solid ' +
+                (sel ? '#1466C7' : '#CFE0F1') + ';background:' + (sel ? '#F1F7FF' : '#fff') + ';color:' + (sel ? '#0B4F9E' : '#3D5674')
+            };
+          })
+        };
+      }),
+
+      bookingLines: persons.map((p, i) => {
+        const nm = pkgNames(p);
+        const cnt = Object.keys(p.picked).length;
+        return {
+          text: L('คนที่ ', 'Person ') + (i + 1) + ': ' + (nm.length ? nm.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')) +
+            (cnt ? L(' + รายการเดี่ยว ', ' + ') + cnt + L(' รายการ', ' single tests') : '') + ' · ฿' + this.fmt(personSum(p))
+        };
+      }),
+
+      address: s.address,
+      onAddress: e => this.setState({address: e.target.value}),
+      usePin: () => this.setState({address: L('ปักหมุดแล้ว · 18.7961° N, 98.9679° E', "Pinned · 18.7961° N, 98.9679° E")}),
+      zoneNote: s.address
+        ? L('อยู่ในพื้นที่ให้บริการ · ทีมใกล้ที่สุดห่าง ', "In service area · nearest team ") + s.distance + L(' กม.', ' km')
+        : L('พิมพ์ที่อยู่ หรือกดปุ่มเพื่อปักหมุดตำแหน่งปัจจุบัน', "Type an address or tap the button to pin your current location"),
+
+      patientNote: s.patient === 'bedridden'
+        ? L('ทีม 2 คน พร้อมเตียงลมและอุปกรณ์ช่วยพยุง', "2-person team with air mattress and support equipment")
+        : s.patient === 'elderly'
+          ? L('เจาะโดยผู้เชี่ยวชาญเส้นเลือดเปราะ วัดความดันฟรี', "Drawn by specialists in fragile veins · free blood pressure check")
+          : L('ทีม 1 คน ใช้เวลาที่บ้านประมาณ 15 นาที', "1-person team · about 15 minutes at home"),
+      pickGeneral: () => this.setState({patient: 'general'}),
+      pickElderly: () => this.setState({patient: 'elderly'}),
+      pickBedridden: () => this.setState({patient: 'bedridden'}),
+      generalStyle: this.chip(s.patient === 'general'),
+      elderlyStyle: this.chip(s.patient === 'elderly'),
+      bedriddenStyle: this.chip(s.patient === 'bedridden'),
+
+      pickFile: () => this.setState({file: s.file ? '' : 'lab-order-นพ.สมชาย.pdf'}),
+      uploadLabel: s.file || L('อัปโหลดใบสั่งตรวจจากแพทย์', "Upload doctor's lab order"),
+      uploadStyle: 'display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:15px 16px;border-radius:12px;cursor:pointer;text-align:left;transition:all .18s;border:1.5px dashed ' +
+        (s.file ? '#17B8A6;background:#E8F6F3;color:#0A6E62;' : '#C6D6E8;background:#F7FAFD;color:#3D5674;'),
+
+      visitDate: s.visitDate,
+      onDate: e => this.setState({visitDate: e.target.value}),
+      slot: s.slot,
+      onSlot: e => this.setState({slot: e.target.value}),
+
+      clearPkg: () => setPerson(act, {pks: {}}),
+      noPkgMark: pkgNames(cur).length === 0 ? '✓' : '',
+      noPkgStyle: 'display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;margin-bottom:12px;padding:14px 16px;border-radius:13px;cursor:pointer;text-align:left;transition:all .18s;border:1.5px ' +
+        (pkgNames(cur).length === 0 ? 'solid #17B8A6;background:#E8F6F3;color:#0A6E62;' : 'dashed #C6D6E8;background:#F7FAFD;color:#3D5674;'),
+
+      posterOpen: !!s.poster,
+      posterTitle: s.posterTitle,
+      posterImg: s.poster ? React.createElement('img', {
+        src: s.poster, alt: s.posterTitle || '',
+        style: {width: 'min(92vw, 560px)', height: 'auto', maxHeight: '76vh', objectFit: 'contain', borderRadius: 14, display: 'block', flexShrink: 0}
+      }) : null,
+      closePoster: () => this.setState({poster: null}),
+
+      packages: pkgs.map((p, i) => ({
+        name: p.name,
+        detail: p.detail,
+        priceText: this.fmt(p.price),
+        hasPoster: !!this.posterFor(p.name),
+        openPoster: e => {
+          if (e && e.stopPropagation) e.stopPropagation();
+          this.setState({poster: this.posterFor(p.name), posterTitle: p.name});
+        },
+        select: () => setPerson(act, {pks: (() => {
+          const nx = Object.assign({}, cur.pks);
+          if (nx[p.name] !== undefined) delete nx[p.name]; else nx[p.name] = p.price;
+          return nx;
+        })()}),
+        style: 'display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;padding:14px 16px;border-radius:13px;cursor:pointer;text-align:left;transition:all .18s;border:1.5px solid ' +
+          (cur.pks[p.name] !== undefined ? '#1466C7;background:#F1F7FF;color:#0B4F9E;' : '#E4ECF5;background:#fff;color:#0F2540;')
+      })),
+
+      distance: s.distance,
+      distanceText: s.distance,
+      onDistance: e => this.setState({distance: Number(e.target.value)}),
+      personTabs: persons.map((p, i) => ({
+        label: L('คนที่ ', 'Person ') + (i + 1),
+        sub: (pkgNames(p).length === 0 ? L('รายการเดี่ยว', 'Single tests') : pkgNames(p).length === 1 ? pkgNames(p)[0] : pkgNames(p).length + L(' แพ็กเกจ', ' packages')) +
+          ' · ฿' + this.fmt(personSum(p)),
+        select: () => this.setState({active: i}),
+        style: 'display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 14px;border-radius:12px;cursor:pointer;transition:all .16s;border:1.5px solid ' +
+          (act === i ? '#1466C7;background:#1466C7;color:#fff;' : '#DCE5EF;background:#fff;color:#3D5674;'),
+        canRemove: persons.length > 1,
+        remove: e => {
+          if (e && e.stopPropagation) e.stopPropagation();
+          this.setState(st => ({
+            persons: st.persons.filter((x, j) => j !== i),
+            active: Math.max(0, Math.min(st.active, st.persons.length - 2))
+          }));
+        }
+      })),
+      addPerson: () => this.setState(st => st.persons.length >= 8 ? {} : {
+        persons: st.persons.concat([{pks: {}, picked: {}}]),
+        active: st.persons.length
+      }),
+      canAddPerson: persons.length < 8,
+      activeLabel: L('คนที่ ', 'Person ') + (act + 1),
+      peopleCountText: persons.length + pw(persons.length),
+
+      lineItems: persons.map((p, i) => {
+        const nm = pkgNames(p);
+        const cnt = Object.keys(p.picked).length;
+        const pkSum = nm.reduce((a, k) => a + p.pks[k], 0);
+        return {
+          label: L('คนที่ ', 'Person ') + (i + 1) + ' · ' + (nm.length ? nm.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')),
+          note: (nm.length ? L('แพ็กเกจ ฿', "Package ฿") + this.fmt(pkSum) : L('เฉพาะรายการเดี่ยว', "Single tests only")) + (cnt ? L(' + รายการเดี่ยว ', ' + ') + cnt + L(' รายการ', ' single tests') : ''),
+          value: '฿' + this.fmt(personSum(p))
+        };
+      }).concat(isHome ? [
+        {label: L('ค่าเดินทางทีมเจาะเลือด', "Collection team travel fee"), note: s.distance <= 10 ? L('ในเขต 10 กม. เหมาจ่าย · คิดครั้งเดียวต่อการเดินทาง', "Flat rate within 10 km · charged once per trip") : '฿' + (this.props.perKmRate ?? 25) + L('/กม. ส่วนที่เกิน 10 กม.', "/km beyond 10 km"), value: travel ? '฿' + this.fmt(travel) : L('ฟรี', 'Free')}
+      ] : []).concat([
+        {label: L('ค่าจัดส่งผลตรวจออนไลน์', "Online result delivery"), note: L('PDF พร้อมคำอธิบายผล', "PDF with explanations"), value: L('ฟรี', 'Free')}
+      ]),
+      totalText: this.fmt(total),
+
+      features: [
+        {title: L('นักเทคนิคการแพทย์วิชาชีพ', "Certified Medical Technologists"), en: L("Certified Medical Technologists", 'นักเทคนิคการแพทย์วิชาชีพ'), body: L('ทุกทีมมีใบประกอบวิชาชีพเทคนิคการแพทย์ ผ่านการอบรมการเจาะเลือดที่บ้านและการควบคุมการติดเชื้อ', "Every team holds a medical technology license and is trained in home blood draws and infection control."), icon: ic(['M12 3 4 6v6c0 4.4 3.4 7.9 8 9 4.6-1.1 8-4.6 8-9V6l-8-3Z', 'm9 12 2 2 4-4'])},
+        {title: L('ไม่ต้องรอคิวโรงพยาบาล', "No Hospital Queues"), en: L("No Hospital Queues", 'ไม่ต้องรอคิวโรงพยาบาล'), body: L('เลือกช่วงเวลาที่สะดวก ทีมถึงบ้านตรงเวลา ใช้เวลาเจาะเลือดเฉลี่ย 15 นาที', "Pick a convenient slot. The team arrives on time and a draw takes about 15 minutes."), icon: ic(['M12 7v5l3 2', 'M21 12a9 9 0 1 1-9-9'])},
+        {title: L('ผลตรวจออนไลน์ปลอดภัย', "Secure Online Reports"), en: L("Secure Online Reports", 'ผลตรวจออนไลน์ปลอดภัย'), body: L('ดูผลผ่านลิงก์ส่วนตัวพร้อมรหัส OTP เก็บข้อมูลตามมาตรฐาน PDPA ดาวน์โหลด PDF ได้ตลอดเวลา', "View results via a private link with OTP. Data stored to PDPA standards, PDF download anytime."), icon: ic(['M6 10V8a6 6 0 0 1 12 0v2', 'M5 10h14v10H5z', 'M12 14v3'])},
+        {title: L('ควบคุมอุณหภูมิตัวอย่าง', "Cold-chain Transport"), en: L("Cold-chain Transport", 'ควบคุมอุณหภูมิตัวอย่าง'), body: L('ตัวอย่างเลือดบรรจุกล่องควบคุมอุณหภูมิ 2–8°C บันทึกอุณหภูมิตลอดเส้นทางถึงห้องแล็บ', "Samples travel in 2–8°C temperature-controlled boxes, with temperature logged all the way to the lab."), icon: ic(['M12 3v18', 'M5 7l7 4 7-4', 'M5 17l7-4 7 4'])},
+        {title: L('ดูแลผู้ป่วยติดเตียงโดยเฉพาะ', "Bedridden Care Protocol"), en: L("Bedridden Care Protocol", 'ดูแลผู้ป่วยติดเตียงโดยเฉพาะ'), body: L('ทีม 2 คนพร้อมอุปกรณ์พยุงตัว เจาะเลือดในท่านอนได้อย่างปลอดภัย ประสานงานกับผู้ดูแลล่วงหน้า', "A two-person team with support equipment draws blood safely lying down, coordinated with caregivers in advance."), icon: ic(['M4 18v-6h11a4 4 0 0 1 4 4v2', 'M4 18h16', 'M8 12V9', 'M7 6h3'])},
+        {title: L('ปรึกษาผลกับทีมแล็บฟรี', "Free Result Consultation"), en: L("Free Result Consultation", 'ปรึกษาผลกับทีมแล็บฟรี'), body: L('หลังผลออก โทรหรือแชทกับนักเทคนิคการแพทย์เพื่ออธิบายค่าผิดปกติ และแนะนำการตรวจติดตาม', "After results are out, call or chat with a medical technologist about abnormal values and follow-up tests."), icon: ic(['M21 15a3 3 0 0 1-3 3H8l-5 3V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3z', 'M8 10h8', 'M8 13.5h5'])}
+      ],
+
+      syncBadge: s.syncState === 'live' ? L('ซิงก์แล้ว', "Synced") : s.syncState === 'loading' ? L('กำลังดึงข้อมูล', "Loading") : L('ข้อมูลสำรอง', "Backup data"),
+      syncBadgeStyle: 'padding:4px 10px;border-radius:999px;font-weight:600;font-size:11.5px;' +
+        (s.syncState === 'live' ? 'background:#E8F6F3;color:#0A6E62;'
+          : s.syncState === 'loading' ? 'background:#EAF3FF;color:#0B4F9E;'
+            : 'background:#FFF1E8;color:#9A5220;'),
+      syncNote: en ? (s.syncState === 'live' ? pkgs.length + ' packages and ' + all.length + ' tests pulled live from Master Price List 2026 (Retail column). Sheet edits appear on next reload.' : s.syncState === 'loading' ? 'Connecting to Master Price List 2026' : 'Could not reach the sheet (share it as Anyone with the link). Showing saved backup prices.') : s.syncState === 'live'
+        ? 'แพ็กเกจ ' + pkgs.length + ' ชุด และรายการตรวจ ' + all.length + ' รายการ ดึงสดจาก Master Price List 2026 (คอลัมน์ Retail) แก้ในชีตแล้วหน้านี้อัปเดตทันทีที่โหลดใหม่'
+        : s.syncState === 'loading'
+          ? 'กำลังเชื่อมต่อ Master Price List 2026'
+          : 'เชื่อมต่อชีตไม่ได้ (ต้องตั้งค่าแชร์เป็น Anyone with the link) กำลังแสดงราคาชุดสำรองที่บันทึกไว้',
+
+      testCats: cats.map(c => ({
+        label: c === 'ทั้งหมด' ? L('ทั้งหมด', 'All') : c,
+        select: () => this.setState({testCat: c, showAllTests: false}),
+        style: 'padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;transition:all .16s;border:1.5px solid ' +
+          (s.testCat === c ? '#1466C7;background:#1466C7;color:#fff;' : '#DCE5EF;background:#fff;color:#3D5674;')
+      })),
+      testQuery: s.testQuery,
+      onTestQuery: e => this.setState({testQuery: e.target.value, showAllTests: false}),
+      visibleTests: shown.map(t => {
+        const on = !!cur.picked[t.n];
+        return {
+          name: t.n, th: t.th, cat: t.c, priceText: this.fmt(t.p), turnaround: en ? t.t.replace('ชั่วโมง', 'hr').replace('วัน', 'days').replace('นาที', 'min') : t.t,
+          toggle: () => this.setState(st => ({
+            persons: st.persons.map((pp, j) => {
+              if (j !== act) return pp;
+              const p = Object.assign({}, pp.picked);
+              if (p[t.n]) delete p[t.n]; else p[t.n] = {n: t.n, p: t.p};
+              return Object.assign({}, pp, {picked: p});
+            })
+          })),
+          rowStyle: 'display:grid;grid-template-columns:minmax(200px,2.2fr) minmax(110px,.85fr) minmax(84px,.6fr) minmax(84px,.55fr) 40px;gap:16px;align-items:center;padding:15px 22px;border-bottom:1px solid #EEF3F9;cursor:pointer;transition:background .14s;' +
+            (on ? 'background:#F1F7FF;' : ''),
+          btnStyle: 'width:30px;height:30px;border:0;border-radius:9px;display:grid;place-items:center;font-size:17px;font-weight:600;cursor:pointer;transition:all .16s;' +
+            (on ? 'background:#17B8A6;color:#fff;' : 'background:#EEF3F9;color:#0B4F9E;'),
+          btnLabel: on ? '✓' : '+'
+        };
+      }),
+      pickedCount: pickedList.length,
+      hasPicked: pickedList.length > 0,
+      pickedChips: pickedList.map(t => ({
+        name: t.n,
+        priceText: this.fmt(t.p),
+        remove: () => this.setState(st => ({
+          persons: st.persons.map((pp, j) => {
+            if (j !== act) return pp;
+            const p = Object.assign({}, pp.picked);
+            delete p[t.n];
+            return Object.assign({}, pp, {picked: p});
+          })
+        }))
+      })),
+      clearPicked: () => setPerson(act, {picked: {}}),
+      pickedSummaryLabel: pickedList.length
+        ? L('คนที่ ', 'Person ') + (act + 1) + ' เลือกรายการเดี่ยว ' + pickedList.length + ' รายการ · ฿' + this.fmt(pickedSum)
+        : L('คนที่ ', 'Person ') + (act + 1) + ' ยังไม่ได้เลือกรายการตรวจเดี่ยว',
+      testCountText: filtered.length + L(' รายการ', ' tests'),
+      hasMoreTests: filtered.length > shown.length,
+      moreTestsLabel: L('ดูอีก ', "Show ") + (filtered.length - shown.length) + L(' รายการ', ' more'),
+      showMoreTests: () => this.setState({showAllTests: true}),
+      noTests: filtered.length === 0,
+
+      branches: [
+        {
+          n: '01', name: L('ศูนย์แล็บ เมดิคอลเทรนด์', "Medical Trend Lab Center"), tag: L('สันกำแพง', "San Kamphaeng"),
+          address: L('107/17 หมู่ 3 ต.ต้นเปา อ.สันกำแพง จ.เชียงใหม่ 50130', "107/17 Moo 3, Ton Pao, San Kamphaeng, Chiang Mai 50130"),
+          landmark: '',
+          phone: '095 247 2631', tel: 'tel:0952472631',
+          email: 'medicaltrend.lab@gmail.com',
+          mailto: 'mailto:medicaltrend.lab@gmail.com',
+          logo: 'uploads/MT%20Center%20copy.png',
+          map: 'https://maps.app.goo.gl/dHaP2e7HRyN2FW7V6'
+        },
+        {
+          n: '02', name: L('ราชพฤกษ์แล็บเชียงใหม่', "Ratchaphruek Lab Chiang Mai"), tag: L('หางดง', "Hang Dong"),
+          address: L('5/1 หมู่ที่ 1 ถนนเชียงใหม่-ฮอด ต.หางดง อ.หางดง จ.เชียงใหม่', "5/1 Moo 1, Chiang Mai–Hot Rd, Hang Dong, Chiang Mai"),
+          landmark: '',
+          phone: '085 717 8242', tel: 'tel:0857178242',
+          email: 'ratchaphruek_lab@hotmail.com',
+          mailto: 'mailto:ratchaphruek_lab@hotmail.com',
+          logo: 'uploads/PRL%20Logo.png',
+          map: 'https://maps.app.goo.gl/y9izRjZqGh4rdBw3A'
+        },
+        {
+          n: '03', name: L('เมดิคอลเทรนด์แล็บ สาขาไอบลิส สหคลินิก', "Medical Trend Lab, iBliss Polyclinic branch"), tag: L('วัดเกตุ', "Wat Ket"),
+          address: L('308/8 ถนนเชียงใหม่-ลำพูน ต.วัดเกตุ อ.เมือง จ.เชียงใหม่', "308/8 Chiang Mai–Lamphun Rd, Wat Ket, Mueang, Chiang Mai"),
+          landmark: L('เวชกรรม + เทคนิคการแพทย์', "Medicine + Medical Technology"),
+          phone: '088 564 7132', tel: 'tel:0885647132',
+          email: 'medicaltrend.ibliss@gmail.com',
+          mailto: 'mailto:medicaltrend.ibliss@gmail.com',
+          logo: 'uploads/MT%20Center%20copy.png',
+          map: 'https://maps.app.goo.gl/fLN92AkvcfVXRNn7A'
+        },
+        {
+          n: '04', name: L('เมดิคอลเทรนด์ เฮลธ์แคร์ สหคลินิก', "Medical Trend Healthcare Polyclinic"), tag: L('พะเยา', "Phayao"),
+          address: L('429 หมู่ที่ 1 ต.แม่กา อ.เมือง จ.พะเยา 56000', "429 Moo 1, Mae Ka, Mueang, Phayao 56000"),
+          landmark: L('เทคนิคการแพทย์ + การพยาบาลและการผดุงครรภ์', "Medical Technology + Nursing & Midwifery"),
+          phone: '090 226 4192', tel: 'tel:0902264192',
+          email: 'medicaltrend.th@gmail.com',
+          mailto: 'mailto:medicaltrend.th@gmail.com',
+          logo: 'uploads/MTH%20Logo.png',
+          map: 'https://maps.app.goo.gl/tDfmQh4GsNK9HKAbA'
+        }
+      ],
+
+      steps: [
+        {n: '1', title: L('จองผ่านเว็บหรือ LINE', "Book via web or LINE"), body: L('เลือกแพ็กเกจ ปักหมุดที่อยู่ และแนบใบสั่งตรวจของแพทย์', "Choose a package, pin your address and attach your doctor's lab order."), time: L('ใช้เวลา 2 นาที', "Takes 2 minutes"), icon: ic(['M8 4h8a2 2 0 0 1 2 2v14l-6-3-6 3V6a2 2 0 0 1 2-2Z'], {size: 26})},
+        {n: '2', title: L('ยืนยันนัดและคำแนะนำ', "Confirmation & prep advice"), body: L('เจ้าหน้าที่โทรยืนยัน แจ้งการงดน้ำงดอาหารและยาที่ต้องหยุด', "Staff call to confirm and explain fasting and any medication to pause."), time: L('ภายใน 30 นาที', "Within 30 minutes"), icon: ic(['M4 6h16v12H4z', 'm4 7 8 6 8-6'], {size: 26})},
+        {n: '3', title: L('ทีมเดินทางถึงบ้าน', "Team travels to you"), body: L('ติดตามตำแหน่งทีมแบบเรียลไทม์ แสดงบัตรวิชาชีพก่อนเริ่มทุกครั้ง', "Track the team in real time. They show their professional ID before starting."), time: L('ตรงตามช่วงเวลาที่เลือก', "Within your chosen slot"), icon: ic(['M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z', 'M12 12.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z'], {size: 26})},
+        {n: '4', title: L('เจาะเลือดและส่งแล็บ', "Blood draw & lab delivery"), body: L('เจาะในบ้านคุณ 15 นาที ตัวอย่างเข้าห้องแล็บภายใน 2 ชั่วโมง', "15 minutes at your home; samples reach the lab within 2 hours."), time: L('15 นาทีที่บ้าน', "15 minutes at home"), icon: ic(['M9.5 3h5', 'M10.5 3v6l-3.4 6.6A3 3 0 0 0 9.8 20h4.4a3 3 0 0 0 2.7-4.4L13.5 9V3', 'M8 15h8'], {size: 26})},
+        {n: '5', title: L('รับผลและปรึกษา', "Results & consultation"), body: L('ผลออนไลน์พร้อมคำอธิบาย นัดคุยกับนักเทคนิคการแพทย์ได้ฟรี', "Online results with explanations, plus a free talk with a medical technologist."), time: L('24–48 ชั่วโมง', "24–48 hours"), icon: ic(['M4 4h13l3 3v13H4z', 'M8 12h8', 'M8 16h5'], {size: 26})}
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>
