@@ -69,6 +69,8 @@ Team domain ของบริษัท: `medicaltrend.cloudflareaccess.com` (�
      (อย่าเลือก *Cloudflare* เพราะใช้ได้เฉพาะสมาชิกบัญชี Cloudflare) → **Save**
 4. **AUD Tag** — ในแอปเดียวกัน แท็บ **Overview / Basic information** → **Application Audience (AUD) Tag**
    เป็นเลขฐาน 16 ยาว **64 ตัว ไม่มีขีด** (ไม่ใช่ Application ID แบบ `xxxxxxxx-xxxx-…` ที่อยู่ใน URL)
+   **หาไม่เจอ?** ข้ามไปก่อนได้: รัน `npm run deploy` แล้วเปิด https://lab.medicaltrend.stream/admin → ล็อกอินด้วยรหัส OTP
+   หน้าเว็บจะแสดง AUD Tag ที่ถูกต้องให้คัดลอก (แสดงเฉพาะเมื่อ token ผ่านการตรวจลายเซ็นของ Cloudflare แล้ว)
 5. ใส่ใน `wrangler.jsonc` → `"ACCESS_AUD": "<AUD tag>"` แล้ว `npm run deploy`
 6. เปิด https://lab.medicaltrend.stream/admin → กรอก `lab@medicaltrend.co.th` → ใส่รหัส 6 หลักจากอีเมล
    (ผู้ส่ง `noreply@notify.cloudflare.com` — ถ้าไม่เจอให้ดูใน Spam หรือ allowlist โดเมน `notify.cloudflare.com`)

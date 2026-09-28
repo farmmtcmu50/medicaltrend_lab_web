@@ -10,7 +10,7 @@ export interface AccessEnv {
   ADMIN_DEV_EMAIL?: string;     // local `wrangler dev` only: put it in .dev.vars (gitignored). Never set it on the deployed Worker.
 }
 
-export type AdminAuth = { ok: true; email: string } | { ok: false; status: number; reason: string };
+export type AdminAuth = { ok: true; email: string } | { ok: false; status: number; reason: string; detectedAud?: string };
 
 interface Jwk extends JsonWebKey { kid: string }
 let certCache: { at: number; keys: Jwk[] } | null = null;
@@ -22,12 +22,26 @@ export async function authenticateAdmin(req: Request, env: AccessEnv): Promise<A
     console.warn('ADMIN_DEV_EMAIL is set: Access check bypassed (local development only)');
     return { ok: true, email: env.ADMIN_DEV_EMAIL };
   }
-  if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD || !allow.length) {
+  if (!env.ACCESS_TEAM_DOMAIN || !allow.length) {
     return { ok: false, status: 503, reason: 'access_not_configured' };
   }
   // The AUD tag is 64 hex chars; a UUID here is the Application ID pasted by mistake.
-  if (!/^[0-9a-f]{64}$/i.test(env.ACCESS_AUD.trim())) {
-    return { ok: false, status: 503, reason: 'access_aud_invalid' };
+  if (!env.ACCESS_AUD || !/^[0-9a-f]{64}$/i.test(env.ACCESS_AUD.trim())) {
+    // Setup helper: once Access is in front of /admin, the signed token carries the right
+    // AUD tag, so show it instead of making the admin hunt for it in the dashboard.
+    // Nothing is granted here; the request is still refused.
+    const reason = env.ACCESS_AUD ? 'access_aud_invalid' : 'access_not_configured';
+    const token = req.headers.get('cf-access-jwt-assertion');
+    if (token) {
+      try {
+        const payload = await verifyJwt(token, env.ACCESS_TEAM_DOMAIN, null);
+        const aud = (Array.isArray(payload.aud) ? payload.aud : [payload.aud]).find(a => typeof a === 'string' && /^[0-9a-f]{64}$/i.test(a));
+        if (aud) return { ok: false, status: 503, reason, detectedAud: aud };
+      } catch (err) {
+        console.warn('access jwt rejected during setup', err);
+      }
+    }
+    return { ok: false, status: 503, reason };
   }
 
   const token = req.headers.get('cf-access-jwt-assertion');
@@ -44,7 +58,8 @@ export async function authenticateAdmin(req: Request, env: AccessEnv): Promise<A
   }
 }
 
-async function verifyJwt(token: string, teamDomain: string, aud: string): Promise<Record<string, unknown>> {
+/** aud = null skips only the audience check (setup helper); issuer, signature and expiry are always checked. */
+async function verifyJwt(token: string, teamDomain: string, aud: string | null): Promise<Record<string, unknown>> {
   const [h, p, s] = token.split('.');
   if (!h || !p || !s) throw new Error('malformed');
   const header = JSON.parse(b64urlText(h));
@@ -55,7 +70,7 @@ async function verifyJwt(token: string, teamDomain: string, aud: string): Promis
   const now = Math.floor(Date.now() / 1000);
   if (payload.iss !== issuer) throw new Error('iss');
   const auds: string[] = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-  if (!auds.includes(aud)) throw new Error('aud');
+  if (aud !== null && !auds.includes(aud)) throw new Error('aud');
   if (typeof payload.exp !== 'number' || payload.exp < now - 30) throw new Error('exp');
   if (typeof payload.nbf === 'number' && payload.nbf > now + 30) throw new Error('nbf');
 

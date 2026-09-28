@@ -33,9 +33,13 @@ export default {
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
         if (!auth.ok) {
-          return isAdminPage(url.pathname)
-            ? new Response('ไม่มีสิทธิ์เข้าหน้านี้ (' + auth.reason + ')', { status: auth.status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } })
-            : json({ error: auth.reason }, auth.status);
+          if (!isAdminPage(url.pathname)) return json({ error: auth.reason }, auth.status);
+          const msg = auth.detectedAud
+            ? 'ล็อกอินผ่าน Cloudflare Access สำเร็จ แต่ยังไม่ได้ใส่ AUD Tag ใน wrangler.jsonc\n\n' +
+              'AUD Tag ของแอปนี้คือ:\n\n' + auth.detectedAud + '\n\n' +
+              'คัดลอกค่านี้ไปใส่ที่ "ACCESS_AUD" ใน wrangler.jsonc แล้วรัน npm run deploy อีกครั้ง'
+            : 'ไม่มีสิทธิ์เข้าหน้านี้ (' + auth.reason + ')';
+          return new Response(msg, { status: auth.status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
         }
         if (url.pathname.startsWith('/api/admin')) return await handleAdmin(req, env, auth.email);
         const page = await env.ASSETS.fetch(new Request(new URL('/admin', url), req));
