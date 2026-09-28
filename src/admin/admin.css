@@ -1,0 +1,25 @@
+/* Booking Console — base styles and hover states from project/Admin Console.dc.html */
+body { margin: 0; background: #EEF3F9; -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+a { color: #0B4F9E; text-decoration: none; }
+a:hover { color: #17A090; }
+input, select, button, textarea { font-family: inherit; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #1466C7; outline-offset: 2px; }
+
+.a-pale:hover { background: #EAF3FF !important; }
+.a-row { transition: background .14s; }
+.a-row:hover { background: #F7FAFD; }
+.a-nav:hover { background: rgba(255,255,255,.1) !important; }
+.a-nav[aria-current="page"]:hover { background: #fff !important; }
+
+.a-grid { display: grid; grid-template-columns: 124px minmax(170px, 1.4fr) 92px minmax(150px, 1fr) 118px 44px 96px 116px 64px; gap: 12px; }
+
+@media (max-width: 760px) {
+  .a-aside { max-width: none !important; flex-basis: 100% !important; padding: 14px 14px 12px !important; gap: 12px !important; }
+  .a-aside-nav { flex-direction: row !important; overflow-x: auto; }
+  .a-aside-nav button, .a-aside-nav a { width: auto !important; white-space: nowrap; flex-shrink: 0; }
+  .a-aside-foot { display: none !important; }
+  .a-main { padding: 16px 14px 48px !important; }
+}

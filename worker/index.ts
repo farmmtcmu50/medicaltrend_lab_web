@@ -1,6 +1,7 @@
 // Cloudflare Worker for lab.medicaltrend.stream
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
+//   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
   BRANCH_IDS, PATIENT_TYPES, PRICING, SHEET_ID, SHEET_TAB, SLOTS,
@@ -8,7 +9,10 @@ import {
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
 
-export interface Env {
+import { authenticateAdmin, type AccessEnv } from './access';
+import { handleAdmin } from './admin';
+
+export interface Env extends AccessEnv {
   DB: D1Database;
   UPLOADS: R2Bucket;
   ASSETS: Fetcher;
@@ -26,6 +30,20 @@ export default {
     try {
       if (url.pathname === '/api/catalog' && req.method === 'GET') return await catalogResponse(env, ctx);
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
+      if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
+        const auth = await authenticateAdmin(req, env);
+        if (!auth.ok) {
+          return isAdminPage(url.pathname)
+            ? new Response('ไม่มีสิทธิ์เข้าหน้านี้ (' + auth.reason + ')', { status: auth.status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } })
+            : json({ error: auth.reason }, auth.status);
+        }
+        if (url.pathname.startsWith('/api/admin')) return await handleAdmin(req, env, auth.email);
+        const page = await env.ASSETS.fetch(new Request(new URL('/admin', url), req));
+        const res = new Response(page.body, page);
+        res.headers.set('cache-control', 'private, no-store');
+        res.headers.set('x-robots-tag', 'noindex');
+        return res;
+      }
       if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404);
       return env.ASSETS.fetch(req);
     } catch (err) {
@@ -34,6 +52,8 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>;
+
+const isAdminPage = (path: string) => path === '/admin' || path.startsWith('/admin/') || path === '/admin.html';
 
 // ---------------------------------------------------------------- catalog
 
@@ -152,6 +172,8 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
     ...priced.flatMap((person, i) => person.items.map(it =>
       env.DB.prepare('INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1,?2,?3,?4,?5)')
         .bind(id, i + 1, it.kind, it.name, it.price))),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, to_status) VALUES (?1, ?2, 'customer', 'created', 'pending')")
+      .bind(id, now.toISOString()),
   ];
 
   try {

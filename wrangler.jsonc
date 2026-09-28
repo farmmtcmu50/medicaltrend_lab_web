@@ -14,7 +14,16 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/admin", "/admin/*", "/admin.html"]
+  },
+
+  // Back office (/admin). Cloudflare Access is the login; the Worker re-checks the Access token
+  // and this allowlist. Fill ACCESS_TEAM_DOMAIN and ACCESS_AUD from Zero Trust -> Access -> Applications
+  // (see DEPLOY.md). Until both are set, /admin answers 503 (fails closed).
+  "vars": {
+    "ADMIN_EMAILS": "lab@medicaltrend.co.th",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
   },
 
   "d1_databases": [
