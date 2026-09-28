@@ -54,21 +54,24 @@ Booking Console (`src/admin/`, API ใน `worker/admin.ts`) มี 3 หน้�
 ถ้ายังไม่ตั้งค่า หน้า `/admin` จะตอบ 503 — ไม่มีทางเปิดข้อมูลโดยไม่ล็อกอิน
 
 ### ตั้งค่า Cloudflare Access (ครั้งเดียว)
-1. https://dash.cloudflare.com → **Zero Trust** (ครั้งแรกจะให้ตั้งชื่อ team เช่น `medicaltrend` → team domain = `medicaltrend.cloudflareaccess.com` และเลือกแพ็กเกจ Free)
-2. **Access → Applications → Add an application → Self-hosted**
-   - Application name: `MT Booking Console` · Session duration: `24 hours`
-   - เพิ่ม public hostname 2 รายการ (โดเมนเดียวกัน ต่างกันที่ path):
-     `lab.medicaltrend.stream` path `admin` และ `lab.medicaltrend.stream` path `api/admin`
-3. Policy: ชื่อ `MT staff` · Action **Allow** · Include → **Emails** → `lab@medicaltrend.co.th`
-4. Login methods: ใช้ **One-time PIN** (ค่าเริ่มต้น) — ระบบจะส่งรหัส 6 หลักไปที่อีเมลทุกครั้งที่ล็อกอิน
-5. บันทึกแล้วเปิดแอปนั้น คัดลอก **Application Audience (AUD) Tag**
-6. ใส่ค่าใน `wrangler.jsonc` ส่วน `vars`:
-   ```jsonc
-   "ADMIN_EMAILS": "lab@medicaltrend.co.th",
-   "ACCESS_TEAM_DOMAIN": "medicaltrend.cloudflareaccess.com",
-   "ACCESS_AUD": "<AUD tag ที่คัดลอกมา>"
-   ```
-7. `npm run deploy` แล้วเปิด https://lab.medicaltrend.stream/admin → กรอกอีเมล → ใส่รหัสจากอีเมล
+Team domain ของบริษัท: `medicaltrend.cloudflareaccess.com` (ใส่ใน `wrangler.jsonc` แล้ว)
+
+1. **เปิดการล็อกอินด้วยรหัสทางอีเมล** — บัญชี Zero Trust ใหม่ไม่มี One-time PIN ให้อัตโนมัติ
+   https://dash.cloudflare.com → **Zero Trust → Integrations → Identity providers → Add new identity provider → One-time PIN**
+2. **สร้าง Policy** — **Zero Trust → Access controls → Policies → Create new policy**
+   - Policy name `MT staff` · Action **Allow** · Session duration `24 hours`
+   - Add rules → **Include** → Selector **Emails** → Value `lab@medicaltrend.co.th` → **Save**
+3. **สร้าง/แก้แอป** — **Zero Trust → Access controls → Applications → Add an application → Self-hosted** (หรือเปิดแอปเดิมแล้ว **Edit**)
+   - Application name `MT Booking Console`
+   - Public hostnames 2 รายการ: `lab.medicaltrend.stream` path `admin` และ `lab.medicaltrend.stream` path `api/admin`
+   - แท็บ **Policies** → **Select existing policies** → ติ๊ก `MT staff`
+   - แท็บ **Authentication** → ปิด *Accept all available identity providers* → ติ๊ก **One-time PIN** อย่างเดียว
+     (อย่าเลือก *Cloudflare* เพราะใช้ได้เฉพาะสมาชิกบัญชี Cloudflare) → **Save**
+4. **AUD Tag** — ในแอปเดียวกัน แท็บ **Overview / Basic information** → **Application Audience (AUD) Tag**
+   เป็นเลขฐาน 16 ยาว **64 ตัว ไม่มีขีด** (ไม่ใช่ Application ID แบบ `xxxxxxxx-xxxx-…` ที่อยู่ใน URL)
+5. ใส่ใน `wrangler.jsonc` → `"ACCESS_AUD": "<AUD tag>"` แล้ว `npm run deploy`
+6. เปิด https://lab.medicaltrend.stream/admin → กรอก `lab@medicaltrend.co.th` → ใส่รหัส 6 หลักจากอีเมล
+   (ผู้ส่ง `noreply@notify.cloudflare.com` — ถ้าไม่เจอให้ดูใน Spam หรือ allowlist โดเมน `notify.cloudflare.com`)
 
 **เพิ่มผู้ใช้ภายหลัง:** เพิ่มอีเมลทั้งใน Access policy (ข้อ 3) และใน `ADMIN_EMAILS` (คั่นด้วย `,`) แล้ว deploy ใหม่
 

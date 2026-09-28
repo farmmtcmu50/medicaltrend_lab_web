@@ -22,7 +22,7 @@
   // (see DEPLOY.md). Until both are set, /admin answers 503 (fails closed).
   "vars": {
     "ADMIN_EMAILS": "lab@medicaltrend.co.th",
-    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_TEAM_DOMAIN": "medicaltrend.cloudflareaccess.com",
     "ACCESS_AUD": ""
   },
 

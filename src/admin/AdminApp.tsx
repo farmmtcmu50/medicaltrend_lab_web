@@ -73,6 +73,8 @@ export default function AdminApp() {
           <div style={{ fontSize: 13, color: '#536C89', lineHeight: 1.6 }}>
             {authError === 'access_not_configured'
               ? 'ยังไม่ได้ตั้งค่า Cloudflare Access (ACCESS_TEAM_DOMAIN / ACCESS_AUD) ใน wrangler.jsonc'
+              : authError === 'access_aud_invalid'
+                ? 'ค่า ACCESS_AUD ไม่ใช่ AUD Tag (ต้องเป็นตัวอักษร 64 ตัวไม่มีขีด ไม่ใช่ Application ID) กรุณาตรวจใน Zero Trust → Applications → Overview'
               : authError === 'email_not_allowed'
                 ? 'อีเมลนี้ไม่ได้รับสิทธิ์เข้าหลังบ้าน'
                 : 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง'}

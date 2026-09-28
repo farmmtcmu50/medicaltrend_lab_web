@@ -25,6 +25,10 @@ export async function authenticateAdmin(req: Request, env: AccessEnv): Promise<A
   if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD || !allow.length) {
     return { ok: false, status: 503, reason: 'access_not_configured' };
   }
+  // The AUD tag is 64 hex chars; a UUID here is the Application ID pasted by mistake.
+  if (!/^[0-9a-f]{64}$/i.test(env.ACCESS_AUD.trim())) {
+    return { ok: false, status: 503, reason: 'access_aud_invalid' };
+  }
 
   const token = req.headers.get('cf-access-jwt-assertion');
   if (!token) return { ok: false, status: 401, reason: 'no_access_token' };
