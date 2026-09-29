@@ -41,7 +41,7 @@ export interface AdminBooking extends AdminRow {
   map_url: string | null;
   referrer: string | null;
   items: { person_no: number; kind: 'package' | 'test'; name: string; price: number }[];
-  events: { at: string; actor: string; action: 'created' | 'status' | 'note'; from_status: string | null; to_status: string | null; note: string | null }[];
+  events: { at: string; actor: string; action: 'created' | 'status' | 'note' | 'items'; from_status: string | null; to_status: string | null; note: string | null }[];
 }
 
 export interface AdminSummary {

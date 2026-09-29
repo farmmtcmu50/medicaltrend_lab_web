@@ -8,6 +8,7 @@ import {
 } from '../../shared/admin';
 import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
+import ItemEditor from './ItemEditor';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
 const bkkToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -360,6 +361,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [editing, setEditing] = useState(false);
   const load = useCallback(() => {
     setErr('');
     api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); }).catch(e => setErr(e.code || 'network'));
@@ -463,8 +465,15 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {editing ? (
+            <ItemEditor b={b} toast={toast} onCancel={() => setEditing(false)} onConflict={() => { setEditing(false); load(); }}
+              onSaved={x => { setB(x); setEditing(false); }} />
+          ) : (
           <div style={card}>
-            <div style={cardTitle}>ผู้รับบริการ {b.people} คน</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span style={cardTitle}>ผู้รับบริการ {b.people} คน</span>
+              {b.status !== 'cancelled' && <button onClick={() => setEditing(true)} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
+            </div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
               {persons.map((items, i) => (
                 <div key={i} style={{ border: '1.5px solid #E9F0F8', borderRadius: 14, padding: 14, background: '#FBFDFF' }}>
@@ -485,6 +494,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
               ))}
             </div>
           </div>
+          )}
 
           <div style={card}>
             <div style={cardTitle}>หมายเหตุเจ้าหน้าที่</div>
@@ -552,7 +562,8 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                   <div style={{ color: '#0F2540', fontWeight: 600 }}>
                     {e.action === 'created' ? 'ลูกค้าจองผ่านหน้าเว็บ'
                       : e.action === 'status' ? (STATUS_META[e.from_status as Status]?.label || e.from_status) + ' → ' + (STATUS_META[e.to_status as Status]?.label || e.to_status)
-                        : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
+                        : e.action === 'items' ? 'แก้ไขรายการตรวจ: ' + (e.note || '')
+                          : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
                   </div>
                   <div style={{ color: '#8FA6C0' }}>{thDateTime(e.at)} · {e.actor === 'customer' ? 'ลูกค้า' : e.actor}</div>
                 </div>

@@ -5,16 +5,20 @@
 //   GET  /api/admin/bookings/:ref
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
 //   POST /api/admin/bookings/:ref/note     {"note": "..."}
+//   POST /api/admin/bookings/:ref/items    {"persons": [[{kind, name}]], "expectedUpdatedAt": "..."} re-price + LINE alert
 //   GET  /api/admin/bookings/:ref/lab-order
-import { BRANCH_IDS } from '../shared/catalog';
+import { BRANCH_IDS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
+import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
+import { notifyItemsChanged, type LineEnv } from './line';
 
-interface Env { DB: D1Database; UPLOADS: R2Bucket }
+interface Env extends LineEnv { UPLOADS: R2Bucket }
+export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
 
 const PAGE_SIZE = 50;
 const REF_RE = /^MT-\d{6}-[2-9A-HJ-NP-Z]{4}$/;
 
-export async function handleAdmin(req: Request, env: Env, email: string): Promise<Response> {
+export async function handleAdmin(req: Request, env: Env, email: string, ctx: AdminCtx): Promise<Response> {
   const url = new URL(req.url);
   const parts = url.pathname.replace(/^\/api\/admin\/?/, '').split('/').filter(Boolean);
 
@@ -54,6 +58,8 @@ export async function handleAdmin(req: Request, env: Env, email: string): Promis
     });
   }
 
+  if (req.method === 'POST' && parts.length === 3 && parts[2] === 'items') return editItems(req, env, email, ctx, ref, row.id);
+
   if (req.method === 'POST' && parts.length === 3 && (parts[2] === 'status' || parts[2] === 'note')) {
     const body = await req.json<{ status?: string; note?: string }>().catch(() => null);
     if (!body) return json({ error: 'bad_request' }, 400);
@@ -81,6 +87,54 @@ export async function handleAdmin(req: Request, env: Env, email: string): Promis
   }
 
   return json({ error: 'not_found' }, 404);
+}
+
+async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
+  const body = await req.json<{ persons?: unknown; expectedUpdatedAt?: unknown }>().catch(() => null);
+  const bad = (detail: string) => json({ error: 'bad_request', detail }, 400);
+  if (!body || !Array.isArray(body.persons)) return bad('persons');
+  if (body.persons.length < 1 || body.persons.length > MAX_PERSONS) return bad('persons');
+  const persons: EditItem[][] = [];
+  for (const p of body.persons) {
+    if (!Array.isArray(p) || p.length > MAX_ITEMS_PER_PERSON) return bad('items');
+    const items: EditItem[] = [];
+    for (const it of p as { kind?: unknown; name?: unknown }[]) {
+      if ((it?.kind !== 'package' && it?.kind !== 'test') || typeof it.name !== 'string' || !it.name || it.name.length > 200) return bad('item');
+      if (!items.some(x => x.kind === it.kind && x.name === it.name)) items.push({ kind: it.kind, name: it.name });
+    }
+    persons.push(items);
+  }
+
+  const b = await env.DB.prepare('SELECT status, total, travel_fee, updated_at FROM bookings WHERE id = ?1')
+    .bind(id).first<{ status: Status; total: number; travel_fee: number; updated_at: string | null }>();
+  if (!b) return json({ error: 'not_found' }, 404);
+  if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  // Someone else saved this booking since the editor was opened.
+  if ((body.expectedUpdatedAt ?? null) !== b.updated_at) return json({ error: 'conflict' }, 409);
+
+  const existing = (await env.DB.prepare('SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id')
+    .bind(id).all<StoredItem>()).results;
+  const edit = priceEdit(existing, persons, priceBook(await ctx.catalog()));
+  if (edit.unknown.length) return json({ error: 'unknown_items', items: edit.unknown }, 409);
+  if (!edit.added.length && !edit.removed.length && persons.length === existing.reduce((m, x) => Math.max(m, x.person_no), 0)) {
+    return json(await bookingDetail(env, ref));
+  }
+
+  const total = edit.subtotal + b.travel_fee;
+  const now = new Date().toISOString();
+  const summary = describeEdit(edit, b.total, total);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM booking_items WHERE booking_id = ?1').bind(id),
+    ...edit.persons.flatMap(p => p.items.map(it =>
+      env.DB.prepare('INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1, ?2, ?3, ?4, ?5)')
+        .bind(id, it.person_no, it.kind, it.name, it.price))),
+    env.DB.prepare('UPDATE bookings SET items_subtotal = ?1, total = ?2, people = ?3, updated_at = ?4 WHERE id = ?5')
+      .bind(edit.subtotal, total, persons.length, now, id),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, note) VALUES (?1, ?2, ?3, 'items', ?4)")
+      .bind(id, now, email, summary),
+  ]);
+  ctx.waitUntil(notifyItemsChanged(env, id, email, edit, b.total));
+  return json(await bookingDetail(env, ref));
 }
 
 async function listBookings(url: URL, env: Env) {

@@ -52,7 +52,9 @@ export default {
             : 'ไม่มีสิทธิ์เข้าหน้านี้ (' + auth.reason + ')';
           return new Response(msg, { status: auth.status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
         }
-        if (url.pathname.startsWith('/api/admin')) return await handleAdmin(req, env, auth.email);
+        if (url.pathname.startsWith('/api/admin')) {
+          return await handleAdmin(req, env, auth.email, { waitUntil: p => ctx.waitUntil(p), catalog: () => loadCatalog(env, ctx) });
+        }
         const page = await env.ASSETS.fetch(new Request(new URL('/admin', url), req));
         const res = new Response(page.body, page);
         res.headers.set('cache-control', 'private, no-store');

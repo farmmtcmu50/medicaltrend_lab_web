@@ -2,9 +2,11 @@
 //   POST /api/line/webhook  receives LINE events. Staff bind a group by typing
 //                           "ผูกแจ้งเตือน <LINE_BIND_CODE>" in it (the OA is public, so joining alone is not enough).
 //   notifyBooking()         pushes a summary of a new booking to the bound group; failures never affect the booking.
+//   notifyItemsChanged()    pushes what staff changed in a booking's tests from the Booking Console.
 // Secrets (wrangler secret put): LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_BIND_CODE.
 // Optional var LINE_GROUP_ID overrides the group bound through the webhook.
 import { BRANCH_NAMES, PATIENT_LABELS } from '../shared/admin';
+import type { PricedEdit } from '../shared/itemEdit';
 import { refLabel } from '../shared/ref';
 import { json } from './util';
 
@@ -115,6 +117,17 @@ interface ItemRow { person_no: number; kind: string; name: string; price: number
 
 /** Pushes a new-booking alert to the bound LINE group. Never throws: errors are only logged. */
 export async function notifyBooking(env: LineEnv, bookingId: string): Promise<void> {
+  await pushAbout(env, bookingId, 'booking alert', (b, items) => bookingMessage(b, items));
+}
+
+/** Pushes a "tests edited" alert after staff saved changes in the Booking Console. Never throws. */
+export async function notifyItemsChanged(
+  env: LineEnv, bookingId: string, actor: string, edit: Pick<PricedEdit, 'added' | 'removed'>, oldTotal: number,
+): Promise<void> {
+  await pushAbout(env, bookingId, 'items alert', (b, items) => itemsChangedMessage(b, items, actor, edit, oldTotal));
+}
+
+async function pushAbout(env: LineEnv, bookingId: string, what: string, render: (b: BookingRow, items: ItemRow[]) => string) {
   try {
     if (!env.LINE_CHANNEL_ACCESS_TOKEN) return;
     const groupId = await boundGroup(env);
@@ -125,10 +138,10 @@ export async function notifyBooking(env: LineEnv, bookingId: string): Promise<vo
       'SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id',
     ).bind(bookingId).all<ItemRow>()).results;
     // LINE text messages are capped at 5,000 characters.
-    const text = bookingMessage(b, items).slice(0, 4900);
+    const text = render(b, items).slice(0, 4900);
     await lineApi(env, 'push', { to: groupId, messages: [{ type: 'text', text }] }, crypto.randomUUID());
   } catch (err) {
-    console.error('LINE booking alert failed', bookingId, err);
+    console.error('LINE ' + what + ' failed', bookingId, err);
   }
 }
 
@@ -163,20 +176,52 @@ export function bookingMessage(b: BookingRow, items: ItemRow[]): string {
   if (b.contact_line) L.push(`💬 LINE: ${b.contact_line}`);
   if (b.contact_email) L.push(`✉️ ${b.contact_email}`);
 
-  L.push('', std ? '🧪 แพ็กเกจ' : `🧪 รายการตรวจ (${b.people} ท่าน)`);
-  const people = [...new Set(items.map(i => i.person_no))];
-  for (const n of people) {
-    if (people.length > 1) L.push(`คนที่ ${n}`);
-    for (const it of items.filter(i => i.person_no === n)) L.push(` • ${it.name} ${baht(it.price)}`);
-  }
-  if (!items.length) L.push(' • ยังไม่ได้เลือก (ให้เจ้าหน้าที่ติดต่อกลับ)');
-
-  L.push('');
+  L.push('', std ? '🧪 แพ็กเกจ' : `🧪 รายการตรวจ (${b.people} ท่าน)`, ...itemLines(b, items), '');
   if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าเดินทาง ${baht(b.travel_fee)}`);
   L.push(`💰 ยอดรวม ${baht(b.total)}`);
   if (b.note) L.push(`📝 หมายเหตุ: ${b.note}`);
   if (b.lab_order_name) L.push(`📎 ใบสั่งแพทย์: แนบแล้ว (${b.lab_order_name})`);
   L.push(`🔗 ที่มา: ${refLabel(b.referrer)}`);
+  L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);
+  return L.join('\n');
+}
+
+function itemLines(b: BookingRow, items: ItemRow[]): string[] {
+  const L: string[] = [];
+  const people = Math.max(b.people, ...items.map(i => i.person_no));
+  for (let n = 1; n <= people; n++) {
+    const mine = items.filter(i => i.person_no === n);
+    if (people > 1) L.push(`คนที่ ${n}`);
+    for (const it of mine) L.push(` • ${it.name} ${baht(it.price)}`);
+    if (!mine.length) L.push(' • ยังไม่ได้เลือก (ให้เจ้าหน้าที่ติดต่อกลับ)');
+  }
+  return L;
+}
+
+export function itemsChangedMessage(
+  b: BookingRow, items: ItemRow[], actor: string, edit: Pick<PricedEdit, 'added' | 'removed'>, oldTotal: number,
+): string {
+  const where = b.mode === 'home' ? 'เจาะเลือดถึงบ้าน' : (b.branch && BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES]) || b.branch || '-';
+  const L: string[] = [
+    `✏️ แก้ไขรายการตรวจ · ${b.ref}`,
+    `โดย ${actor}`,
+    '',
+    `👤 ${b.contact_name} · 📞 ${phone(b.contact_phone)}`,
+    `📅 ${thaiDate(b.visit_date)} · ${b.slot}`,
+    `📍 ${where}`,
+  ];
+  if (edit.added.length) {
+    L.push('', '➕ เพิ่ม');
+    for (const x of edit.added) L.push(` • คนที่ ${x.person_no}: ${x.name} ${baht(x.price)}`);
+  }
+  if (edit.removed.length) {
+    L.push('', '➖ ลบออก');
+    for (const x of edit.removed) L.push(` • คนที่ ${x.person_no}: ${x.name} ${baht(x.price)}`);
+  }
+  L.push('', `🧪 รายการตรวจล่าสุด (${b.people} ท่าน)`, ...itemLines(b, items), '');
+  if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าเดินทาง ${baht(b.travel_fee)}`);
+  const diff = b.total - oldTotal;
+  L.push(`💰 ยอดรวม ${baht(oldTotal)} → ${baht(b.total)} (${diff >= 0 ? '+' : '−'}${baht(Math.abs(diff))})`);
   L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);
   return L.join('\n');
 }

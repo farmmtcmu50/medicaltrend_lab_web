@@ -1,4 +1,6 @@
 import type { AdminBooking, AdminRow, AdminSummary, Status } from '../../shared/admin';
+import type { Catalog } from '../../shared/catalog';
+import type { EditItem } from '../../shared/itemEdit';
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string) { super(code); }
@@ -27,5 +29,12 @@ export const api = {
   get: (ref: string) => call<AdminBooking>('/bookings/' + ref),
   setStatus: (ref: string, status: Status) => post<AdminBooking>('/bookings/' + ref + '/status', { status }),
   setNote: (ref: string, note: string) => post<AdminBooking>('/bookings/' + ref + '/note', { note }),
+  editItems: (ref: string, persons: EditItem[][], expectedUpdatedAt: string | null) =>
+    post<AdminBooking>('/bookings/' + ref + '/items', { persons, expectedUpdatedAt }),
+  catalog: async (): Promise<Catalog> => {
+    const res = await fetch('/api/catalog');
+    if (!res.ok) throw new ApiError(res.status, 'catalog');
+    return res.json();
+  },
   labOrderUrl: (ref: string) => '/api/admin/bookings/' + ref + '/lab-order',
 };
