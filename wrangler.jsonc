@@ -21,7 +21,7 @@
   // and this allowlist. Fill ACCESS_TEAM_DOMAIN and ACCESS_AUD from Zero Trust -> Access -> Applications
   // (see DEPLOY.md). Until both are set, /admin answers 503 (fails closed).
   "vars": {
-    "ADMIN_EMAILS": "lab@medicaltrend.co.th",
+    "ADMIN_EMAILS": "lab@medicaltrend.co.th,chanat@medicaltrend.co.th,munnika@medicaltrend.co.th,ratchaphruek_lab@hotmail.com",
     "ACCESS_TEAM_DOMAIN": "medicaltrend.cloudflareaccess.com",
     "ACCESS_AUD": "29eb689f7e786e99bdb4e65f70fc29760c8f52722da393640efaeebf0bd0466d"
   },
