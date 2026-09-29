@@ -119,7 +119,7 @@ async function listBookings(url: URL, env: Env) {
 async function bookingDetail(env: Env, ref: string): Promise<AdminBooking> {
   const b = await env.DB.prepare(`SELECT id, ref, created_at, status, mode, branch, visit_date, slot, address, latitude, longitude,
       patient_type, distance_km, people, contact_name, contact_phone, contact_line, contact_email, note, lab_order_key,
-      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at
+      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url
       FROM bookings WHERE ref = ?1`).bind(ref).first<Record<string, unknown>>();
   const [items, events] = await env.DB.batch([
     env.DB.prepare('SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id').bind(b!.id),

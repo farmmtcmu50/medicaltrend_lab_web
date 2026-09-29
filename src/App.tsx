@@ -3,6 +3,7 @@ import {
   BRANCH_IDS, POPULAR, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
+import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../shared/maps';
 import { DICT, type Lang } from './i18n';
 import { branches as branchList, features as featureList, visitSteps } from './content';
 import { BookingDialog, type BookingDraft } from './BookingDialog';
@@ -36,6 +37,9 @@ export default function App() {
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  // Google Maps link pasted by the customer (or generated from the pin); sent to staff with the booking.
+  const [mapLink, setMapLink] = useState<{ url: string; status: 'resolving' | 'ok' | 'nocoords'; fromPin?: boolean } | null>(null);
+  const mapReq = useRef(0);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
   const [branch, setBranch] = useState<BranchId>('sankamphaeng');
@@ -146,12 +150,49 @@ export default function App() {
         const { latitude: lat, longitude: lng } = pos.coords;
         setCoords({ lat, lng });
         setAddress(L('ปักหมุดแล้ว · ', 'Pinned · ') + lat.toFixed(4) + '° N, ' + lng.toFixed(4) + '° E');
+        mapReq.current++;
+        setMapLink({ url: mapsLinkFor(+lat.toFixed(6), +lng.toFixed(6)), status: 'ok', fromPin: true });
         setLocating(false);
       },
       () => { setLocating(false); setToast(t.locFail); },
       { enableHighAccuracy: true, timeout: 12000 },
     );
   };
+  const onAddressChange = (text: string) => {
+    const url = findMapUrl(text);
+    if (!url) {
+      setAddress(text);
+      if (!mapLink) setCoords(null);
+      return;
+    }
+    // A Google Maps share link: keep any text around it as the address, read the location from the link.
+    const rest = text.replace(url, ' ').replace(/\s+/g, ' ').trim();
+    const req = ++mapReq.current;
+    const apply = (lat: number, lng: number, name: string | null, finalUrl: string) => {
+      if (req !== mapReq.current) return;
+      setCoords({ lat, lng });
+      setMapLink({ url: finalUrl, status: 'ok' });
+      setAddress(a => a || name || L('ตำแหน่งจาก Google Maps', 'Location from Google Maps'));
+    };
+    setAddress(rest);
+    const direct = parseMapUrl(url);
+    if (direct) { apply(direct.lat, direct.lng, direct.name, url); return; }
+    setMapLink({ url, status: isShortMapUrl(url) ? 'resolving' : 'nocoords' });
+    if (!rest) setAddress(L('ตำแหน่งจาก Google Maps', 'Location from Google Maps'));
+    if (!isShortMapUrl(url)) return;
+    fetch('/api/maps/resolve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }) })
+      .then(r => r.json().catch(() => ({})))
+      .then((r: { ok?: boolean; lat?: number; lng?: number; name?: string | null; url?: string }) => {
+        if (req !== mapReq.current) return;
+        if (r.ok && typeof r.lat === 'number' && typeof r.lng === 'number') {
+          apply(r.lat, r.lng, r.name ?? null, url);
+          if (r.name && !rest) setAddress(r.name);
+        } else setMapLink({ url, status: 'nocoords' });
+      })
+      .catch(() => { if (req === mapReq.current) setMapLink({ url, status: 'nocoords' }); });
+  };
+  const clearMapLink = () => { mapReq.current++; setMapLink(null); setCoords(null); };
+
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = '';
@@ -170,12 +211,12 @@ export default function App() {
     setDialogOpen(true);
   };
   const draft: BookingDraft = {
-    mode, branch, visitDate, slot, address, coords, patientType: patient, distanceKm: distance, file, lang,
+    mode, branch, visitDate, slot, address, coords, mapUrl: mapLink?.url ?? null, patientType: patient, distanceKm: distance, file, lang,
     persons: persons.map(p => ({ packages: p.pks, tests: p.picked })),
     total,
   };
   const resetBooking = () => {
-    setPersons([emptyPerson()]); setActive(0); setFile(null); setAddress(''); setCoords(null);
+    setPersons([emptyPerson()]); setActive(0); setFile(null); setAddress(''); setCoords(null); setMapLink(null);
   };
 
   const branchesView = branchList(L);
@@ -218,7 +259,7 @@ export default function App() {
 
   const zoneNote = locating ? t.locating : address
     ? L('อยู่ในพื้นที่ให้บริการ · ทีมใกล้ที่สุดห่าง ', 'In service area · nearest team ') + distance + L(' กม.', ' km')
-    : L('พิมพ์ที่อยู่ หรือกดปุ่มเพื่อปักหมุดตำแหน่งปัจจุบัน', 'Type an address or tap the button to pin your current location');
+    : L('พิมพ์ที่อยู่ วางลิงก์ Google Maps หรือกดปุ่มเพื่อปักหมุดตำแหน่งปัจจุบัน', 'Type an address, paste a Google Maps link, or tap the button to pin your current location');
   const patientNote = patient === 'bedridden'
     ? L('ทีม 2 คน พร้อมเตียงลมและอุปกรณ์ช่วยพยุง', '2-person team with air mattress and support equipment')
     : patient === 'elderly'
@@ -324,12 +365,26 @@ export default function App() {
                     <label style={ui.label} htmlFor="addr">{t.addrLabel}</label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <svg style={{ position: 'absolute', left: 13, color: '#8FA6C0' }} width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
-                      <input id="addr" className="f-input" value={address} onChange={e => { setAddress(e.target.value); setCoords(null); }} placeholder={t.addrPh} autoComplete="street-address"
+                      <input id="addr" className="f-input" value={address} onChange={e => onAddressChange(e.target.value)} placeholder={t.addrPh} autoComplete="street-address"
                         style={{ width: '100%', padding: '13px 44px 13px 38px', border: '1.5px solid #DCE5EF', borderRadius: 12, fontSize: 14, color: '#0F2540', outline: 'none' }} />
                       <button title={t.useLoc} aria-label={t.useLoc} onClick={usePin} className="h-pin" style={{ position: 'absolute', right: 7, width: 30, height: 30, border: 0, borderRadius: 9, background: '#E8F6F3', color: '#0E8C7C', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" style={locating ? { animation: 'spin 1s linear infinite' } : undefined}><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="5" /></svg>
                       </button>
                     </div>
+                    {mapLink && (
+                      <div role="status" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12, padding: '8px 10px', borderRadius: 10, border: '1px solid ' + (mapLink.status === 'nocoords' ? '#F3E2BD' : '#BFE5DE'), background: mapLink.status === 'nocoords' ? '#FFF8EA' : '#F4FBF9', color: mapLink.status === 'nocoords' ? '#6B5210' : '#0A6E62' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" style={mapLink.status === 'resolving' ? { animation: 'spin 1s linear infinite' } : undefined}><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" /><circle cx="12" cy="10" r="2.6" /></svg>
+                        <span style={{ fontWeight: 600, flex: '1 1 auto', minWidth: 0 }}>
+                          {mapLink.status === 'resolving'
+                            ? L('กำลังอ่านตำแหน่งจากลิงก์ Google Maps…', 'Reading location from Google Maps link…')
+                            : mapLink.status === 'nocoords'
+                              ? L('บันทึกลิงก์ Google Maps แล้ว · เจ้าหน้าที่จะเปิดดูตำแหน่งจากลิงก์', 'Google Maps link saved · staff will open it to find you')
+                              : (mapLink.fromPin ? L('ปักหมุดตำแหน่งปัจจุบันแล้ว', 'Current location pinned') : L('ได้ตำแหน่งจาก Google Maps แล้ว', 'Location read from Google Maps')) + (coords ? ' · ' + coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5) : '')}
+                        </span>
+                        <a href={mapLink.url} target="_blank" rel="noopener" style={{ color: 'inherit', fontWeight: 700, textDecoration: 'underline', whiteSpace: 'nowrap' }}>{L('เปิดดู', 'Open')} ↗</a>
+                        <button onClick={clearMapLink} aria-label={L('ลบลิงก์ตำแหน่ง', 'Remove location link')} style={{ border: 0, background: 'transparent', color: 'inherit', fontSize: 15, lineHeight: 1, cursor: 'pointer', padding: '0 2px', opacity: .7 }}>×</button>
+                      </div>
+                    )}
                     <div style={{ fontSize: 11.5, color: '#8FA6C0', marginTop: 6 }}>{zoneNote}</div>
                   </div>
 

@@ -12,6 +12,7 @@ export interface BookingDraft {
   slot: string;
   address: string;
   coords: { lat: number; lng: number } | null;
+  mapUrl: string | null;
   patientType: PatientType;
   distanceKm: number;
   file: File | null;
@@ -75,6 +76,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
       address: draft.mode === 'home' ? draft.address : undefined,
       lat: draft.mode === 'home' ? draft.coords?.lat ?? null : null,
       lng: draft.mode === 'home' ? draft.coords?.lng ?? null : null,
+      mapUrl: draft.mode === 'home' ? draft.mapUrl : null,
       patientType: draft.mode === 'home' ? draft.patientType : undefined,
       distanceKm: draft.mode === 'home' ? draft.distanceKm : undefined,
       persons: draft.persons,

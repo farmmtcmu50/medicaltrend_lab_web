@@ -368,7 +368,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
 
   const persons = Array.from({ length: b.people }, (_, i) => b.items.filter(it => it.person_no === i + 1));
   const isHome = b.mode === 'home';
-  const mapUrl = b.latitude != null && b.longitude != null
+  const mapUrl = b.map_url ? b.map_url : b.latitude != null && b.longitude != null
     ? `https://www.google.com/maps/search/?api=1&query=${b.latitude},${b.longitude}`
     : b.address ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.address) : '';
   const facts: [string, ReactNode][] = [
@@ -377,7 +377,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     ['วัน เวลา', thDate(b.visit_date) + ' · ' + b.slot],
     [isHome ? 'ช่องทาง' : 'สาขา', branchLabel(b.mode, b.branch)],
     ...(isHome ? [
-      ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">แผนที่ ↗</a></>}</>],
+      ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
       ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.'],
     ] as [string, ReactNode][] : []),
     ['LINE ID', b.contact_line || '—'],

@@ -1,6 +1,7 @@
 // Cloudflare Worker for lab.medicaltrend.stream
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
+//   POST /api/maps/resolve  expand a Google Maps share link to coordinates
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
@@ -8,6 +9,7 @@ import {
   buildCatalog, parseSheet, priceSelection, snapshotCatalog, travelFee,
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
+import { isMapUrl, isShortMapUrl, parseMapUrl } from '../shared/maps';
 
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
@@ -30,6 +32,7 @@ export default {
     try {
       if (url.pathname === '/api/catalog' && req.method === 'GET') return await catalogResponse(env, ctx);
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
+      if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
         if (!auth.ok) {
@@ -109,6 +112,7 @@ interface BookingPayload {
   address?: string;
   lat?: number | null;
   lng?: number | null;
+  mapUrl?: string | null;
   patientType?: string;
   distanceKm?: number;
   persons: PersonSelection[];
@@ -165,13 +169,13 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
     env.DB.prepare(`INSERT INTO bookings (
         id, ref, created_at, mode, branch, visit_date, slot, address, latitude, longitude, patient_type,
         distance_km, people, contact_name, contact_phone, contact_line, contact_email, note,
-        lab_order_key, lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang
-      ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26)`)
+        lab_order_key, lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, map_url
+      ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)`)
       .bind(
         id, ref, now.toISOString(), p.mode, v.branch, p.visitDate, p.slot, v.address, v.lat, v.lng, v.patientType,
         v.distanceKm, p.persons.length, v.name, v.phone, v.line, v.email, v.note,
         labOrderKey, upload ? upload.name.slice(0, 200) : null, subtotal, travel, total, cat.source,
-        now.toISOString(), p.lang === 'en' ? 'en' : 'th',
+        now.toISOString(), p.lang === 'en' ? 'en' : 'th', v.mapUrl,
       ),
     ...priced.flatMap((person, i) => person.items.map(it =>
       env.DB.prepare('INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1,?2,?3,?4,?5)')
@@ -217,7 +221,7 @@ function validate(p: BookingPayload, upload: File | null) {
   need(p.pdpaConsent === true, 'pdpaConsent');
 
   let branch: string | null = null, address: string | null = null, patientType: string | null = null;
-  let distanceKm: number | null = null, lat: number | null = null, lng: number | null = null;
+  let distanceKm: number | null = null, lat: number | null = null, lng: number | null = null, mapUrl: string | null = null;
   if (p.mode === 'lab') {
     need((BRANCH_IDS as readonly string[]).includes(p.branch || ''), 'branch');
     branch = p.branch!;
@@ -231,6 +235,8 @@ function validate(p: BookingPayload, upload: File | null) {
     if (typeof p.lat === 'number' && typeof p.lng === 'number' && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180) {
       lat = p.lat; lng = p.lng;
     }
+    const link = str(p.mapUrl, 500);
+    if (link && /^https:\/\//.test(link) && isMapUrl(link)) mapUrl = link;
   }
 
   if (upload) {
@@ -241,8 +247,42 @@ function validate(p: BookingPayload, upload: File | null) {
   return {
     name, phone, email: email || null,
     line: str(c.line, 80) || null, note: str(c.note, 1000) || null,
-    branch, address, patientType, distanceKm, lat, lng,
+    branch, address, patientType, distanceKm, lat, lng, mapUrl,
   };
+}
+
+// ---------------------------------------------------------------- maps
+
+const MAX_HOPS = 5;
+
+/** Expands a Google Maps share link. Every hop must stay on a Google Maps host (no open proxy). */
+async function resolveMapLink(req: Request) {
+  const body = await req.json<{ url?: string }>().catch(() => null);
+  let current = typeof body?.url === 'string' ? body.url.trim().slice(0, 600) : '';
+  if (!current || !isMapUrl(current)) return json({ error: 'not_a_map_link' }, 400);
+
+  for (let hop = 0; hop <= MAX_HOPS; hop++) {
+    const point = parseMapUrl(current);
+    if (point) return json({ ok: true, ...point, url: current }, 200, { 'cache-control': 'public, max-age=86400' });
+    if (!isShortMapUrl(current) && hop > 0) break;
+    const res = await fetch(current, {
+      redirect: 'manual',
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; MedicalTrendBooking/1.0)', 'accept-language': 'th,en;q=0.8' },
+      signal: AbortSignal.timeout(6000),
+    }).catch(() => null);
+    if (!res) return json({ error: 'fetch_failed' }, 502);
+    const next = res.headers.get('location');
+    if (!next || res.status < 300 || res.status >= 400) break;
+    const abs = new URL(next, current).href;
+    if (!isMapUrl(abs)) {
+      // Consent or unrelated pages: the original target is usually carried in ?continue=
+      const cont = new URL(abs).searchParams.get('continue');
+      if (cont && isMapUrl(cont)) { current = cont; continue; }
+      break;
+    }
+    current = abs;
+  }
+  return json({ error: 'no_coordinates', url: current }, 422);
 }
 
 // ---------------------------------------------------------------- helpers
