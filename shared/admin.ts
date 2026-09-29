@@ -60,3 +60,10 @@ export interface AdminSummary {
   topItems: { name: string; count: number; amount: number }[];
   referrers: { source: string; referrer: string | null; count: number; amount: number }[];
 }
+
+/** A row of popular_items (STEP 2 cards managed in the Booking Console). */
+export interface PopularRow {
+  id: string; sort: number; active: number; name: string; name_en: string; detail: string; detail_en: string;
+  price: number | null; was: number | null; tiers_json: string | null; code: string | null; poster: string;
+  std_link: number; updated_at: string; updated_by: string;
+}

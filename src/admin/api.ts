@@ -1,4 +1,4 @@
-import type { AdminBooking, AdminRow, AdminSummary, Status } from '../../shared/admin';
+import type { AdminBooking, AdminRow, AdminSummary, PopularRow, Status } from '../../shared/admin';
 import type { Catalog } from '../../shared/catalog';
 import type { EditItem } from '../../shared/itemEdit';
 
@@ -36,5 +36,15 @@ export const api = {
     if (!res.ok) throw new ApiError(res.status, 'catalog');
     return res.json();
   },
+  popular: () => call<{ items: PopularRow[] }>('/popular'),
+  savePopular: (data: Record<string, unknown>, poster: Blob | null) => {
+    const form = new FormData();
+    form.set('data', JSON.stringify(data));
+    if (poster) form.set('poster', poster, 'poster.webp');
+    return call<{ items: PopularRow[] }>('/popular', { method: 'POST', body: form });
+  },
+  popularOrder: (ids: string[]) => post<{ items: PopularRow[] }>('/popular/order', { ids }),
+  popularActive: (id: string, active: boolean) => post<{ items: PopularRow[] }>('/popular/' + id + '/active', { active }),
+  popularDelete: (id: string) => post<{ items: PopularRow[] }>('/popular/' + id + '/delete', {}),
   labOrderUrl: (ref: string) => '/api/admin/bookings/' + ref + '/lab-order',
 };

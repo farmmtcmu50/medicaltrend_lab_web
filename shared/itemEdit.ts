@@ -1,6 +1,6 @@
 // Editing a booking's tests from the Booking Console. Shared by the admin page (live preview)
 // and the Worker (authoritative re-price), so the total staff see before saving is the total stored.
-import { POPULAR, popularKey, travelFee, type Catalog } from './catalog';
+import { popularKey, travelFee, type Catalog } from './catalog';
 import { STD_PACKAGES } from './std';
 
 export type ItemKind = 'package' | 'test';
@@ -20,7 +20,7 @@ export function priceBook(cat: Catalog): BookItem[] {
     if (!seen.has(k)) { seen.add(k); out.push(x); }
   };
   for (const p of cat.packages) add({ kind: 'package', name: p.name, price: p.price, group: 'แพ็กเกจ', code: p.id, detail: p.detail });
-  for (const p of POPULAR) {
+  for (const p of cat.popular ?? []) {
     if (p.tiers) for (const t of p.tiers) add({ kind: 'package', name: popularKey(p, t), price: t.price, group: 'ยอดนิยม' });
     else if (p.price) add({ kind: 'package', name: p.name, price: p.price, group: 'ยอดนิยม', detail: p.detail });
   }

@@ -2,6 +2,7 @@
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
+//   GET  /api/posters/:file  poster images for the popular cards (R2), managed in the Booking Console (worker/popular.ts)
 //   GET  /api/distance?lat=&lng=  nearest branch + road distance for the home-collection fee (worker/geo.ts)
 //   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
 //   cron (daily 11:00 UTC = 18:00 Bangkok): email reminders for tomorrow's visits (worker/mail.ts)
@@ -21,6 +22,7 @@ import { handleAdmin } from './admin';
 import { distanceFrom, distanceResponse, expandMapLink } from './geo';
 import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
+import { loadPopular, servePoster } from './popular';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
@@ -44,6 +46,7 @@ export default {
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
       if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
       if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env, ctx);
+      if (url.pathname.startsWith('/api/posters/') && req.method === 'GET') return await servePoster(url.pathname.slice('/api/posters/'.length), env);
       if (url.pathname === '/api/distance' && req.method === 'GET') return await distanceResponse(url, env, ctx);
       if (url.pathname === '/api/line/webhook' && req.method === 'POST') return await handleLineWebhook(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
@@ -89,6 +92,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
   const hit = await cache.match(key);
   if (hit) return hit.json();
 
+  const popular = (await loadPopular(env)) ?? undefined;
   let cat: Catalog;
   try {
     const res = await fetch(
@@ -98,7 +102,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
     if (!res.ok) throw new Error('sheet http ' + res.status);
     const rows = parseSheet(await res.text());
     const now = new Date().toISOString();
-    cat = buildCatalog(rows, 'live', now);
+    cat = buildCatalog(rows, 'live', now, popular);
     ctx.waitUntil(env.DB.prepare(
       'INSERT INTO catalog_cache (id, rows_json, synced_at) VALUES (1, ?1, ?2) ' +
       'ON CONFLICT (id) DO UPDATE SET rows_json = excluded.rows_json, synced_at = excluded.synced_at',
@@ -107,7 +111,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
     console.warn('sheet unavailable, falling back', err);
     const row = await env.DB.prepare('SELECT rows_json, synced_at FROM catalog_cache WHERE id = 1')
       .first<{ rows_json: string; synced_at: string }>().catch(() => null);
-    cat = row ? buildCatalog(JSON.parse(row.rows_json) as Test[], 'cache', row.synced_at) : snapshotCatalog();
+    cat = row ? buildCatalog(JSON.parse(row.rows_json) as Test[], 'cache', row.synced_at, popular) : snapshotCatalog(popular);
   }
 
   ctx.waitUntil(cache.put(key, new Response(JSON.stringify(cat), {

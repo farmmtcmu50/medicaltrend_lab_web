@@ -9,6 +9,7 @@ import {
 import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 import ItemEditor from './ItemEditor';
+import PopularAdmin from './PopularAdmin';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
 const bkkToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -30,11 +31,12 @@ const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', b
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
 
-type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'detail'; ref: string };
+type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'popular' } | { view: 'detail'; ref: string };
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
   if (h.startsWith('b/')) return { view: 'detail', ref: decodeURIComponent(h.slice(2)) };
   if (h === 'bookings') return { view: 'bookings' };
+  if (h === 'popular') return { view: 'popular' };
   return { view: 'dash' };
 }
 const go = (hash: string) => { location.hash = hash; };
@@ -68,6 +70,7 @@ export default function AdminApp() {
   const views: Record<Route['view'], [string, string]> = {
     dash: ['ภาพรวมวันนี้', 'สรุปคิว รายได้ และงานค้างของทุกสาขา · ข้อมูลจากหน้าเว็บจอง lab.medicaltrend.stream'],
     bookings: ['รายการจองทั้งหมด', 'ค้นหา กรองตามสถานะ สาขา และวันนัด แล้วกดเปิดเพื่อจัดการรายการนั้น'],
+    popular: ['Popular tests', 'รูปโฆษณาและรายการตรวจยอดนิยมใน STEP 2 ของหน้าจอง · เก็บไว้หลายรายการแล้วสลับแสดงหรือซ่อนได้'],
     detail: ['รายละเอียดการจอง', 'ตรวจรายการของผู้รับบริการแต่ละคน ยืนยันนัด อัปเดตสถานะ และบันทึกหมายเหตุ'],
   };
   const [title, sub] = views[route.view];
@@ -104,7 +107,8 @@ export default function AdminApp() {
         </div>
         <nav className="a-aside-nav" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <NavBtn on={route.view === 'dash'} label="ภาพรวมวันนี้" onClick={() => go('/')} />
-          <NavBtn on={route.view !== 'dash'} label="รายการจอง" onClick={() => go('/bookings')} />
+          <NavBtn on={route.view === 'bookings' || route.view === 'detail'} label="รายการจอง" onClick={() => go('/bookings')} />
+          <NavBtn on={route.view === 'popular'} label="Popular tests" onClick={() => go('/popular')} />
           <a href="/" target="_blank" rel="noopener" className="a-nav" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, padding: '11px 12px', borderRadius: 11, color: '#DCEBFA' }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: 'rgba(255,255,255,.3)' }} />หน้าเว็บจอง ↗
           </a>
@@ -148,6 +152,7 @@ export default function AdminApp() {
 
         {route.view === 'dash' && <Dashboard openList={openList} />}
         {route.view === 'bookings' && <BookingList filters={filters} setFilters={setFilters} />}
+        {route.view === 'popular' && <PopularAdmin toast={setToast} />}
         {route.view === 'detail' && <BookingDetail key={route.ref} ref_={route.ref} toast={setToast} />}
       </main>
 

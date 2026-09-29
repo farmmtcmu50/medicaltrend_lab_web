@@ -13,6 +13,8 @@ export interface Pkg { id?: string; name: string; detail: string; price: number 
 export interface Catalog {
   tests: Test[];
   packages: Pkg[];
+  /** STEP 2 "popular" cards, managed in the Booking Console (D1 popular_items); POPULAR is the fallback. */
+  popular: Popular[];
   source: 'live' | 'cache' | 'snapshot';
   syncedAt: string | null;
 }
@@ -42,12 +44,17 @@ export type PatientType = typeof PATIENT_TYPES[number];
 
 export interface PopularTier { label: string; price: number }
 export interface Popular {
+  /** popular_items.id when the card comes from the Booking Console. */
+  id?: string;
+  /** Optional sheet code (e.g. PAC-25, CH-39): the card then takes its price from the Master Price List. */
+  code?: string;
   name: string; nameEn: string; detail: string; detailEn: string;
   price?: number; was?: number; poster: string; tiers?: PopularTier[];
   /** Booked on the STD page (/std) instead of the main cart. */
   stdLink?: boolean;
 }
 
+/** Built-in cards: shown until the Booking Console has its own list, and used to seed it. */
 export const POPULAR: Popular[] = [
   { nameEn: 'Allergy test, 107 allergens', detailEn: 'Specific IgE, 107 allergens · results in 1 business day · Class 0–6 international scale', name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', detail: 'IgE Specific Allergens 107 ชนิด · รายงานผล 1 วันทำการ · Class 0–6 ตามมาตรฐานสากล', price: 3500, poster: '/img/poster-allergy.webp' },
   { nameEn: 'STD package, 6 tests', detailEn: 'HIV Ag/Ab 4th Gen, HBsAg, Anti-HBs, Anti-HCV, Syphilis VDRL (RPR), Syphilis Anti-TP · results within 1 hour', name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 6 รายการ', detail: 'HIV Ag/Ab 4th Gen, HBsAg, Anti-HBs, Anti-HCV, Syphilis VDRL (RPR), Syphilis Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, poster: '/img/poster-std6.webp', stdLink: true },
@@ -61,10 +68,10 @@ export const POPULAR: Popular[] = [
 export const popularKey = (p: Popular, tier?: PopularTier) => tier ? p.name + ' · ' + tier.label : p.name;
 
 /** Price for every selectable package-like key: sheet packages, extras, popular items and tiers. */
-export function packagePrices(pkgs: Pkg[]): Map<string, number> {
+export function packagePrices(pkgs: Pkg[], popular: Popular[] = POPULAR): Map<string, number> {
   const m = new Map<string, number>();
   for (const p of pkgs) m.set(p.name, p.price);
-  for (const p of POPULAR) {
+  for (const p of popular) {
     if (p.tiers) for (const t of p.tiers) m.set(popularKey(p, t), t.price);
     else if (p.price) m.set(p.name, p.price);
   }
@@ -115,15 +122,18 @@ const PAC_RE = /^PAC-(\d+)/;
 const isPackage = (t: Test) => t.id ? PAC_RE.test(t.id) : t.c.toLowerCase() === 'package';
 const pacNo = (t: Test) => Number(t.id?.match(PAC_RE)?.[1] ?? 9999);
 
-export function buildCatalog(rows: Test[], source: Catalog['source'], syncedAt: string | null): Catalog {
+export function buildCatalog(rows: Test[], source: Catalog['source'], syncedAt: string | null, popular: Popular[] = POPULAR): Catalog {
   const packages = rows.filter(isPackage)
     .sort((a, b) => pacNo(a) - pacNo(b))
     .map(t => ({ id: t.id, name: t.n.replace(/^Package\s+/i, ''), detail: t.th, price: t.p }));
   const tests = rows.filter(t => !isPackage(t) && t.c.toLowerCase() !== 'package');
-  return { tests, packages, source, syncedAt };
+  // A card linked to a sheet code follows the sheet's retail price (unless it is tiered).
+  const byCode = new Map(rows.filter(t => t.id).map(t => [t.id!, t.p]));
+  const linked = popular.map(p => (p.code && !p.tiers?.length && byCode.has(p.code.toUpperCase()) ? { ...p, price: byCode.get(p.code.toUpperCase()) } : p));
+  return { tests, packages, popular: linked, source, syncedAt };
 }
 
-export const snapshotCatalog = (): Catalog => buildCatalog(snapshot as Test[], 'snapshot', null);
+export const snapshotCatalog = (popular?: Popular[]): Catalog => buildCatalog(snapshot as Test[], 'snapshot', null, popular);
 
 // ---------- ordering / posters ----------
 
@@ -188,7 +198,7 @@ export interface PricedPerson { items: PricedItem[]; subtotal: number }
 
 /** Prices each person's selection against a catalog. Unknown names are reported, not guessed. */
 export function priceSelection(cat: Catalog, persons: PersonSelection[]) {
-  const pk = packagePrices(cat.packages);
+  const pk = packagePrices(cat.packages, cat.popular);
   const tests = new Map(cat.tests.map(t => [t.n, t.p]));
   const unknown: string[] = [];
   const priced: PricedPerson[] = persons.map(p => {

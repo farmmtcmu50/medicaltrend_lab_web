@@ -1,6 +1,7 @@
 // Back-office API. Every handler here runs only after authenticateAdmin() succeeded.
 //   GET  /api/admin/me
 //   GET  /api/admin/summary
+//   /api/admin/popular…              popular cards on the booking page (worker/popular.ts)
 //   GET  /api/admin/mail-check      is RESEND_API_KEY accepted by Resend? (shape of the key, never the key)
 //   GET  /api/admin/bookings?status=&branch=&q=&from=&to=&page=
 //   GET  /api/admin/bookings/:ref
@@ -13,6 +14,7 @@ import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Sta
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
 import { notifyItemsChanged, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
+import { handlePopularAdmin } from './popular';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
@@ -28,11 +30,15 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
     // JSON-only + same-origin: blocks cross-site form posts riding on the Access cookie.
     const origin = req.headers.get('origin');
     if (origin && origin !== url.origin) return json({ error: 'bad_origin' }, 403);
-    if (!(req.headers.get('content-type') || '').includes('application/json')) return json({ error: 'json_required' }, 415);
+    const ctype = req.headers.get('content-type') || '';
+    // The only multipart endpoint (poster upload) must also prove it came from this page.
+    const upload = parts.length === 1 && parts[0] === 'popular' && ctype.includes('multipart/form-data') && origin === url.origin;
+    if (!upload && !ctype.includes('application/json')) return json({ error: 'json_required' }, 415);
   }
 
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'me') return json({ email });
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
+  if (parts[0] === 'popular') return handlePopularAdmin(req, env, email, parts, ctx.waitUntil);
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);
 

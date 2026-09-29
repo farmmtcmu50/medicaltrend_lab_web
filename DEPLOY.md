@@ -150,3 +150,11 @@ worker/mail.ts ส่งในนาม `MedicalTrend Lab <lab@medicaltrend.co.t
    แล้วกด Verify จนสถานะเป็น Verified
 3. API Keys → Create (Sending access, domain medicaltrend.co.th) → `npx wrangler secret put RESEND_API_KEY`
 4. `npm run deploy` (มี cron `0 11 * * *` ใน wrangler.jsonc) ถ้าไม่มี RESEND_API_KEY ระบบจะไม่ส่งอีเมลและไม่กระทบการจอง
+
+## Popular tests (STEP 2) จากหลังบ้าน
+
+หลังบ้าน → เมนู **Popular tests** เก็บการ์ดได้ไม่จำกัด (รูปโฆษณา + ชื่อ/รายการตรวจ TH/EN + ราคา) กด แสดง/ซ่อน และ ↑ ↓ เพื่อเรียงลำดับ
+- ราคา 3 แบบ: ราคาเดียว (+ราคาขีดฆ่า) · ตามรหัสในชีต (เช่น PAC-25 ราคาตาม Master Price List อัตโนมัติ) · หลายระดับราคา
+- รูปถูกย่อเป็น WebP ≤1120px ในเบราว์เซอร์แล้วเก็บใน R2 (`posters/…`) เสิร์ฟที่ `/api/posters/…`
+- ข้อมูลอยู่ในตาราง `popular_items` (migration 0009) การ์ดที่แสดงถูกรวมใน /api/catalog หน้าเว็บและการคิดราคาตอนจองใช้ชุดเดียวกัน อัปเดตภายใน ~1 นาที
+- ชื่อการ์ดคือ key ของตะกร้า — แก้ชื่อระหว่างที่ลูกค้ากำลังจอง ลูกค้าจะถูกขอให้ตรวจรายการใหม่

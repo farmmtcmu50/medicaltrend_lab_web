@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, POPULAR, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
+  BRANCH_IDS, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { detectRef } from './ref';
@@ -113,7 +113,7 @@ export default function App() {
   }, [poster]);
 
   // ---- pricing (same rules the Worker applies)
-  const pkPrice = useMemo(() => packagePrices(catalog.packages), [catalog]);
+  const pkPrice = useMemo(() => packagePrices(catalog.packages, catalog.popular), [catalog]);
   const testPrice = useMemo(() => new Map(catalog.tests.map(x => [x.n, x.p])), [catalog]);
   const pkgSum = (p: Person) => p.pks.reduce((a, k) => a + (pkPrice.get(k) ?? 0), 0);
   const pickedSum = (p: Person) => p.picked.reduce((a, k) => a + (testPrice.get(k) ?? 0), 0);
@@ -582,7 +582,7 @@ export default function App() {
       </section>
 
       {/* ---------------------------------------------------------------- STEP 2 popular */}
-      <section id="popular" className="wrap" style={{ ...ui.wrap, padding: '76px 24px 0' }}>
+      {(catalog.popular ?? []).length > 0 && <section id="popular" className="wrap" style={{ ...ui.wrap, padding: '76px 24px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={ui.stepBadge}>STEP 2</span>
           <span style={ui.eyebrow}>Popular tests</span>
@@ -592,7 +592,7 @@ export default function App() {
           <p style={{ ...ui.lede, maxWidth: 420, fontSize: 14.5 }}>{t.popP} {personLabel(act)}</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(268px, 100%), 1fr))', gap: 18 }}>
-          {POPULAR.map(p => {
+          {(catalog.popular ?? []).map(p => {
             const on = p.tiers ? p.tiers.some(tr => cur.pks.includes(popularKey(p, tr))) : cur.pks.includes(p.name);
             const name = en ? p.nameEn : p.name;
             const toggle = (key: string, group: boolean) => updatePerson(act, pp => {
@@ -656,7 +656,7 @@ export default function App() {
           {L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ครบทุกแพ็กเกจ · เลือกเชื้อ PCR เอง', 'All HIV & STD packages · build your own PCR panel')}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
         </a>
-      </section>
+      </section>}
 
       {/* ---------------------------------------------------------------- STEP 3 packages + STEP 4 tests */}
       <section id="pricing" className="wrap" style={{ ...ui.wrap, padding: '76px 24px 88px' }}>
