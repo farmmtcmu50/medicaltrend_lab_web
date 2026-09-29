@@ -2,6 +2,7 @@
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
+//   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
@@ -13,6 +14,8 @@ import { isMapUrl, isShortMapUrl, parseMapUrl } from '../shared/maps';
 
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
+import { createStdBooking } from './std';
+import { addDays, bangkokToday, bookingRef, json } from './util';
 
 export interface Env extends AccessEnv {
   DB: D1Database;
@@ -33,6 +36,7 @@ export default {
       if (url.pathname === '/api/catalog' && req.method === 'GET') return await catalogResponse(env, ctx);
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
       if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
+      if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
         if (!auth.ok) {
@@ -283,37 +287,4 @@ async function resolveMapLink(req: Request) {
     current = abs;
   }
   return json({ error: 'no_coordinates', url: current }, 422);
-}
-
-// ---------------------------------------------------------------- helpers
-
-function bangkokToday(): string {
-  return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
-}
-
-function addDays(ymd: string, n: number): string {
-  const d = new Date(ymd + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-/** MT-YYMMDD-XXXX with an unambiguous alphabet (no 0/O/1/I). */
-function bookingRef(now: Date): string {
-  const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const bytes = crypto.getRandomValues(new Uint8Array(4));
-  const tail = Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
-  const bkk = new Date(now.getTime() + 7 * 3600_000).toISOString();
-  return `MT-${bkk.slice(2, 4)}${bkk.slice(5, 7)}${bkk.slice(8, 10)}-${tail}`;
-}
-
-function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'x-content-type-options': 'nosniff',
-      ...(status >= 400 || !headers['cache-control'] ? { 'cache-control': 'no-store' } : {}),
-      ...headers,
-    },
-  });
 }

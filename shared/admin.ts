@@ -30,6 +30,7 @@ export const PATIENT_LABELS: Record<string, string> = { general: 'ทั่ว�
 export interface AdminRow {
   ref: string; created_at: string; status: Status; mode: 'lab' | 'home'; branch: BranchId | null;
   visit_date: string; slot: string; people: number; contact_name: string; contact_phone: string; total: number;
+  source: 'web' | 'std';
 }
 
 export interface AdminBooking extends AdminRow {

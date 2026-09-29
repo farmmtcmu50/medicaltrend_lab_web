@@ -545,6 +545,10 @@ export default function App() {
             );
           })}
         </div>
+              <a href="/std" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
+          {L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ครบทุกแพ็กเกจ · เลือกเชื้อ PCR เอง', 'All HIV & STD packages · build your own PCR panel')}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+        </a>
       </section>
 
       {/* ---------------------------------------------------------------- STEP 3 packages + STEP 4 tests */}

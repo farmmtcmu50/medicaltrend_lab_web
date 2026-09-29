@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    rollupOptions: { input: { main: 'index.html', admin: 'admin.html' } },
+    rollupOptions: { input: { main: 'index.html', admin: 'admin.html', std: 'std.html' } },
   },
   server: { proxy: { '/api': 'http://127.0.0.1:8787' } },
 });

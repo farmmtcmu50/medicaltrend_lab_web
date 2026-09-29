@@ -14,7 +14,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T>(path: string, data: unknown) =>
   call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
-export interface ListQuery { status?: string; branch?: string; q?: string; from?: string; to?: string; page?: number }
+export interface ListQuery { status?: string; branch?: string; source?: string; q?: string; from?: string; to?: string; page?: number }
 
 export const api = {
   me: () => call<{ email: string }>('/me'),

@@ -91,6 +91,8 @@ async function listBookings(url: URL, env: Env) {
 
   const status = p.get('status');
   if (status && (STATUSES as readonly string[]).includes(status)) add('status = ?', status);
+  const source = p.get('source');
+  if (source === 'web' || source === 'std') add('source = ?', source);
   const branch = p.get('branch');
   if (branch === 'home') where.push("mode = 'home'");
   else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) add('branch = ?', branch);
@@ -108,7 +110,7 @@ async function listBookings(url: URL, env: Env) {
   const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
   const [rows, count] = await env.DB.batch([
-    env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total
+    env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total, source
       FROM bookings ${w} ORDER BY visit_date DESC, slot ASC, created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`).bind(...args),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM bookings ${w}`).bind(...args),
   ]);
@@ -119,7 +121,7 @@ async function listBookings(url: URL, env: Env) {
 async function bookingDetail(env: Env, ref: string): Promise<AdminBooking> {
   const b = await env.DB.prepare(`SELECT id, ref, created_at, status, mode, branch, visit_date, slot, address, latitude, longitude,
       patient_type, distance_km, people, contact_name, contact_phone, contact_line, contact_email, note, lab_order_key,
-      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url
+      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url, source
       FROM bookings WHERE ref = ?1`).bind(ref).first<Record<string, unknown>>();
   const [items, events] = await env.DB.batch([
     env.DB.prepare('SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id').bind(b!.id),

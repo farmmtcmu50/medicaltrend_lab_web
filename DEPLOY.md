@@ -26,6 +26,15 @@ Worker อ่าน Google Sheet แท็บ `Master Capital` ฝั่งเ�
 - ราคาไม่ตรงกับที่หน้าเว็บแสดง → ตอบ `409 price_changed` หน้าเว็บโหลดราคาใหม่แล้วให้ลูกค้ากดยืนยันอีกครั้ง
 - สำเร็จ → ได้เลขที่การจองรูปแบบ `MT-YYMMDD-XXXX`
 
+## หน้าตรวจ HIV / STD `https://lab.medicaltrend.stream/std`
+
+จากดีไซน์ Claude Design "MedicalTrend STD Testing" (Desktop 1440 + Mobile 390) — โค้ดใน `src/std/`
+- แพ็กเกจ 5 ชุด + PCR เลือกเชื้อเอง (ราคาขั้นตามจำนวนเชื้อ) กฎราคาอยู่ใน `shared/std.ts` ใช้ร่วมกับ Worker
+- จองผ่าน `POST /api/std/bookings` บันทึกลง D1 เดียวกัน (`bookings.source = 'std'`) ขึ้นใน Booking Console พร้อมป้าย STD และตัวกรอง "หน้า STD"
+- เวลานัดตรวจตามเวลาเปิดของแต่ละสาขา (`branchHours` ใน `shared/std.ts`) Worker ตรวจซ้ำ
+- ข้อมูลสาขา/ค่าเจาะนอกสถานที่ยึดตามเว็บหลัก และยังไม่แสดงเลขใบอนุญาตโฆษณา/สถานพยาบาล
+- ภาพประกอบ 3 ขั้นตอนไม่ได้แนบมากับไฟล์ดีไซน์ จึงแสดงเป็นการ์ดข้อความ
+
 ## คำสั่ง
 
 ```bash

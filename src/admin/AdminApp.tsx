@@ -19,6 +19,7 @@ const pill = (m: { c: string; bg: string }): CSSProperties => ({
   borderRadius: 999, whiteSpace: 'nowrap', color: m.c, background: m.bg,
 });
 const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#0B4F9E', bg: '#EAF3FF' });
+const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
@@ -37,7 +38,7 @@ export default function AdminApp() {
   const [me, setMe] = useState<string>('');
   const [authError, setAuthError] = useState('');
   const [toast, setToast] = useState('');
-  const [filters, setFilters] = useState<ListQuery>({ status: 'all', branch: 'all', q: '', from: '', to: '', page: 1 });
+  const [filters, setFilters] = useState<ListQuery>({ status: 'all', branch: 'all', source: 'all', q: '', from: '', to: '', page: 1 });
 
   useEffect(() => {
     const on = () => setRoute(parseHash());
@@ -129,6 +130,11 @@ export default function AdminApp() {
                 <option value="all">ทุกสาขา / ทุกช่องทาง</option>
                 {BRANCH_IDS.map(id => <option key={id} value={id}>{BRANCH_NAMES[id]}</option>)}
                 <option value="home">บริการเจาะเลือดถึงบ้าน</option>
+              </select>
+              <select aria-label="หน้าเว็บที่จอง" value={filters.source} onChange={e => setFilters(f => ({ ...f, source: e.target.value, page: 1 }))} style={{ flex: '0 1 170px', border: '1.5px solid #DFE8F2', borderRadius: 11, padding: '10px 12px', fontSize: 13, background: '#fff', color: '#0F2540' }}>
+                <option value="all">ทุกหน้าเว็บ</option>
+                <option value="web">หน้าจองหลัก</option>
+                <option value="std">หน้า STD (/std)</option>
               </select>
             </>
           )}
@@ -302,7 +308,7 @@ function BookingList({ filters, setFilters }: { filters: ListQuery; setFilters: 
                   <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.contact_name}</span>
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.contact_phone}</span>
                 </span>
-                <span style={channelPill(r.mode)}>{r.mode === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
+                <span style={r.source === 'std' ? stdPill : channelPill(r.mode)}>{r.source === 'std' ? 'STD' : r.mode === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
                 <span style={{ color: '#3D5674', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{branchLabel(r.mode, r.branch)}</span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span>{thDate(r.visit_date)}</span>
@@ -403,6 +409,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
             <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em', fontFamily: "'IBM Plex Sans', sans-serif" }}>{b.ref}</span>
             <span style={pill(STATUS_META[b.status])}>{STATUS_META[b.status].label}</span>
             <span style={channelPill(b.mode)}>{isHome ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
+            {b.source === 'std' && <span style={stdPill}>จองจากหน้า STD</span>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px 18px', fontSize: 12.5 }}>
             {facts.map(([label, value]) => (
