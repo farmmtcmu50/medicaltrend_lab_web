@@ -636,7 +636,10 @@ export default function App() {
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); updatePerson(act, pp => ({ ...pp, pks: toggleIn(pp.pks, p.name) })); } }}
                     style={ui.pkgRow(on)}>
                     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5, minWidth: 0 }}>
-                      <span style={{ fontSize: 14.5, fontWeight: 600 }}>{p.name}</span>
+                      <span style={{ fontSize: 14.5, fontWeight: 600 }}>
+                        {p.id && <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', opacity: .55, marginRight: 8 }}>{p.id}</span>}
+                        {p.name}
+                      </span>
                       <span style={{ fontSize: 11.5, opacity: .68 }}>{p.detail}</span>
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>

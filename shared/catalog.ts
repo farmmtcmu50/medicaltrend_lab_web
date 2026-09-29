@@ -7,8 +7,9 @@ export const SHEET_ID = '1YNt4ugp0EVdl7g4yXsMWGYwW-kyl-adVhFT6YaYcMs0';
 export const SHEET_TAB = 'Master Capital';
 
 /** One row of the price list (retail price only — cost columns never leave the Worker). */
-export interface Test { c: string; n: string; th: string; p: number; w: string }
-export interface Pkg { name: string; detail: string; price: number }
+/** `id` is the sheet's รหัสการตรวจ, e.g. "CHEM-01" or "PAC-03" (rows cached before it was read have none). */
+export interface Test { id?: string; c: string; n: string; th: string; p: number; w: string }
+export interface Pkg { id?: string; name: string; detail: string; price: number }
 export interface Catalog {
   tests: Test[];
   packages: Pkg[];
@@ -30,14 +31,6 @@ export const BRANCH_IDS = ['sankamphaeng', 'hangdong', 'watket', 'phayao'] as co
 export type BranchId = typeof BRANCH_IDS[number];
 export const PATIENT_TYPES = ['general', 'elderly', 'bedridden'] as const;
 export type PatientType = typeof PATIENT_TYPES[number];
-
-/** Packages the sheet may not carry yet; the sheet version wins when a name matches. */
-export const EXTRA_PKGS: Pkg[] = [
-  { name: 'Signature ชาย', detail: 'ตรวจสุขภาพผู้ชายระดับ Signature เพิ่ม Cystatin C, GGT, Homocysteine, Cortisol และ Ferritin — 41 รายการ', price: 6990 },
-  { name: 'Signature หญิง', detail: 'ตรวจสุขภาพผู้หญิงระดับ Signature เพิ่ม Cystatin C, GGT, Homocysteine, Cortisol และ Ferritin — 42 รายการ', price: 6990 },
-  { name: 'Ultimate ชาย', detail: 'ตรวจสุขภาพผู้ชายแบบครอบคลุมสูงสุด เพิ่ม Insulin, HOMA-IR, Apo A1/Apo B, NT-proBNP, Vitamin B12, Folate — 51 รายการ', price: 12900 },
-  { name: 'Ultimate หญิง', detail: 'ตรวจสุขภาพผู้หญิงแบบครอบคลุมสูงสุด เพิ่ม Insulin, HOMA-IR, Apo A1/Apo B, NT-proBNP, Vitamin B12, Folate — 52 รายการ', price: 12900 },
-];
 
 export interface PopularTier { label: string; price: number }
 export interface Popular {
@@ -94,10 +87,11 @@ export function parseSheet(csv: string): Test[] {
   const rows = csvRows(csv);
   const head = (rows[0] || []).map(h => h.trim());
   const col = (n: string) => head.indexOf(n);
-  const iName = col('รายชื่อการทดสอบ'), iCat = col('ประเภท'), iDesc = col('คำอธิบาย'),
+  const iCode = col('รหัสการตรวจ'), iName = col('รายชื่อการทดสอบ'), iCat = col('ประเภท'), iDesc = col('คำอธิบาย'),
     iRetail = col('Retail'), iWait = col('เวลารอผล');
   if (iName < 0 || iRetail < 0) throw new Error('sheet columns changed');
   const tests = rows.slice(1).map(r => ({
+    id: iCode < 0 ? undefined : (r[iCode] || '').trim().toUpperCase() || undefined,
     n: (r[iName] || '').trim(),
     c: (r[iCat] || '').trim() || 'อื่นๆ',
     th: (r[iDesc] || '').trim(),
@@ -108,14 +102,17 @@ export function parseSheet(csv: string): Test[] {
   return tests;
 }
 
-/** Splits parsed rows into single tests and packages (plus extras), P1–P10 first. */
+/** Packages are the sheet rows coded PAC-xx (in code order); every other row is a single test. */
+const PAC_RE = /^PAC-(\d+)/;
+const isPackage = (t: Test) => t.id ? PAC_RE.test(t.id) : t.c.toLowerCase() === 'package';
+const pacNo = (t: Test) => Number(t.id?.match(PAC_RE)?.[1] ?? 9999);
+
 export function buildCatalog(rows: Test[], source: Catalog['source'], syncedAt: string | null): Catalog {
-  let packages = rows.filter(t => t.c.toLowerCase() === 'package')
-    .map(t => ({ name: t.n.replace(/^Package\s+/i, ''), detail: t.th, price: t.p }));
-  packages = packages.concat(EXTRA_PKGS.filter(x =>
-    !packages.some(p => p.name.toLowerCase() === x.name.toLowerCase())));
-  packages.sort((a, b) => pkgRank(a.name) - pkgRank(b.name));
-  return { tests: rows.filter(t => t.c.toLowerCase() !== 'package'), packages, source, syncedAt };
+  const packages = rows.filter(isPackage)
+    .sort((a, b) => pacNo(a) - pacNo(b))
+    .map(t => ({ id: t.id, name: t.n.replace(/^Package\s+/i, ''), detail: t.th, price: t.p }));
+  const tests = rows.filter(t => !isPackage(t) && t.c.toLowerCase() !== 'package');
+  return { tests, packages, source, syncedAt };
 }
 
 export const snapshotCatalog = (): Catalog => buildCatalog(snapshot as Test[], 'snapshot', null);
@@ -124,21 +121,6 @@ export const snapshotCatalog = (): Catalog => buildCatalog(snapshot as Test[], '
 
 const isFemale = (n: string) => /female|หญิง|\bf\b/.test(n);
 const isMale = (n: string) => /male|ชาย|\bm\b/.test(n);
-
-export function pkgRank(name: string): number {
-  const n = (name || '').toLowerCase();
-  const explicit = n.match(/^p(\d+)\b/);
-  if (explicit) return Number(explicit[1]);
-  const female = isFemale(n), male = isMale(n);
-  if (/starter/.test(n)) return 1;
-  if (/standard/.test(n)) return 2;
-  if (/extra/.test(n)) return 3;
-  if (/supreme/.test(n)) return 4;
-  if (/beyond/.test(n)) return female ? 6 : 5;
-  if (/signature/.test(n)) return female ? 8 : 7;
-  if (/ultimate/.test(n)) return female ? 10 : male ? 9 : 10;
-  return 99;
-}
 
 export function posterFor(name: string): string {
   const n = (name || '').toLowerCase();
