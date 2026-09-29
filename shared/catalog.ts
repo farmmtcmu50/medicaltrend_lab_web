@@ -19,7 +19,7 @@ export interface Catalog {
 
 export const PRICING = {
   minKm: 1,
-  maxKm: 20,          // beyond this: outside the home-collection area
+  maxKm: 40,          // beyond this: outside the home-collection area
   maxPeople: 8,
   /** Home collection fee per visit by distance from the nearest branch (whole km, rounded up). */
   homeTiers: [
@@ -28,6 +28,7 @@ export const PRICING = {
     { upToKm: 10, fee: 350 },
     { upToKm: 15, fee: 400 },
     { upToKm: 20, fee: 450 },
+    { upToKm: 40, fee: 600 },
   ],
   includedPeople: 5,  // the visit fee covers up to 5 people
   extraPersonFee: 50, // each person beyond that
