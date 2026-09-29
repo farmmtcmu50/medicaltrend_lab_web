@@ -37,8 +37,20 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible { outline: 
 
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
+/* Header: Thai labels stay on one line; less important bits give way as the window narrows. */
+.hdr-nav a, .hdr-tel, .hdr-brand-text span { white-space: nowrap; }
+@media (max-width: 1360px) {
+  .hdr-tel { display: none !important; }
+  .hdr-inner { gap: 20px !important; }
+  .hdr-nav { gap: 20px !important; }
+}
+@media (max-width: 1200px) {
+  .hdr-brand-text { display: none !important; }
+  .hdr-nav { gap: 16px !important; font-size: 13.5px !important; }
+}
 @media (max-width: 1020px) {
   .hdr-nav { display: none !important; }
+  .hdr-brand-text { display: flex !important; }
 }
 @media (max-width: 720px) {
   .hdr-tel, .hdr-sub { display: none !important; }
