@@ -134,6 +134,8 @@ export function posterFor(name: string): string {
   const n = (name || '').toLowerCase();
   const male = isMale(n), female = isFemale(n);
   const img = (f: string) => '/img/' + f + '.webp';
+  const mini = n.match(/mini\s*pack\s*([a-d])\b/);
+  if (mini) return img('poster-minipack-' + mini[1]);
   if (/starter/.test(n)) return img('poster-p1-starter');
   if (/standard/.test(n)) return img('poster-p2-standard');
   if (/extra/.test(n)) return img('poster-p3-extra');
