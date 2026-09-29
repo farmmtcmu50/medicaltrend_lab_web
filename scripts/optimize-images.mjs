@@ -32,7 +32,7 @@ const IMAGES = [
   ['Allergy.jpg', 'poster-allergy', 1120],
   ['HPV15.jpg', 'poster-hpv15', 1120],
   ['STD14.jpg', 'poster-std14', 1120],
-  ['STD 880 square.png', 'poster-std5', 1120],
+  ['STD 880 6 tests.webp', 'poster-std6', 1120],
   ['Tumor Screen Male.png', 'poster-tumor-screen-m', 1120],
   ['Tumor Screen Female.png', 'poster-tumor-screen-f', 1120],
   ['Tumor Plus Male.png', 'poster-tumor-plus-m', 1120],

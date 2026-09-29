@@ -49,7 +49,7 @@ export interface Popular {
 
 export const POPULAR: Popular[] = [
   { nameEn: 'Allergy test, 107 allergens', detailEn: 'Specific IgE, 107 allergens · results in 1 business day · Class 0–6 international scale', name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', detail: 'IgE Specific Allergens 107 ชนิด · รายงานผล 1 วันทำการ · Class 0–6 ตามมาตรฐานสากล', price: 3500, poster: '/img/poster-allergy.webp' },
-  { nameEn: 'STD package, 5 tests', detailEn: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · results within 1 hour', name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 5 รายการ', detail: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, was: 1260, poster: '/img/poster-std5.webp', stdLink: true },
+  { nameEn: 'STD package, 6 tests', detailEn: 'HIV Ag/Ab 4th Gen, HBsAg, Anti-HBs, Anti-HCV, Syphilis VDRL (RPR), Syphilis Anti-TP · results within 1 hour', name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 6 รายการ', detail: 'HIV Ag/Ab 4th Gen, HBsAg, Anti-HBs, Anti-HCV, Syphilis VDRL (RPR), Syphilis Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, poster: '/img/poster-std6.webp', stdLink: true },
   { nameEn: 'HPV DNA test, 15 genotypes', detailEn: 'Self-collected, no exam chair needed · all 15 genotypes reported within 3 business days', name: 'ตรวจ HPV DNA 15 Genotype', detail: 'เก็บตัวอย่างด้วยตัวเอง ไม่ต้องขึ้นขาหยั่ง · รายงานผลแยกครบ 15 genotypes ภายใน 3 วันทำการ', price: 890, poster: '/img/poster-hpv15.webp' },
   { nameEn: 'STD test, 14 infections', detailEn: 'Realtime PCR, choose only the pathogens you need · results within 3 days', name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค', detail: 'Realtime PCR เลือกตรวจเฉพาะเชื้อที่ต้องการได้ · ผลออกภายใน 3 วัน', poster: '/img/poster-std14.webp', stdLink: true, tiers: [
     { label: '3 เชื้อ', price: 1200 }, { label: '7 เชื้อ', price: 1600 }, { label: '11 เชื้อ', price: 1800 }, { label: '14 เชื้อ', price: 2100 },
@@ -154,7 +154,7 @@ export function posterFor(name: string): string {
   if (/allerg|ภูมิแพ้|ก่อภูมิ|ige/.test(n)) return img('poster-allergy');
   if (/hpv/.test(n)) return img('poster-hpv15');
   if (/14 โรค|realtime pcr|เชื้อ/.test(n)) return img('poster-std14');
-  if (/เพศสัมพันธ์|std/.test(n)) return img('poster-std5');
+  if (/เพศสัมพันธ์|std/.test(n)) return img('poster-std6');
   if (/tumor|มะเร็ง|บ่งชี้|plus|screen|คัดกรอง|พลัส/.test(n)) {
     const plus = /plus|พลัส/.test(n);
     if (female) return img(plus ? 'poster-tumor-plus-f' : 'poster-tumor-screen-f');
