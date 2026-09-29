@@ -11,6 +11,7 @@ import {
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
 import { isMapUrl, isShortMapUrl, parseMapUrl } from '../shared/maps';
+import { cleanRef } from '../shared/ref';
 
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
@@ -117,6 +118,7 @@ interface BookingPayload {
   lat?: number | null;
   lng?: number | null;
   mapUrl?: string | null;
+  ref?: string;
   patientType?: string;
   distanceKm?: number;
   persons: PersonSelection[];
@@ -173,13 +175,13 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
     env.DB.prepare(`INSERT INTO bookings (
         id, ref, created_at, mode, branch, visit_date, slot, address, latitude, longitude, patient_type,
         distance_km, people, contact_name, contact_phone, contact_line, contact_email, note,
-        lab_order_key, lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, map_url
-      ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27)`)
+        lab_order_key, lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, map_url, referrer
+      ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?20,?21,?22,?23,?24,?25,?26,?27,?28)`)
       .bind(
         id, ref, now.toISOString(), p.mode, v.branch, p.visitDate, p.slot, v.address, v.lat, v.lng, v.patientType,
         v.distanceKm, p.persons.length, v.name, v.phone, v.line, v.email, v.note,
         labOrderKey, upload ? upload.name.slice(0, 200) : null, subtotal, travel, total, cat.source,
-        now.toISOString(), p.lang === 'en' ? 'en' : 'th', v.mapUrl,
+        now.toISOString(), p.lang === 'en' ? 'en' : 'th', v.mapUrl, cleanRef(p.ref),
       ),
     ...priced.flatMap((person, i) => person.items.map(it =>
       env.DB.prepare('INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1,?2,?3,?4,?5)')

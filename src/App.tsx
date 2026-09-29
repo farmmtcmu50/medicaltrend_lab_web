@@ -3,6 +3,7 @@ import {
   BRANCH_IDS, POPULAR, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
+import { detectRef } from './ref';
 import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../shared/maps';
 import { DICT, type Lang } from './i18n';
 import { branches as branchList, features as featureList, visitSteps } from './content';
@@ -30,9 +31,13 @@ const enWait = (v: string) => !v ? '—' : v.replace(/Hours?/i, 'hr').replace(/D
 
 const ALL = 'ทั้งหมด';
 
+/** Searches that mean the customer wants HIV/STD testing → suggest the dedicated /std page. */
+const STD_QUERY = /hiv|\bstds?\b|\bsti\b|syph|ซิฟิลิส|หนองใน|gonor|chlamyd|เริม|herpes|hsv|hpv|vdrl|rpr|anti-?tp|trepon|เพศสัมพันธ์|ทริโค|trichom|mycoplasma|ureaplasma|แผลริมอ่อน|chancroid/i;
+
 export default function App() {
   const [lang, setLangState] = useState<Lang>(initialLang);
-  const [mode, setMode] = useState<'lab' | 'home'>('lab');
+  const [ref] = useState(() => detectRef('mt_ref'));
+  const [mode, setMode] = useState<'lab' | 'home'>(() => new URLSearchParams(location.search).get('mode') === 'home' ? 'home' : 'lab');
   const [patient, setPatient] = useState<PatientType>('general');
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -211,7 +216,7 @@ export default function App() {
     setDialogOpen(true);
   };
   const draft: BookingDraft = {
-    mode, branch, visitDate, slot, address, coords, mapUrl: mapLink?.url ?? null, patientType: patient, distanceKm: distance, file, lang,
+    mode, branch, visitDate, slot, address, coords, mapUrl: mapLink?.url ?? null, ref, patientType: patient, distanceKm: distance, file, lang,
     persons: persons.map(p => ({ packages: p.pks, tests: p.picked })),
     total,
   };
@@ -302,6 +307,7 @@ export default function App() {
             <a href="#pricing" className="h-nav" style={{ color: '#3D5674' }}>{t.navPricing}</a>
             <a href="#how" className="h-nav" style={{ color: '#3D5674' }}>{t.navHow}</a>
             <a href="#branches" className="h-nav" style={{ color: '#3D5674' }}>{t.navBranches}</a>
+            <a href="/std?ref=main-nav" className="h-nav" style={{ color: '#3D5674' }}>{t.navStd}</a>
           </nav>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <a className="hdr-tel" href="tel:0952472631" style={{ fontSize: 13, color: '#6B7F99', fontWeight: 500 }}>{t.call} 095 247 2631</a>
@@ -518,7 +524,24 @@ export default function App() {
                 <div style={{ padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', lineHeight: 1.35 }}>{name}</div>
                   <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55, textWrap: 'pretty' }}>{en ? p.detailEn : p.detail}</div>
-                  {p.tiers ? (
+                  {p.stdLink ? (
+                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+                        <span style={{ display: 'flex', flexDirection: 'column' }}>
+                          {p.was && <span style={{ fontSize: 11.5, color: '#93AEC4', textDecoration: 'line-through' }}>฿{ui.fmt(p.was)}</span>}
+                          {p.tiers && <span style={{ fontSize: 11.5, color: '#6B7F99' }}>{L('เริ่มต้น', 'From')}</span>}
+                          <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em', color: '#0B4F9E', whiteSpace: 'nowrap' }}>
+                            ฿{ui.fmt(p.tiers ? p.tiers[0].price : p.price!)}
+                          </span>
+                        </span>
+                        <a href="/std?ref=main-popular#packages" className="h-pale" style={{ ...ui.popularBtn(false), textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {t.stdCardCta}
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+                        </a>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#8FA6C0', lineHeight: 1.5 }}>{t.stdCardNote}</div>
+                    </div>
+                  ) : p.tiers ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 'auto', paddingTop: 4 }}>
                       {p.tiers.map(tr => {
                         const key = popularKey(p, tr);
@@ -545,7 +568,7 @@ export default function App() {
             );
           })}
         </div>
-              <a href="/std" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
+              <a href="/std?ref=main-popular-more" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
           {L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ครบทุกแพ็กเกจ · เลือกเชื้อ PCR เอง', 'All HIV & STD packages · build your own PCR panel')}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
         </a>
@@ -682,6 +705,19 @@ export default function App() {
             <span className="picking-badge" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#17A090', padding: '6px 12px', borderRadius: 999, marginLeft: 'auto' }}>{t.pickingFor} {personLabel(act)}</span>
             <span style={{ fontSize: 12.5, color: '#8FA6C0', fontWeight: 500 }}>{filtered.length + L(' รายการ', ' tests')}</span>
           </div>
+
+          {STD_QUERY.test(testQuery.trim()) && (
+            <a href="/std?ref=main-search#packages" className="h-pale" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 14, padding: '14px 18px', borderRadius: 14, border: '1.5px solid #CFE0F1', background: '#F1F7FF', color: '#0F2540', textDecoration: 'none', animation: 'riseIn .25s ease both' }}>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{t.stdSearchT}</span>
+                <span style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.5 }}>{t.stdSearchD}</span>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#0B4F9E', whiteSpace: 'nowrap' }}>
+                {t.stdSearchCta}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
+              </span>
+            </a>
+          )}
 
           <div style={{ border: '1px solid #E4ECF5', borderRadius: 18, overflow: 'hidden', background: '#fff' }}>
             <div className="test-grid test-head" style={{ padding: '14px 22px', background: '#F7FAFD', borderBottom: '1px solid #E4ECF5', fontSize: 11.5, fontWeight: 700, letterSpacing: '.08em', color: '#6B7F99', textTransform: 'uppercase' }}>
@@ -838,7 +874,7 @@ export default function App() {
             </div>
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>{t.footAbout}</p>
           </div>
-          <FooterCol title={t.footServices} links={[['#branches', t.fs1], ['#pricing', t.fs2], ['#pricing', t.fs3], ['#pricing', t.fs4]]} />
+          <FooterCol title={t.footServices} links={[['#branches', t.fs1], ['#pricing', t.fs2], ['/std?ref=main-footer', t.fsStd], ['#pricing', t.fs3], ['#pricing', t.fs4]]} />
           <FooterCol title={t.footHelp} links={[['#how', t.navHow], ['#features', t.faq], ['#features', t.pdpa]]} />
           <div>
             <div style={{ color: '#fff', fontSize: 13.5, fontWeight: 600, marginBottom: 12 }}>{t.contact}</div>

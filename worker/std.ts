@@ -2,6 +2,7 @@
 // Stored in the same bookings tables as the main site (source = 'std'), so it shows up in the Booking Console.
 import { BRANCH_IDS, type BranchId } from '../shared/catalog';
 import { STD_BOOKING_DAYS, branchHours, priceStd } from '../shared/std';
+import { cleanRef } from '../shared/ref';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
 interface Env { DB: D1Database }
@@ -10,7 +11,7 @@ interface StdPayload {
   name?: string; email?: string; phone?: string; branch?: string;
   packages?: unknown; pathogens?: unknown;
   date?: string; time?: string; note?: string;
-  pdpaConsent?: boolean; expectedTotal?: number; lang?: string;
+  pdpaConsent?: boolean; expectedTotal?: number; lang?: string; ref?: string;
 }
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -60,9 +61,9 @@ export async function createStdBooking(req: Request, env: Env): Promise<Response
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO bookings (
         id, ref, created_at, mode, branch, visit_date, slot, people, contact_name, contact_phone, contact_email, note,
-        items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, source
-      ) VALUES (?1, ?2, ?3, 'lab', ?4, ?5, ?6, 1, ?7, ?8, ?9, ?10, ?11, 0, ?11, 'std', ?3, ?12, 'std')`)
-      .bind(id, ref, now.toISOString(), branch, date, time, name, phone, email, note, priced.total, p.lang === 'en' ? 'en' : 'th'),
+        items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, source, referrer
+      ) VALUES (?1, ?2, ?3, 'lab', ?4, ?5, ?6, 1, ?7, ?8, ?9, ?10, ?11, 0, ?11, 'std', ?3, ?12, 'std', ?13)`)
+      .bind(id, ref, now.toISOString(), branch, date, time, name, phone, email, note, priced.total, p.lang === 'en' ? 'en' : 'th', cleanRef(p.ref)),
     ...priced.lines.map(l =>
       env.DB.prepare("INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1, 1, 'package', ?2, ?3)")
         .bind(id, l.name, l.price)),

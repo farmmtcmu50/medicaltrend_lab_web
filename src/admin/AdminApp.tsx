@@ -6,6 +6,7 @@ import {
   BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META,
   type AdminBooking, type AdminRow, type AdminSummary, type Status,
 } from '../../shared/admin';
+import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
@@ -237,6 +238,22 @@ function Dashboard({ openList }: { openList: (p: Partial<ListQuery>) => void }) 
             ))}
           </div>
         </div>
+
+        <div style={card}>
+          <div style={cardTitle}>ที่มาของการจอง · 30 วัน</div>
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column' }}>
+            {s.referrers.length === 0 && <Empty>ยังไม่มีข้อมูล</Empty>}
+            {s.referrers.map(r => (
+              <div key={r.source + (r.referrer || '')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: '1px solid #EEF3F9' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                  <span style={{ ...(r.source === 'std' ? stdPill : pill({ c: '#0B4F9E', bg: '#EAF3FF' })), padding: '3px 8px', fontSize: 10.5 }}>{r.source === 'std' ? 'STD' : 'หลัก'}</span>
+                  <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{refLabel(r.referrer)}</span>
+                </span>
+                <span style={{ fontSize: 12, color: '#536C89', whiteSpace: 'nowrap' }}>{r.count} รายการ · ฿{fmt(r.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div style={card}>
@@ -389,6 +406,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     ['LINE ID', b.contact_line || '—'],
     ['อีเมล', b.contact_email ? <a href={'mailto:' + b.contact_email}>{b.contact_email}</a> : '—'],
     ['จองเมื่อ', thDateTime(b.created_at)],
+    ['ที่มา', (b.source === 'std' ? 'หน้า STD · ' : 'หน้าหลัก · ') + refLabel(b.referrer)],
     ['ใบสั่งตรวจจากแพทย์', b.has_lab_order ? <a href={api.labOrderUrl(b.ref)} target="_blank" rel="noopener">{b.lab_order_name || 'เปิดไฟล์'} ↗</a> : 'ไม่มี'],
   ];
 

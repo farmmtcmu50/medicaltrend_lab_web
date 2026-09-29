@@ -43,13 +43,15 @@ export interface PopularTier { label: string; price: number }
 export interface Popular {
   name: string; nameEn: string; detail: string; detailEn: string;
   price?: number; was?: number; poster: string; tiers?: PopularTier[];
+  /** Booked on the STD page (/std) instead of the main cart. */
+  stdLink?: boolean;
 }
 
 export const POPULAR: Popular[] = [
   { nameEn: 'Allergy test, 107 allergens', detailEn: 'Specific IgE, 107 allergens · results in 1 business day · Class 0–6 international scale', name: 'ตรวจสารก่อภูมิแพ้ 107 ชนิด', detail: 'IgE Specific Allergens 107 ชนิด · รายงานผล 1 วันทำการ · Class 0–6 ตามมาตรฐานสากล', price: 3500, poster: '/img/poster-allergy.webp' },
-  { nameEn: 'STD package, 5 tests', detailEn: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · results within 1 hour', name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 5 รายการ', detail: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, was: 1260, poster: '/img/poster-std5.webp' },
+  { nameEn: 'STD package, 5 tests', detailEn: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · results within 1 hour', name: 'แพ็กเกจโรคติดต่อทางเพศสัมพันธ์ 5 รายการ', detail: 'HIV 4th Gen Ag/Ab, HBsAg, Anti-HBs, HCV Ab, Anti-TP · รอผลไม่เกิน 1 ชั่วโมง', price: 880, was: 1260, poster: '/img/poster-std5.webp', stdLink: true },
   { nameEn: 'HPV DNA test, 15 genotypes', detailEn: 'Self-collected, no exam chair needed · all 15 genotypes reported within 3 business days', name: 'ตรวจ HPV DNA 15 Genotype', detail: 'เก็บตัวอย่างด้วยตัวเอง ไม่ต้องขึ้นขาหยั่ง · รายงานผลแยกครบ 15 genotypes ภายใน 3 วันทำการ', price: 890, poster: '/img/poster-hpv15.webp' },
-  { nameEn: 'STD test, 14 infections', detailEn: 'Realtime PCR, choose only the pathogens you need · results within 3 days', name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค', detail: 'Realtime PCR เลือกตรวจเฉพาะเชื้อที่ต้องการได้ · ผลออกภายใน 3 วัน', poster: '/img/poster-std14.webp', tiers: [
+  { nameEn: 'STD test, 14 infections', detailEn: 'Realtime PCR, choose only the pathogens you need · results within 3 days', name: 'ตรวจโรคติดต่อทางเพศสัมพันธ์ 14 โรค', detail: 'Realtime PCR เลือกตรวจเฉพาะเชื้อที่ต้องการได้ · ผลออกภายใน 3 วัน', poster: '/img/poster-std14.webp', stdLink: true, tiers: [
     { label: '3 เชื้อ', price: 1200 }, { label: '7 เชื้อ', price: 1600 }, { label: '11 เชื้อ', price: 1800 }, { label: '14 เชื้อ', price: 2100 },
   ] },
 ];

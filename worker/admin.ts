@@ -121,7 +121,7 @@ async function listBookings(url: URL, env: Env) {
 async function bookingDetail(env: Env, ref: string): Promise<AdminBooking> {
   const b = await env.DB.prepare(`SELECT id, ref, created_at, status, mode, branch, visit_date, slot, address, latitude, longitude,
       patient_type, distance_km, people, contact_name, contact_phone, contact_line, contact_email, note, lab_order_key,
-      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url, source
+      lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url, source, referrer
       FROM bookings WHERE ref = ?1`).bind(ref).first<Record<string, unknown>>();
   const [items, events] = await env.DB.batch([
     env.DB.prepare('SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id').bind(b!.id),
@@ -141,7 +141,8 @@ async function summary(env: Env): Promise<AdminSummary> {
   const month = today.slice(0, 7);
   // created_at is UTC; shift to Bangkok before taking the date.
   const bkkDate = "substr(datetime(created_at, '+7 hours'), 1, 10)";
-  const [visits, created, pending, rev, byStatus, byBranch, top] = await env.DB.batch([
+  const since30 = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const [visits, created, pending, rev, byStatus, byBranch, top, refs] = await env.DB.batch([
     env.DB.prepare("SELECT COUNT(*) AS n, SUM(mode = 'home') AS h FROM bookings WHERE visit_date = ?1 AND status != 'cancelled'").bind(today),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM bookings WHERE ${bkkDate} = ?1`).bind(today),
     env.DB.prepare("SELECT COUNT(*) AS n FROM bookings WHERE status = 'pending'"),
@@ -151,7 +152,9 @@ async function summary(env: Env): Promise<AdminSummary> {
       FROM bookings WHERE substr(visit_date, 1, 7) = ?1 AND status != 'cancelled' GROUP BY k ORDER BY s DESC`).bind(month),
     env.DB.prepare(`SELECT i.name, COUNT(*) AS n, SUM(i.price) AS s FROM booking_items i JOIN bookings b ON b.id = i.booking_id
       WHERE b.status != 'cancelled' AND b.created_at >= ?1 GROUP BY i.name ORDER BY n DESC, s DESC LIMIT 5`)
-      .bind(new Date(Date.now() - 30 * 86400_000).toISOString()),
+      .bind(since30),
+    env.DB.prepare(`SELECT source, referrer, COUNT(*) AS n, SUM(total) AS s FROM bookings
+      WHERE created_at >= ?1 AND status != 'cancelled' GROUP BY source, referrer ORDER BY n DESC LIMIT 12`).bind(since30),
   ]);
   const first = <T>(r: D1Result) => r.results[0] as T;
   return {
@@ -165,6 +168,7 @@ async function summary(env: Env): Promise<AdminSummary> {
     statusToday: Object.fromEntries((byStatus.results as { status: string; n: number }[]).map(r => [r.status, r.n])),
     revenueByBranch: (byBranch.results as { k: string; s: number; n: number }[]).map(r => ({ key: r.k, amount: r.s, count: r.n })),
     topItems: (top.results as { name: string; n: number; s: number }[]).map(r => ({ name: r.name, count: r.n, amount: r.s })),
+    referrers: (refs.results as { source: string; referrer: string | null; n: number; s: number }[]).map(r => ({ source: r.source, referrer: r.referrer, count: r.n, amount: r.s || 0 })),
   };
 }
 

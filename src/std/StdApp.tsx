@@ -5,6 +5,7 @@ import {
   STD_BOOKING_DAYS, STD_BRANCHES, STD_COVERS, STD_KEY_ORDER, STD_PACKAGES, STD_PATHOGENS, TIER_CAPS, TIER_PRICES,
   branchHours, tierPrice, type StdKey,
 } from '../../shared/std';
+import { detectRef } from '../ref';
 import { bookingCopy, copyAll, noticeCopy, stiCopy, type StdLang } from './copy';
 
 const money = (n: number) => n.toLocaleString('en-US');
@@ -31,6 +32,7 @@ const Check = ({ size = 16, color = '#1C75BC', w = 2.5 }: { size?: number; color
 
 export default function StdApp() {
   const [lang, setLangState] = useState<StdLang>(initialLang);
+  const [ref] = useState(() => detectRef('mt_std_ref'));
   const [f, setF] = useState<Form>(emptyForm);
   const [picked, setPicked] = useState<number[]>([]);
   const [notice, setNotice] = useState('');
@@ -187,7 +189,7 @@ export default function StdApp() {
         body: JSON.stringify({
           name: f.name.trim(), email: f.email.trim(), phone: f.phone.replace(/[\s-]/g, ''),
           branch: STD_BRANCHES[+f.branch], packages: f.pkgs, pathogens: hasCustom ? picked : [],
-          date: f.date, time: f.slot, note: f.note.trim(), pdpaConsent: true, expectedTotal: total ?? 0, lang,
+          date: f.date, time: f.slot, note: f.note.trim(), pdpaConsent: true, expectedTotal: total ?? 0, lang, ref,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -522,11 +524,12 @@ export default function StdApp() {
 
         {/* ADD-ONS */}
         <section className="s-addons">
-          {t.addons.map(ad => (
+          {t.addons.map((ad, i) => (
             <div key={ad.t} className="s-addon">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div className="s-addon-t">{ad.t}</div>
                 <div className="s-addon-d">{ad.d}</div>
+                {i === 0 && <a href="/?mode=home&ref=std-home-addon" style={{ fontSize: 15, fontWeight: 600 }}>{lang === 'th' ? 'จองเจาะเลือดถึงบ้าน คำนวณค่าเดินทางอัตโนมัติ →' : 'Book home collection with automatic travel fee →'}</a>}
               </div>
               <div className="s-addon-p">
                 <div className="s-addon-pl">{t.from}</div>

@@ -39,6 +39,7 @@ export interface AdminBooking extends AdminRow {
   lab_order_name: string | null; has_lab_order: boolean; items_subtotal: number; travel_fee: number;
   price_source: string; pdpa_consent_at: string; lang: string; staff_note: string | null; updated_at: string | null;
   map_url: string | null;
+  referrer: string | null;
   items: { person_no: number; kind: 'package' | 'test'; name: string; price: number }[];
   events: { at: string; actor: string; action: 'created' | 'status' | 'note'; from_status: string | null; to_status: string | null; note: string | null }[];
 }
@@ -54,4 +55,5 @@ export interface AdminSummary {
   statusToday: Record<string, number>;
   revenueByBranch: { key: string; amount: number; count: number }[];
   topItems: { name: string; count: number; amount: number }[];
+  referrers: { source: string; referrer: string | null; count: number; amount: number }[];
 }
