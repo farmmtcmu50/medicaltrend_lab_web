@@ -956,7 +956,7 @@ export default function App() {
             <div style={{ color: '#fff', fontSize: 13.5, fontWeight: 600, marginBottom: 12 }}>{t.contact}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
               <a href="tel:0952472631" style={{ color: '#9FC2E0' }}>{t.call} 095 247 2631</a>
-              <a href="mailto:medicaltrend.lab@gmail.com" style={{ color: '#9FC2E0' }}>medicaltrend.lab@gmail.com</a>
+              <a href="mailto:lab@medicaltrend.co.th" style={{ color: '#9FC2E0' }}>lab@medicaltrend.co.th</a>
               <span>{t.cmPy}</span>
             </div>
           </div>

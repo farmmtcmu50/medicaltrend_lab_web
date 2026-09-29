@@ -22,7 +22,7 @@ export const branches = (L: L): Branch[] => [
   {
     id: 'sankamphaeng', name: L('ศูนย์แล็บ เมดิคอลเทรนด์', 'Medical Trend Lab Center'), tag: L('สันกำแพง', 'San Kamphaeng'),
     address: L('107/17 หมู่ 3 ต.ต้นเปา อ.สันกำแพง จ.เชียงใหม่ 50130', '107/17 Moo 3, Ton Pao, San Kamphaeng, Chiang Mai 50130'),
-    landmark: '', phone: '095 247 2631', tel: '0952472631', email: 'medicaltrend.lab@gmail.com',
+    landmark: '', phone: '095 247 2631', tel: '0952472631', email: 'lab@medicaltrend.co.th',
     logo: '/img/logo-mt-center-header.webp', map: 'https://maps.app.goo.gl/dHaP2e7HRyN2FW7V6',
   },
   {
