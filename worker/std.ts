@@ -4,9 +4,10 @@ import { BRANCH_IDS, type BranchId } from '../shared/catalog';
 import { STD_BOOKING_DAYS, branchHours, priceStd } from '../shared/std';
 import { cleanRef } from '../shared/ref';
 import { notifyBooking, type LineEnv } from './line';
+import { mailCustomer, type MailEnv } from './mail';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
-type Env = LineEnv;
+type Env = LineEnv & MailEnv;
 
 interface StdPayload {
   name?: string; email?: string; phone?: string; branch?: string;
@@ -73,5 +74,6 @@ export async function createStdBooking(req: Request, env: Env, ctx: ExecutionCon
   ]);
 
   ctx.waitUntil(notifyBooking(env, id));
+  ctx.waitUntil(mailCustomer(env, id, 'booked'));
   return json({ ok: true, ref, total: priced.total }, 201);
 }

@@ -135,3 +135,18 @@ npx wrangler d1 execute medical-trend-booking --remote \
 - ถ้าไม่มีพิกัด ลูกค้าเลื่อนประมาณระยะทางเอง (1–40 กม.) และเจ้าหน้าที่ยืนยันภายหลัง เกิน 40 กม. ระบบไม่รับจอง
 - ค่าบริการถึงบ้าน (PRICING.homeTiers ใน shared/catalog.ts) ต่อครั้ง ไม่เกิน 5 ท่าน: 1–3 กม. ฿250 · 4–6 ฿300 · 7–10 ฿350 · 11–15 ฿400 · 16–20 ฿450 · 21–40 ฿600 · ท่านที่ 6 ขึ้นไป +฿50/ท่าน (ระยะปัดขึ้นเป็นกิโลเมตรเต็ม)
 - แนบใบสั่งแพทย์แล้วจองได้โดยไม่ต้องเลือกรายการตรวจ (ทั้งที่สาขาและถึงบ้าน) ยอดที่บันทึกคือค่าบริการเบื้องต้น หลังบ้านแสดง "รอแจ้งราคา" ให้เจ้าหน้าที่ใช้ "แก้ไขรายการตรวจ" ใส่รายการและราคา ระบบแจ้งกลุ่ม LINE ให้อัตโนมัติ
+
+## อีเมลถึงลูกค้า (Resend)
+
+worker/mail.ts ส่งในนาม `MedicalTrend Lab <lab@medicaltrend.co.th>` (Reply-To: lab@) เฉพาะการจองที่ลูกค้าใส่อีเมล
+ยืนยันการจอง (หลังจอง) · แจ้งยอด (หลังเจ้าหน้าที่แก้รายการตรวจ) · ยืนยันนัด / ยกเลิก (เปลี่ยนสถานะในหลังบ้าน) · เตือนนัด (cron 18:00 น. ของวันก่อนนัด)
+ผลการส่งทุกครั้งอยู่ในตาราง email_log และการ์ด "อีเมลถึงลูกค้า" ในหลังบ้าน การจอง STD ใช้ข้อความกลาง ๆ ไม่ระบุชื่อโรค/รายการตรวจ
+
+1. สมัคร https://resend.com → Domains → Add Domain → `medicaltrend.co.th` (Region: Tokyo ap-northeast-1)
+2. เพิ่ม DNS ตามที่ Resend แสดง ที่ผู้ดูแล DNS ของ medicaltrend.co.th:
+   - TXT `resend._domainkey` (DKIM)
+   - MX + TXT ที่ subdomain `send` (SPF ของ Resend) — ไม่กระทบ MX/อีเมลเดิมของ lab@
+   - แนะนำ TXT `_dmarc` = `v=DMARC1; p=none;` ถ้ายังไม่มี
+   แล้วกด Verify จนสถานะเป็น Verified
+3. API Keys → Create (Sending access, domain medicaltrend.co.th) → `npx wrangler secret put RESEND_API_KEY`
+4. `npm run deploy` (มี cron `0 11 * * *` ใน wrangler.jsonc) ถ้าไม่มี RESEND_API_KEY ระบบจะไม่ส่งอีเมลและไม่กระทบการจอง

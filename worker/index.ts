@@ -4,6 +4,7 @@
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
 //   GET  /api/distance?lat=&lng=  nearest branch + road distance for the home-collection fee (worker/geo.ts)
 //   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
+//   cron (daily 11:00 UTC = 18:00 Bangkok): email reminders for tomorrow's visits (worker/mail.ts)
 //   POST /api/line/webhook  LINE OA events; new bookings are pushed to the staff LINE group (see worker/line.ts)
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
@@ -18,11 +19,12 @@ import { cleanRef } from '../shared/ref';
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
 import { distanceFrom, distanceResponse, expandMapLink } from './geo';
+import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
-export interface Env extends AccessEnv, LineEnv {
+export interface Env extends AccessEnv, LineEnv, MailEnv {
   DB: D1Database;
   UPLOADS: R2Bucket;
   ASSETS: Fetcher;
@@ -70,6 +72,10 @@ export default {
       console.error('unhandled', err);
       return json({ error: 'server_error' }, 500);
     }
+  },
+
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(sendReminders(env));
   },
 } satisfies ExportedHandler<Env>;
 
@@ -216,6 +222,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   }
 
   ctx.waitUntil(notifyBooking(env, id));
+  ctx.waitUntil(mailCustomer(env, id, 'booked'));
   return json({ ok: true, ref, total, travelFee: travel, subtotal }, 201);
 }
 

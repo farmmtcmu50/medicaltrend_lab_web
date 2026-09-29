@@ -23,6 +23,9 @@ const pill = (m: { c: string; bg: string }): CSSProperties => ({
 const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#0B4F9E', bg: '#EAF3FF' });
 const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
 const rxPill = pill({ c: '#A26A00', bg: '#FFF4E0' });
+const MAIL_LABELS: Record<string, string> = {
+  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน',
+};
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
@@ -554,6 +557,24 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                 );
               })}
               {b.status === 'cancelled' && <div style={{ ...pill(STATUS_META.cancelled), alignSelf: 'start' }}>ยกเลิกแล้ว · {reachedAt('cancelled')}</div>}
+            </div>
+          </div>
+
+          <div style={card}>
+            <div style={cardTitle}>อีเมลถึงลูกค้า</div>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {!b.contact_email && <div style={{ fontSize: 12, color: '#8FA6C0' }}>ลูกค้าไม่ได้ให้อีเมล · ระบบจะไม่ส่งอีเมล</div>}
+              {b.contact_email && !b.emails.length && <div style={{ fontSize: 12, color: '#8FA6C0' }}>ยังไม่มีการส่งอีเมล</div>}
+              {[...b.emails].reverse().map((m, i) => (
+                <div key={i} style={{ fontSize: 12, lineHeight: 1.5, paddingBottom: 9, borderBottom: '1px solid #F1F5FA' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ color: '#0F2540', fontWeight: 600 }}>{MAIL_LABELS[m.kind] || m.kind}</span>
+                    <span style={pill(m.status === 'sent' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#A3242A', bg: '#FDECEC' })}>{m.status === 'sent' ? 'ส่งแล้ว' : 'ส่งไม่สำเร็จ'}</span>
+                  </div>
+                  <div style={{ color: '#8FA6C0' }}>{thDateTime(m.at)} · {m.to_addr}</div>
+                  {m.error && <div style={{ color: '#A3242A', wordBreak: 'break-word' }}>{m.error}</div>}
+                </div>
+              ))}
             </div>
           </div>
 

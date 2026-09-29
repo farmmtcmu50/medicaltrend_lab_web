@@ -26,6 +26,10 @@
     "ACCESS_AUD": "29eb689f7e786e99bdb4e65f70fc29760c8f52722da393640efaeebf0bd0466d"
   },
 
+  // Daily 18:00 Bangkok: email reminders for tomorrow's appointments (worker/mail.ts).
+  // Customer email needs the secret RESEND_API_KEY (npx wrangler secret put RESEND_API_KEY); without it no mail is sent.
+  "triggers": { "crons": ["0 11 * * *"] },
+
   "d1_databases": [
     {
       "binding": "DB",

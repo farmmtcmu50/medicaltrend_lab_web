@@ -11,8 +11,9 @@ import { BRANCH_IDS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
 import { notifyItemsChanged, type LineEnv } from './line';
+import { mailCustomer, type MailEnv } from './mail';
 
-interface Env extends LineEnv { UPLOADS: R2Bucket }
+interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
 
 const PAGE_SIZE = 50;
@@ -74,6 +75,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
         env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, from_status, to_status) VALUES (?1, ?2, ?3, 'status', ?4, ?5)")
           .bind(row.id, now, email, row.status, to),
       ]);
+      if (to === 'confirmed' || to === 'cancelled') ctx.waitUntil(mailCustomer(env, row.id, to));
     } else {
       const note = typeof body.note === 'string' ? body.note.trim().slice(0, 2000) : null;
       if (note === null) return json({ error: 'bad_request', detail: 'note' }, 400);
@@ -135,6 +137,7 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
       .bind(id, now, email, summary),
   ]);
   ctx.waitUntil(notifyItemsChanged(env, id, email, edit, b.total));
+  ctx.waitUntil(mailCustomer(env, id, 'priced'));
   return json(await bookingDetail(env, ref));
 }
 
@@ -179,9 +182,10 @@ async function bookingDetail(env: Env, ref: string): Promise<AdminBooking> {
       patient_type, distance_km, people, contact_name, contact_phone, contact_line, contact_email, note, lab_order_key,
       lab_order_name, items_subtotal, travel_fee, total, price_source, pdpa_consent_at, lang, staff_note, updated_at, map_url, source, referrer
       FROM bookings WHERE ref = ?1`).bind(ref).first<Record<string, unknown>>();
-  const [items, events] = await env.DB.batch([
+  const [items, events, emails] = await env.DB.batch([
     env.DB.prepare('SELECT person_no, kind, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id').bind(b!.id),
     env.DB.prepare('SELECT at, actor, action, from_status, to_status, note FROM booking_events WHERE booking_id = ?1 ORDER BY at, id').bind(b!.id),
+    env.DB.prepare('SELECT at, kind, to_addr, status, error FROM email_log WHERE booking_id = ?1 ORDER BY at, id').bind(b!.id),
   ]);
   const { id: _id, lab_order_key, ...rest } = b!;
   return {
@@ -189,6 +193,7 @@ async function bookingDetail(env: Env, ref: string): Promise<AdminBooking> {
     has_lab_order: !!lab_order_key,
     items: items.results as unknown as AdminBooking['items'],
     events: events.results as unknown as AdminBooking['events'],
+    emails: emails.results as unknown as AdminBooking['emails'],
   };
 }
 
