@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, POPULAR, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee,
+  BRANCH_IDS, POPULAR, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { detectRef } from './ref';
@@ -122,7 +122,7 @@ export default function App() {
   const act = Math.min(active, persons.length - 1);
   const cur = persons[act];
   const peopleTotal = persons.reduce((a, p) => a + personSum(p), 0);
-  const travel = travelFee(mode, distance);
+  const travel = travelFee(mode, distance, persons.length);
   const total = peopleTotal + travel;
   const isHome = mode === 'home';
   const hasRx = !!file;
@@ -277,10 +277,11 @@ export default function App() {
       value: '฿' + ui.fmt(personSum(p)),
     };
   }).concat(isHome ? [{
-    label: L('ค่าเดินทางทีมเจาะเลือด', 'Collection team travel fee'),
-    note: distance <= PRICING.freeKm
-      ? L('ในเขต 10 กม. เหมาจ่าย · คิดครั้งเดียวต่อการเดินทาง', 'Flat rate within 10 km · charged once per trip')
-      : '฿' + PRICING.perKmRate + L('/กม. ส่วนที่เกิน 10 กม.', '/km beyond 10 km'),
+    label: L('ค่าบริการเจาะเลือดถึงบ้าน', 'Home collection fee'),
+    note: L('ระยะ ' + travelTierLabel(distance) + ' กม. · เหมาจ่ายต่อครั้ง ไม่เกิน 5 ท่าน', travelTierLabel(distance) + ' km · flat per visit, up to 5 people') +
+      (persons.length > PRICING.includedPeople
+        ? L(' + ท่านที่ 6 ขึ้นไป ฿' + PRICING.extraPersonFee + '/ท่าน', ' + ฿' + PRICING.extraPersonFee + ' per extra person')
+        : ''),
     value: travel ? '฿' + ui.fmt(travel) : L('ฟรี', 'Free'),
   }] : []).concat(hasRx && !rxOnly ? [{
     label: t.rxPersonLabel, note: t.rxPendingNote, value: t.rxPending,
@@ -366,7 +367,7 @@ export default function App() {
         <>
           <input id="dist" type="range" min={PRICING.minKm} max={PRICING.maxKm} step={1} value={distance} onChange={e => setDistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#1466C7', height: 6, cursor: 'pointer' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8FA6C0', marginTop: 6 }}>
-            <span>1 {km}</span><span>{t.cityFree}</span><span>40 {km}</span>
+            <span>1 {km}</span><span>{t.cityFree}</span><span>{PRICING.maxKm} {km}</span>
           </div>
           <div style={{ fontSize: 11.5, color: distInfo?.status === 'fail' ? '#9A5220' : '#8FA6C0', marginTop: 6, lineHeight: 1.5 }}>{distInfo?.status === 'fail' ? t.distFail : t.distManual}</div>
         </>

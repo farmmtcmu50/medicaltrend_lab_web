@@ -520,7 +520,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
               ))}
               {isHome && (
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.14)' }}>
-                  <span style={{ color: '#DCEBFA' }}>ค่าเดินทาง ({b.distance_km} กม.)</span>
+                  <span style={{ color: '#DCEBFA' }}>ค่าบริการถึงบ้าน ({b.distance_km} กม. · {b.people} ท่าน)</span>
                   <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{b.travel_fee ? '฿' + fmt(b.travel_fee) : 'ฟรี'}</span>
                 </div>
               )}

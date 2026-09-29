@@ -178,7 +178,7 @@ export function bookingMessage(b: BookingRow, items: ItemRow[]): string {
   if (b.contact_email) L.push(`✉️ ${b.contact_email}`);
 
   L.push('', std ? '🧪 แพ็กเกจ' : `🧪 รายการตรวจ (${b.people} ท่าน)`, ...itemLines(b, items), '');
-  if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าเดินทาง ${baht(b.travel_fee)}`);
+  if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าบริการถึงบ้าน ${baht(b.travel_fee)}`);
   L.push(`💰 ยอดรวม ${baht(b.total)}` + (b.lab_order_name && !items.length ? ' (ยังไม่รวมค่าตรวจตามใบสั่งแพทย์)' : ''));
   if (b.note) L.push(`📝 หมายเหตุ: ${b.note}`);
   if (b.lab_order_name) L.push(`📎 ใบสั่งแพทย์: แนบแล้ว (${b.lab_order_name})`);
@@ -220,7 +220,7 @@ export function itemsChangedMessage(
     for (const x of edit.removed) L.push(` • คนที่ ${x.person_no}: ${x.name} ${baht(x.price)}`);
   }
   L.push('', `🧪 รายการตรวจล่าสุด (${b.people} ท่าน)`, ...itemLines(b, items), '');
-  if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าเดินทาง ${baht(b.travel_fee)}`);
+  if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าบริการถึงบ้าน ${baht(b.travel_fee)}`);
   const diff = b.total - oldTotal;
   L.push(`💰 ยอดรวม ${baht(oldTotal)} → ${baht(b.total)} (${diff >= 0 ? '+' : '−'}${baht(Math.abs(diff))})`);
   L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);

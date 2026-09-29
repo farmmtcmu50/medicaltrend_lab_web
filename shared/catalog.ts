@@ -18,12 +18,19 @@ export interface Catalog {
 }
 
 export const PRICING = {
-  baseVisitFee: 350,
-  perKmRate: 25,
-  freeKm: 10,
   minKm: 1,
-  maxKm: 40,
+  maxKm: 20,          // beyond this: outside the home-collection area
   maxPeople: 8,
+  /** Home collection fee per visit by distance from the nearest branch (whole km, rounded up). */
+  homeTiers: [
+    { upToKm: 3, fee: 250 },
+    { upToKm: 6, fee: 300 },
+    { upToKm: 10, fee: 350 },
+    { upToKm: 15, fee: 400 },
+    { upToKm: 20, fee: 450 },
+  ],
+  includedPeople: 5,  // the visit fee covers up to 5 people
+  extraPersonFee: 50, // each person beyond that
 };
 
 export const SLOTS = ['06:00–08:00', '08:00–10:00', '10:00–12:00', '16:00–18:00'] as const;
@@ -153,10 +160,21 @@ export function posterFor(name: string): string {
 
 // ---------- pricing ----------
 
-export function travelFee(mode: 'lab' | 'home', distanceKm: number): number {
+/** Home-collection fee: distance tier (per visit, up to 5 people) + ฿50 for each extra person. */
+export function travelFee(mode: 'lab' | 'home', distanceKm: number, people = 1): number {
   if (mode === 'lab') return 0;
-  const d = distanceKm;
-  return PRICING.baseVisitFee + (d > PRICING.freeKm ? (d - PRICING.freeKm) * PRICING.perKmRate : 0);
+  const d = Math.max(PRICING.minKm, Math.ceil(distanceKm));
+  const tier = PRICING.homeTiers.find(t => d <= t.upToKm) ?? PRICING.homeTiers[PRICING.homeTiers.length - 1];
+  return tier.fee + Math.max(0, people - PRICING.includedPeople) * PRICING.extraPersonFee;
+}
+
+/** Distance range of the fee tier, e.g. "4–6" for 5 km. */
+export function travelTierLabel(distanceKm: number): string {
+  const d = Math.max(PRICING.minKm, Math.ceil(distanceKm));
+  const i = PRICING.homeTiers.findIndex(t => d <= t.upToKm);
+  const t = PRICING.homeTiers[i < 0 ? PRICING.homeTiers.length - 1 : i];
+  const from = i <= 0 ? PRICING.minKm : PRICING.homeTiers[i - 1].upToKm + 1;
+  return `${from}–${t.upToKm}`;
 }
 
 /** What the browser sends per person: names only. Prices are looked up server-side. */

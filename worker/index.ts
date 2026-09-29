@@ -171,7 +171,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   const cat = await loadCatalog(env, ctx);
   const { priced, unknown, subtotal } = priceSelection(cat, p.persons);
   if (unknown.length) return json({ error: 'catalog_changed', unknown }, 409);
-  const travel = travelFee(p.mode, v.distanceKm ?? 0);
+  const travel = travelFee(p.mode, v.distanceKm ?? 0, p.persons.length);
   const total = subtotal + travel;
   if (total !== Math.round(Number(p.expectedTotal))) return json({ error: 'price_changed', total }, 409);
 

@@ -2,7 +2,7 @@
 // then save. The Worker re-prices with the same priceEdit() and posts the change to the staff LINE group.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { AdminBooking } from '../../shared/admin';
-import { MAX_PERSONS, priceBook, priceEdit, type BookItem, type EditItem } from '../../shared/itemEdit';
+import { MAX_PERSONS, editedTravelFee, priceBook, priceEdit, type BookItem, type EditItem } from '../../shared/itemEdit';
 import { api, type ApiError } from './api';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -34,7 +34,8 @@ export default function ItemEditor({ b, onSaved, onCancel, onConflict, toast }: 
   }, []);
 
   const preview = useMemo(() => priceEdit(b.items, persons, book || []), [b.items, persons, book]);
-  const newTotal = preview.subtotal + b.travel_fee;
+  const travel = editedTravelFee(b, persons.length);
+  const newTotal = preview.subtotal + travel;
   const changed = preview.added.length > 0 || preview.removed.length > 0 || persons.length !== b.people;
   const isNew = (p: number, it: EditItem) => preview.added.some(x => x.person_no === p + 1 && x.kind === it.kind && x.name === it.name);
   const priceOf = (p: number, it: EditItem) => preview.persons[p]?.items.find(x => x.kind === it.kind && x.name === it.name)?.price;
@@ -148,7 +149,7 @@ export default function ItemEditor({ b, onSaved, onCancel, onConflict, toast }: 
       <div style={{ marginTop: 16, padding: 14, borderRadius: 14, background: '#F5F9FF', border: '1px solid #DCE8F6', display: 'flex', flexDirection: 'column', gap: 7, fontSize: 12.5 }}>
         <Row label="ยอดรวมเดิม" value={'฿' + fmt(b.total)} />
         <Row label="ค่าตรวจใหม่" value={'฿' + fmt(preview.subtotal)} />
-        {b.mode === 'home' && <Row label={`ค่าเดินทาง (${b.distance_km} กม.)`} value={b.travel_fee ? '฿' + fmt(b.travel_fee) : 'ฟรี'} />}
+        {b.mode === 'home' && <Row label={`ค่าบริการถึงบ้าน (${b.distance_km} กม. · ${persons.length} ท่าน)`} value={'฿' + fmt(travel) + (travel !== b.travel_fee ? ` (เดิม ฿${fmt(b.travel_fee)})` : '')} />}
         <div style={{ borderTop: '1px dashed #CFE0F1', margin: '3px 0' }} />
         <Row label={<b>ยอดรวมใหม่</b>} value={<b style={{ fontSize: 17, color: '#0B4F9E' }}>฿{fmt(newTotal)}</b>} />
         <Row label="ส่วนต่าง" value={<b style={{ color: newTotal - b.total > 0 ? '#0B6E60' : newTotal - b.total < 0 ? '#A3242A' : '#5A7189' }}>{newTotal - b.total >= 0 ? '+' : '−'}฿{fmt(Math.abs(newTotal - b.total))}</b>} />

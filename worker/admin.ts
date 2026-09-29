@@ -9,7 +9,7 @@
 //   GET  /api/admin/bookings/:ref/lab-order
 import { BRANCH_IDS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
-import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
+import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
 import { notifyItemsChanged, type LineEnv } from './line';
 
 interface Env extends LineEnv { UPLOADS: R2Bucket }
@@ -105,8 +105,8 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
     persons.push(items);
   }
 
-  const b = await env.DB.prepare('SELECT status, total, travel_fee, updated_at FROM bookings WHERE id = ?1')
-    .bind(id).first<{ status: Status; total: number; travel_fee: number; updated_at: string | null }>();
+  const b = await env.DB.prepare('SELECT status, mode, distance_km, people, total, travel_fee, updated_at FROM bookings WHERE id = ?1')
+    .bind(id).first<{ status: Status; mode: 'lab' | 'home'; distance_km: number | null; people: number; total: number; travel_fee: number; updated_at: string | null }>();
   if (!b) return json({ error: 'not_found' }, 404);
   if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
   // Someone else saved this booking since the editor was opened.
@@ -120,7 +120,8 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
     return json(await bookingDetail(env, ref));
   }
 
-  const total = edit.subtotal + b.travel_fee;
+  const travel = editedTravelFee(b, persons.length);
+  const total = edit.subtotal + travel;
   const now = new Date().toISOString();
   const summary = describeEdit(edit, b.total, total);
   await env.DB.batch([
@@ -128,8 +129,8 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
     ...edit.persons.flatMap(p => p.items.map(it =>
       env.DB.prepare('INSERT INTO booking_items (booking_id, person_no, kind, name, price) VALUES (?1, ?2, ?3, ?4, ?5)')
         .bind(id, it.person_no, it.kind, it.name, it.price))),
-    env.DB.prepare('UPDATE bookings SET items_subtotal = ?1, total = ?2, people = ?3, updated_at = ?4 WHERE id = ?5')
-      .bind(edit.subtotal, total, persons.length, now, id),
+    env.DB.prepare('UPDATE bookings SET items_subtotal = ?1, total = ?2, people = ?3, travel_fee = ?4, updated_at = ?5 WHERE id = ?6')
+      .bind(edit.subtotal, total, persons.length, travel, now, id),
     env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, note) VALUES (?1, ?2, ?3, 'items', ?4)")
       .bind(id, now, email, summary),
   ]);

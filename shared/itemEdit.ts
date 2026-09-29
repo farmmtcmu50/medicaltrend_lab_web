@@ -1,6 +1,6 @@
 // Editing a booking's tests from the Booking Console. Shared by the admin page (live preview)
 // and the Worker (authoritative re-price), so the total staff see before saving is the total stored.
-import { POPULAR, popularKey, type Catalog } from './catalog';
+import { POPULAR, popularKey, travelFee, type Catalog } from './catalog';
 import { STD_PACKAGES } from './std';
 
 export type ItemKind = 'package' | 'test';
@@ -65,6 +65,12 @@ export function priceEdit(existing: StoredItem[], persons: EditItem[][], book: B
     added: flat.filter(x => !before.has(key(x))),
     removed: existing.filter(x => !after.has(key(x))),
   };
+}
+
+/** Travel fee after an edit: unchanged unless the number of people changed (then today's home tariff). */
+export function editedTravelFee(b: { mode: 'lab' | 'home'; distance_km: number | null; people: number; travel_fee: number }, people: number): number {
+  if (b.mode !== 'home' || people === b.people) return b.travel_fee;
+  return travelFee('home', b.distance_km ?? 1, people);
 }
 
 const baht = (n: number) => '฿' + n.toLocaleString('en-US');
