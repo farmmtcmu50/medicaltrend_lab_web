@@ -30,6 +30,11 @@ const thaiWait = (v: string) => !v ? '—' : v.replace(/Hours?/i, 'ชั่ว�
 const enWait = (v: string) => !v ? '—' : v.replace(/Hours?/i, 'hr').replace(/Days?/i, 'days').replace(/Mins?/i, 'min');
 
 const ALL = 'ทั้งหมด';
+/** Quick-filter chip that gathers the HIV/STD single tests scattered across sheet categories. */
+const STD_CAT = 'HIV/STD';
+const STD_TEST = /hiv|syphilis|\brpr\b|vdrl|anti-?tp\b|\bhbs|hcv|hsv|\bhpv|\bsti\b|chlamyd|gonor|trichom|เพศสัมพันธ์|ซิฟิลิส|เริม/i;
+const STD_WORD = /\bstds?\b|\bstis?\b|เพศสัมพันธ์/i;
+const isStdTest = (x: { n: string; th: string }) => STD_TEST.test(x.n + ' ' + x.th);
 
 /** Searches that mean the customer wants HIV/STD testing → suggest the dedicated /std page. */
 const STD_QUERY = /hiv|\bstds?\b|\bsti\b|syph|ซิฟิลิส|หนองใน|gonor|chlamyd|เริม|herpes|hsv|hpv|vdrl|rpr|anti-?tp|trepon|เพศสัมพันธ์|ทริโค|trichom|mycoplasma|ureaplasma|แผลริมอ่อน|chancroid/i;
@@ -139,11 +144,12 @@ export default function App() {
   };
 
   // ---- tests table
-  const cats = useMemo(() => [ALL].concat(catalog.tests.map(x => x.c).filter((c, i, a) => a.indexOf(c) === i)), [catalog]);
+  const cats = useMemo(() => [ALL, STD_CAT].concat(catalog.tests.map(x => x.c).filter((c, i, a) => a.indexOf(c) === i)), [catalog]);
   const q = testQuery.trim().toLowerCase();
+  const stdWord = STD_WORD.test(q);
   const filtered = catalog.tests.filter(x =>
-    (testCat === ALL || x.c === testCat) &&
-    (!q || x.n.toLowerCase().includes(q) || x.th.includes(testQuery.trim())));
+    (testCat === ALL || (testCat === STD_CAT ? isStdTest(x) : x.c === testCat)) &&
+    (!q || x.n.toLowerCase().includes(q) || x.th.includes(testQuery.trim()) || (stdWord && isStdTest(x))));
   const shown = showAllTests ? filtered : filtered.slice(0, 12);
 
   // ---- STEP 1 helpers
