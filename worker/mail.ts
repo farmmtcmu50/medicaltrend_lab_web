@@ -49,7 +49,7 @@ export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKi
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        authorization: 'Bearer ' + env.RESEND_API_KEY,
+        authorization: 'Bearer ' + env.RESEND_API_KEY.trim().replace(/^["']|["']$/g, ''), // tolerate a pasted newline or quotes
         'content-type': 'application/json',
         // booked/reminder go out once per booking; staff-triggered mails may repeat on purpose.
         'idempotency-key': kind === 'booked' || kind === 'reminder' ? `${b.id}-${kind}` : `${b.id}-${kind}-${Date.now()}`,
