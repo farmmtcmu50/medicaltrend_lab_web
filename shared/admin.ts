@@ -31,6 +31,8 @@ export interface AdminRow {
   ref: string; created_at: string; status: Status; mode: 'lab' | 'home'; branch: BranchId | null;
   visit_date: string; slot: string; people: number; contact_name: string; contact_phone: string; total: number;
   source: 'web' | 'std';
+  /** Booked with a doctor's lab order and no tests yet: staff must price it (list rows only). */
+  rx_pending?: number;
 }
 
 export interface AdminBooking extends AdminRow {

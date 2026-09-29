@@ -22,6 +22,7 @@ const pill = (m: { c: string; bg: string }): CSSProperties => ({
 });
 const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#0B4F9E', bg: '#EAF3FF' });
 const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
+const rxPill = pill({ c: '#A26A00', bg: '#FFF4E0' });
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
@@ -333,7 +334,7 @@ function BookingList({ filters, setFilters }: { filters: ListQuery; setFilters: 
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.slot}</span>
                 </span>
                 <span style={{ textAlign: 'center', fontWeight: 600 }}>{r.people}</span>
-                <span style={{ textAlign: 'right', fontWeight: 700 }}>฿{fmt(r.total)}</span>
+                <span style={{ textAlign: 'right', fontWeight: 700 }}>{r.rx_pending ? <span style={{ ...rxPill, padding: '4px 8px', fontSize: 10.5 }}>รอแจ้งราคา</span> : '฿' + fmt(r.total)}</span>
                 <span style={pill(STATUS_META[r.status])}>{STATUS_META[r.status].label}</span>
                 <a href={'#/b/' + r.ref} onClick={e => e.stopPropagation()} className="a-pale" style={{ border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 11.5, fontWeight: 700, padding: '7px 10px', borderRadius: 9, textAlign: 'center' }}>เปิด</a>
               </div>
@@ -403,7 +404,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     [isHome ? 'ช่องทาง' : 'สาขา', branchLabel(b.mode, b.branch)],
     ...(isHome ? [
       ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
-      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.'],
+      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (b.branch ? ' จาก' + (BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES] || b.branch) : ' (ลูกค้าประมาณเอง)')],
     ] as [string, ReactNode][] : []),
     ['LINE ID', b.contact_line || '—'],
     ['อีเมล', b.contact_email ? <a href={'mailto:' + b.contact_email}>{b.contact_email}</a> : '—'],
@@ -430,6 +431,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
             <span style={pill(STATUS_META[b.status])}>{STATUS_META[b.status].label}</span>
             <span style={channelPill(b.mode)}>{isHome ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
             {b.source === 'std' && <span style={stdPill}>จองจากหน้า STD</span>}
+            {b.has_lab_order && !b.items.length && <span style={rxPill}>ใบสั่งแพทย์ · รอแจ้งค่าตรวจ</span>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(170px, 100%), 1fr))', gap: '12px 18px', fontSize: 12.5 }}>
             {facts.map(([label, value]) => (
@@ -479,6 +481,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                 <div key={i} style={{ border: '1.5px solid #E9F0F8', borderRadius: 14, padding: 14, background: '#FBFDFF' }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700 }}>คนที่ {i + 1}</div>
                   <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5 }}>
+                    {!items.length && <span style={{ color: '#A26A00' }}>{b.has_lab_order ? 'ตรวจตามใบสั่งแพทย์ · กด "แก้ไขรายการตรวจ" เพื่อใส่รายการและราคา' : 'ยังไม่มีรายการ'}</span>}
                     {items.map((it, j) => (
                       <div key={j} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
                         <span style={{ color: '#3D5674', lineHeight: 1.45 }}>{it.kind === 'package' ? '📦 ' : ''}{it.name}</span>

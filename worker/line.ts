@@ -164,7 +164,8 @@ export function bookingMessage(b: BookingRow, items: ItemRow[]): string {
     if (b.address) L.push(`🏠 ${b.address}`);
     const map = b.map_url || (b.latitude != null && b.longitude != null ? `https://maps.google.com/?q=${b.latitude},${b.longitude}` : null);
     if (map) L.push(`🗺️ ${map}`);
-    const extra = [b.distance_km != null ? `ระยะทาง ${b.distance_km} กม.` : '', b.patient_type ? 'ผู้รับบริการ: ' + (PATIENT_LABELS[b.patient_type] || b.patient_type) : '']
+    const near = b.branch ? ' จาก' + (BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES] || b.branch) : ' (ลูกค้าประมาณเอง)';
+    const extra = [b.distance_km != null ? `ระยะทาง ${b.distance_km} กม.${near}` : '', b.patient_type ? 'ผู้รับบริการ: ' + (PATIENT_LABELS[b.patient_type] || b.patient_type) : '']
       .filter(Boolean).join(' · ');
     if (extra) L.push(`🚗 ${extra}`);
   } else {
@@ -178,7 +179,7 @@ export function bookingMessage(b: BookingRow, items: ItemRow[]): string {
 
   L.push('', std ? '🧪 แพ็กเกจ' : `🧪 รายการตรวจ (${b.people} ท่าน)`, ...itemLines(b, items), '');
   if (b.travel_fee > 0) L.push(`💵 ค่าตรวจ ${baht(b.items_subtotal)}`, `🚗 ค่าเดินทาง ${baht(b.travel_fee)}`);
-  L.push(`💰 ยอดรวม ${baht(b.total)}`);
+  L.push(`💰 ยอดรวม ${baht(b.total)}` + (b.lab_order_name && !items.length ? ' (ยังไม่รวมค่าตรวจตามใบสั่งแพทย์)' : ''));
   if (b.note) L.push(`📝 หมายเหตุ: ${b.note}`);
   if (b.lab_order_name) L.push(`📎 ใบสั่งแพทย์: แนบแล้ว (${b.lab_order_name})`);
   L.push(`🔗 ที่มา: ${refLabel(b.referrer)}`);
@@ -193,7 +194,7 @@ function itemLines(b: BookingRow, items: ItemRow[]): string[] {
     const mine = items.filter(i => i.person_no === n);
     if (people > 1) L.push(`คนที่ ${n}`);
     for (const it of mine) L.push(` • ${it.name} ${baht(it.price)}`);
-    if (!mine.length) L.push(' • ยังไม่ได้เลือก (ให้เจ้าหน้าที่ติดต่อกลับ)');
+    if (!mine.length) L.push(b.lab_order_name ? ' • ตามใบสั่งแพทย์ · รอเจ้าหน้าที่แจ้งค่าตรวจ' : ' • ยังไม่ได้เลือก (ให้เจ้าหน้าที่ติดต่อกลับ)');
   }
   return L;
 }

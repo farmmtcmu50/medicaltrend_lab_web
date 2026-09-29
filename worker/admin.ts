@@ -149,7 +149,7 @@ async function listBookings(url: URL, env: Env) {
   if (source === 'web' || source === 'std') add('source = ?', source);
   const branch = p.get('branch');
   if (branch === 'home') where.push("mode = 'home'");
-  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) add('branch = ?', branch);
+  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) { where.push("mode = 'lab'"); add('branch = ?', branch); }
   const from = p.get('from'), to = p.get('to');
   if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) add('visit_date >= ?', from);
   if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) add('visit_date <= ?', to);
@@ -164,7 +164,8 @@ async function listBookings(url: URL, env: Env) {
   const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
   const [rows, count] = await env.DB.batch([
-    env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total, source
+    env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total, source,
+        (lab_order_key IS NOT NULL AND NOT EXISTS (SELECT 1 FROM booking_items i WHERE i.booking_id = bookings.id)) AS rx_pending
       FROM bookings ${w} ORDER BY visit_date DESC, slot ASC, created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}`).bind(...args),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM bookings ${w}`).bind(...args),
   ]);

@@ -2,6 +2,7 @@
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
+//   GET  /api/distance?lat=&lng=  nearest branch + road distance for the home-collection fee (worker/geo.ts)
 //   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
 //   POST /api/line/webhook  LINE OA events; new bookings are pushed to the staff LINE group (see worker/line.ts)
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
@@ -11,11 +12,12 @@ import {
   buildCatalog, parseSheet, priceSelection, snapshotCatalog, travelFee,
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
-import { isMapUrl, isShortMapUrl, parseMapUrl } from '../shared/maps';
+import { isMapUrl } from '../shared/maps';
 import { cleanRef } from '../shared/ref';
 
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
+import { distanceFrom, distanceResponse, expandMapLink } from './geo';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
@@ -40,6 +42,7 @@ export default {
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
       if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
       if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env, ctx);
+      if (url.pathname === '/api/distance' && req.method === 'GET') return await distanceResponse(url, env, ctx);
       if (url.pathname === '/api/line/webhook' && req.method === 'POST') return await handleLineWebhook(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
@@ -155,6 +158,16 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
     throw e;
   }
 
+  // A known location decides the distance (nearest branch, road km), not the slider.
+  if (p.mode === 'home' && v.lat != null && v.lng != null) {
+    const d = await distanceFrom(env, ctx, { lat: v.lat, lng: v.lng }).catch(() => null);
+    if (d) {
+      if (d.km > PRICING.maxKm) return json({ error: 'out_of_area', km: d.km }, 422);
+      v.distanceKm = d.km;
+      v.branch = d.branch;
+    }
+  }
+
   const cat = await loadCatalog(env, ctx);
   const { priced, unknown, subtotal } = priceSelection(cat, p.persons);
   if (unknown.length) return json({ error: 'catalog_changed', unknown }, 409);
@@ -218,7 +231,8 @@ function validate(p: BookingPayload, upload: File | null) {
   need(Array.isArray(p.persons) && p.persons.length >= 1 && p.persons.length <= PRICING.maxPeople, 'persons');
   for (const person of p.persons) {
     need(person && Array.isArray(person.packages) && Array.isArray(person.tests), 'persons');
-    need(person.packages.length + person.tests.length > 0, 'every person needs at least one item');
+    // With a doctor's lab order the customer may skip choosing tests; staff price it from the order.
+    need(upload || person.packages.length + person.tests.length > 0, 'every person needs at least one item');
     need(person.packages.length + person.tests.length <= 60, 'too many items');
     need([...person.packages, ...person.tests].every(x => typeof x === 'string' && x.length <= 200), 'item');
   }
@@ -265,34 +279,13 @@ function validate(p: BookingPayload, upload: File | null) {
 
 // ---------------------------------------------------------------- maps
 
-const MAX_HOPS = 5;
-
 /** Expands a Google Maps share link. Every hop must stay on a Google Maps host (no open proxy). */
 async function resolveMapLink(req: Request) {
   const body = await req.json<{ url?: string }>().catch(() => null);
-  let current = typeof body?.url === 'string' ? body.url.trim().slice(0, 600) : '';
-  if (!current || !isMapUrl(current)) return json({ error: 'not_a_map_link' }, 400);
-
-  for (let hop = 0; hop <= MAX_HOPS; hop++) {
-    const point = parseMapUrl(current);
-    if (point) return json({ ok: true, ...point, url: current }, 200, { 'cache-control': 'public, max-age=86400' });
-    if (!isShortMapUrl(current) && hop > 0) break;
-    const res = await fetch(current, {
-      redirect: 'manual',
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; MedicalTrendBooking/1.0)', 'accept-language': 'th,en;q=0.8' },
-      signal: AbortSignal.timeout(6000),
-    }).catch(() => null);
-    if (!res) return json({ error: 'fetch_failed' }, 502);
-    const next = res.headers.get('location');
-    if (!next || res.status < 300 || res.status >= 400) break;
-    const abs = new URL(next, current).href;
-    if (!isMapUrl(abs)) {
-      // Consent or unrelated pages: the original target is usually carried in ?continue=
-      const cont = new URL(abs).searchParams.get('continue');
-      if (cont && isMapUrl(cont)) { current = cont; continue; }
-      break;
-    }
-    current = abs;
-  }
-  return json({ error: 'no_coordinates', url: current }, 422);
+  const url = typeof body?.url === 'string' ? body.url.trim().slice(0, 600) : '';
+  if (!url || !isMapUrl(url)) return json({ error: 'not_a_map_link' }, 400);
+  const r = await expandMapLink(url).catch(() => null);
+  if (!r) return json({ error: 'fetch_failed' }, 502);
+  if (r.point) return json({ ok: true, ...r.point, url: r.url }, 200, { 'cache-control': 'public, max-age=86400' });
+  return json({ error: 'no_coordinates', url: r.url }, 422);
 }

@@ -20,6 +20,8 @@ export interface BookingDraft {
   lang: Lang;
   persons: PersonSelection[];
   total: number;
+  /** A doctor's lab order is attached: lab fees are priced by staff later, total is the initial fee only. */
+  rxPending: boolean;
 }
 
 interface Props {
@@ -89,7 +91,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
     };
     const form = new FormData();
     form.set('payload', JSON.stringify(payload));
-    if (draft.mode === 'home' && draft.file) form.set('labOrder', draft.file);
+    if (draft.file) form.set('labOrder', draft.file);
 
     try {
       const res = await fetch('/api/bookings', { method: 'POST', body: form });
@@ -100,6 +102,8 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
       } else if (res.status === 409) {
         await onRepriced();
         setServerError(body.error === 'price_changed' ? t.errPrice : t.errCatalog);
+      } else if (body.error === 'out_of_area') {
+        setServerError(t.outOfArea);
       } else {
         setServerError(t.errServer);
       }
@@ -166,6 +170,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
               <span style={{ fontSize: 12.5, color: '#6B7F99' }}>{ctaLabel} · {draft.visitDate} {draft.slot}</span>
               <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>฿{ui.fmt(draft.total)}</span>
             </div>
+            {draft.rxPending && <div style={{ fontSize: 12, color: '#0A6E62', marginTop: -6, lineHeight: 1.5 }}>{t.estimateRx} · {t.rxPendingNote}</div>}
             {serverError && <div role="alert" style={{ ...errText, background: '#FFF1E8', border: '1px solid #F3CDB5', borderRadius: 10, padding: '10px 12px', color: '#9A5220' }}>{serverError}</div>}
             <button type="submit" disabled={sending} className="h-cta" style={{ ...primaryBtn, opacity: sending ? .7 : 1, cursor: sending ? 'wait' : 'pointer' }}>
               {sending ? t.sending : t.submit}

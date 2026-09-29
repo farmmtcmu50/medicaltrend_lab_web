@@ -4,6 +4,7 @@ import {
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { detectRef } from './ref';
+import type { DistanceResult } from '../shared/geo';
 import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../shared/maps';
 import { DICT, type Lang } from './i18n';
 import { branches as branchList, features as featureList, visitSteps } from './content';
@@ -54,6 +55,8 @@ export default function App() {
   const [fileError, setFileError] = useState('');
   const [branch, setBranch] = useState<BranchId>('sankamphaeng');
   const [distance, setDistance] = useState(8);
+  // Distance worked out by the Worker from the customer's coordinates (nearest branch, road km).
+  const [distInfo, setDistInfo] = useState<{ status: 'loading' | 'fail' } | (DistanceResult & { status: 'ok' }) | null>(null);
   const [visitDate, setVisitDate] = useState(() => bkkDate(1));
   const [slot, setSlot] = useState<string>(SLOTS[0]);
   const [testQuery, setTestQuery] = useState('');
@@ -122,6 +125,9 @@ export default function App() {
   const travel = travelFee(mode, distance);
   const total = peopleTotal + travel;
   const isHome = mode === 'home';
+  const hasRx = !!file;
+  const rxOnly = hasRx && persons.every(p => p.pks.length + p.picked.length === 0);
+  const outOfArea = isHome && distInfo?.status === 'ok' && distInfo.km > PRICING.maxKm;
 
   const updatePerson = (i: number, fn: (p: Person) => Person) =>
     setPersons(ps => ps.map((p, j) => (j === i ? fn(p) : p)));
@@ -153,6 +159,23 @@ export default function App() {
   const shown = showAllTests ? filtered : filtered.slice(0, 12);
 
   // ---- STEP 1 helpers
+  useEffect(() => {
+    if (!isHome || !coords) { setDistInfo(null); return; }
+    let live = true;
+    setDistInfo({ status: 'loading' });
+    fetch(`/api/distance?lat=${coords.lat}&lng=${coords.lng}`)
+      .then(r => r.json().catch(() => ({})))
+      .then((r: Partial<DistanceResult>) => {
+        if (!live) return;
+        if (r.ok && typeof r.km === 'number' && r.branch && r.method) {
+          setDistInfo({ status: 'ok', ok: true, km: r.km, branch: r.branch, method: r.method });
+          setDistance(Math.min(Math.max(r.km, PRICING.minKm), PRICING.maxKm));
+        } else setDistInfo({ status: 'fail' });
+      })
+      .catch(() => { if (live) setDistInfo({ status: 'fail' }); });
+    return () => { live = false; };
+  }, [isHome, coords]);
+
   const usePin = () => {
     if (!navigator.geolocation) { setToast(t.locFail); return; }
     setLocating(true);
@@ -215,8 +238,10 @@ export default function App() {
 
   // ---- STEP 5
   const startBooking = () => {
-    if (persons.some(p => p.pks.length + p.picked.length === 0)) return setBookError(t.errEmpty);
+    if (!hasRx && persons.some(p => p.pks.length + p.picked.length === 0)) return setBookError(t.errEmpty);
     if (isHome && address.trim().length < 5) return setBookError(t.errAddress);
+    if (outOfArea) return setBookError(t.outOfArea);
+    if (isHome && distInfo?.status === 'loading') return;
     if (!visitDate || visitDate < bkkDate(0)) return setBookError(t.errDate);
     setBookError('');
     setDialogOpen(true);
@@ -225,6 +250,7 @@ export default function App() {
     mode, branch, visitDate, slot, address, coords, mapUrl: mapLink?.url ?? null, ref, patientType: patient, distanceKm: distance, file, lang,
     persons: persons.map(p => ({ packages: p.pks, tests: p.picked })),
     total,
+    rxPending: hasRx,
   };
   const resetBooking = () => {
     setPersons([emptyPerson()]); setActive(0); setFile(null); setAddress(''); setCoords(null); setMapLink(null);
@@ -243,6 +269,7 @@ export default function App() {
 
   const lineItems = persons.map((p, i) => {
     const cnt = p.picked.length;
+    if (hasRx && p.pks.length + cnt === 0) return { label: personLabel(i) + ' · ' + t.rxPersonLabel, note: t.rxPendingNote, value: t.rxPending };
     return {
       label: personLabel(i) + ' · ' + (p.pks.length ? p.pks.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')),
       note: (p.pks.length ? L('แพ็กเกจ ฿', 'Package ฿') + ui.fmt(pkgSum(p)) : L('เฉพาะรายการเดี่ยว', 'Single tests only')) +
@@ -255,6 +282,8 @@ export default function App() {
       ? L('ในเขต 10 กม. เหมาจ่าย · คิดครั้งเดียวต่อการเดินทาง', 'Flat rate within 10 km · charged once per trip')
       : '฿' + PRICING.perKmRate + L('/กม. ส่วนที่เกิน 10 กม.', '/km beyond 10 km'),
     value: travel ? '฿' + ui.fmt(travel) : L('ฟรี', 'Free'),
+  }] : []).concat(hasRx && !rxOnly ? [{
+    label: t.rxPersonLabel, note: t.rxPendingNote, value: t.rxPending,
   }] : []).concat([{
     label: L('ค่าจัดส่งผลตรวจออนไลน์', 'Online result delivery'), note: L('PDF พร้อมคำอธิบายผล', 'PDF with explanations'), value: L('ฟรี', 'Free'),
   }]);
@@ -269,7 +298,7 @@ export default function App() {
         'Could not reach the sheet (share it as Anyone with the link). Showing saved backup prices.');
 
   const zoneNote = locating ? t.locating : address
-    ? L('อยู่ในพื้นที่ให้บริการ · ทีมใกล้ที่สุดห่าง ', 'In service area · nearest team ') + distance + L(' กม.', ' km')
+    ? ''
     : L('พิมพ์ที่อยู่ วางลิงก์ Google Maps หรือกดปุ่มเพื่อปักหมุดตำแหน่งปัจจุบัน', 'Type an address, paste a Google Maps link, or tap the button to pin your current location');
   const patientNote = patient === 'bedridden'
     ? L('ทีม 2 คน พร้อมเตียงลมและอุปกรณ์ช่วยพยุง', '2-person team with air mattress and support equipment')
@@ -290,6 +319,58 @@ export default function App() {
           {SLOTS.map((s, i) => <option key={s} value={s}>{s}{i === 0 ? ` (${t.fasting})` : ''}</option>)}
         </select>
       </div>
+    </div>
+  );
+
+  const rxField = (
+    <div>
+      <span style={ui.label}>{t.rxLabel}</span>
+      <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,.pdf,.jpg,.jpeg,.png" onChange={onFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => fileInput.current?.click()} style={ui.uploadBtn(!!file)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5" /><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" /></svg>
+          <span style={{ fontWeight: 600, fontSize: 13.5, wordBreak: 'break-all', paddingRight: file ? 30 : 0 }}>{file ? file.name : L('อัปโหลดใบสั่งตรวจจากแพทย์', "Upload doctor's lab order")}</span>
+          <span style={{ fontSize: 11.5, opacity: .7 }}>{t.rxHint}</span>
+        </button>
+        {file && (
+          <button onClick={() => setFile(null)} title={t.removeFile} aria-label={t.removeFile} className="h-soft" style={{ position: 'absolute', top: 10, right: 10, width: 28, height: 28, border: 0, borderRadius: 8, background: '#fff', color: '#0A6E62', fontSize: 16, cursor: 'pointer' }}>×</button>
+        )}
+      </div>
+      {fileError && <div role="alert" style={{ fontSize: 11.5, color: '#B4432A', marginTop: 6, fontWeight: 500 }}>{fileError}</div>}
+      {file && (
+        <div role="status" style={{ marginTop: 8, fontSize: 12, lineHeight: 1.55, padding: '9px 11px', borderRadius: 10, border: '1px solid #BFE5DE', background: '#F4FBF9', color: '#0A6E62' }}>
+          <b>{t.rxOnlyT}</b><span style={{ display: 'block', opacity: .85 }}>{t.rxOnlyD}</span>
+        </div>
+      )}
+    </div>
+  );
+
+  const km = t.km;
+  const distanceBlock = (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+        <label htmlFor="dist" style={ui.label}>{t.distLabel}</label>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#0B4F9E' }}>{distInfo?.status === 'loading' ? '…' : distance + ' ' + km}</span>
+      </div>
+      {distInfo?.status === 'ok' ? (
+        <div role="status" style={{ fontSize: 12, lineHeight: 1.55, padding: '9px 11px', borderRadius: 10, border: '1px solid ' + (outOfArea ? '#F3CDB5' : '#BFE5DE'), background: outOfArea ? '#FFF1E8' : '#F4FBF9', color: outOfArea ? '#9A5220' : '#0A6E62' }}>
+          {outOfArea ? t.outOfArea : <>
+            <b>{(distInfo.method === 'road' ? t.distRoad : t.distStraight) + ' ' + distInfo.km + ' ' + km}</b>
+            {' · ' + t.distFrom + ' ' + (branchList(L).find(b => b.id === distInfo.branch)?.name || distInfo.branch)}
+            <span style={{ display: 'block', opacity: .8 }}>{t.distAuto}</span>
+          </>}
+        </div>
+      ) : distInfo?.status === 'loading' ? (
+        <div role="status" style={{ fontSize: 12, color: '#6B7F99' }}>{t.distLoading}</div>
+      ) : (
+        <>
+          <input id="dist" type="range" min={PRICING.minKm} max={PRICING.maxKm} step={1} value={distance} onChange={e => setDistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#1466C7', height: 6, cursor: 'pointer' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8FA6C0', marginTop: 6 }}>
+            <span>1 {km}</span><span>{t.cityFree}</span><span>40 {km}</span>
+          </div>
+          <div style={{ fontSize: 11.5, color: distInfo?.status === 'fail' ? '#9A5220' : '#8FA6C0', marginTop: 6, lineHeight: 1.5 }}>{distInfo?.status === 'fail' ? t.distFail : t.distManual}</div>
+        </>
+      )}
     </div>
   );
 
@@ -400,6 +481,8 @@ export default function App() {
                     <div style={{ fontSize: 11.5, color: '#8FA6C0', marginTop: 6 }}>{zoneNote}</div>
                   </div>
 
+                  {distanceBlock}
+
                   <div>
                     <span style={ui.label}>{t.patientType}</span>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -413,21 +496,7 @@ export default function App() {
                     <div style={{ fontSize: 11.5, color: '#17A090', marginTop: 7, fontWeight: 500 }}>{patientNote}</div>
                   </div>
 
-                  <div>
-                    <span style={ui.label}>{t.rxLabel}</span>
-                    <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,.pdf,.jpg,.jpeg,.png" onChange={onFile} className="sr-only" tabIndex={-1} aria-hidden="true" />
-                    <div style={{ position: 'relative' }}>
-                      <button onClick={() => fileInput.current?.click()} style={ui.uploadBtn(!!file)}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4M12 4 7.5 8.5M12 4l4.5 4.5" /><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" /></svg>
-                        <span style={{ fontWeight: 600, fontSize: 13.5, wordBreak: 'break-all', paddingRight: file ? 30 : 0 }}>{file ? file.name : L('อัปโหลดใบสั่งตรวจจากแพทย์', "Upload doctor's lab order")}</span>
-                        <span style={{ fontSize: 11.5, opacity: .7 }}>{t.rxHint}</span>
-                      </button>
-                      {file && (
-                        <button onClick={() => setFile(null)} title={t.removeFile} aria-label={t.removeFile} className="h-soft" style={{ position: 'absolute', top: 10, right: 10, width: 28, height: 28, border: 0, borderRadius: 8, background: '#fff', color: '#0A6E62', fontSize: 16, cursor: 'pointer' }}>×</button>
-                      )}
-                    </div>
-                    {fileError && <div role="alert" style={{ fontSize: 11.5, color: '#B4432A', marginTop: 6, fontWeight: 500 }}>{fileError}</div>}
-                  </div>
+                  {rxField}
 
                   {dateSlot}
                 </div>
@@ -440,6 +509,7 @@ export default function App() {
                     </select>
                   </div>
                   {dateSlot}
+                  {rxField}
                   <div style={{ background: '#F1F6FC', border: '1px solid #DCE8F5', borderRadius: 12, padding: '13px 14px', fontSize: 12.5, color: '#3D5674', lineHeight: 1.55 }}>{t.labNote}</div>
                 </div>
               )}
@@ -469,13 +539,20 @@ export default function App() {
 
               <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingTop: 18, borderTop: '1px dashed #DCE5EF', flexWrap: 'wrap' }}>
                 <div>
-                  <div style={{ fontSize: 11.5, color: '#6B7F99' }}>{t.estimate}</div>
+                  <div style={{ fontSize: 11.5, color: '#6B7F99' }}>{hasRx ? t.estimateRx : t.estimate}</div>
                   <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>฿{ui.fmt(total)}</div>
                 </div>
+                {hasRx ? (
+                  <a href="#book" className="h-cta" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#17B8A6', color: '#042F2A', fontSize: 14, fontWeight: 700, padding: '13px 20px', borderRadius: 12 }}>
+                    {t.rxCta}
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14" /><path d="m6 13 6 6 6-6" /></svg>
+                  </a>
+                ) : (
                 <a href="#popular" className="h-link-soft" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#EAF3FF', color: '#0B4F9E', fontSize: 14, fontWeight: 600, padding: '13px 20px', borderRadius: 12 }}>
                   {t.toStep2}
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14" /><path d="m6 13 6 6 6-6" /></svg>
                 </a>
+                )}
               </div>
             </div>
           </div>
@@ -674,18 +751,6 @@ export default function App() {
               </div>
             )}
 
-            {isHome && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <label htmlFor="dist" style={{ fontSize: 12.5, fontWeight: 600, color: '#3D5674' }}>{t.distLabel}</label>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#0B4F9E' }}>{distance} {t.km}</span>
-                </div>
-                <input id="dist" type="range" min={PRICING.minKm} max={PRICING.maxKm} step={1} value={distance} onChange={e => setDistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#1466C7', height: 6, cursor: 'pointer' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8FA6C0', marginTop: 6 }}>
-                  <span>1 {t.km}</span><span>{t.cityFree}</span><span>40 {t.km}</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -778,7 +843,8 @@ export default function App() {
               <span>{persons.length + pw(persons.length) + ' · ' + visitDate + ' ' + slot}</span>
               {persons.map((p, i) => (
                 <span key={i}>
-                  {personLabel(i) + ': ' + (p.pks.length ? p.pks.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')) +
+                  {hasRx && p.pks.length + p.picked.length === 0 ? personLabel(i) + ': ' + t.rxPersonLabel + ' · ' + t.rxPending :
+                    personLabel(i) + ': ' + (p.pks.length ? p.pks.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')) +
                     (p.picked.length ? L(' + รายการเดี่ยว ', ' + ') + p.picked.length + L(' รายการ', ' single tests') : '') + ' · ฿' + ui.fmt(personSum(p))}
                 </span>
               ))}
@@ -799,7 +865,7 @@ export default function App() {
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 16, paddingBottom: 18, borderBottom: '1px solid rgba(255,255,255,.16)' }}>
-              <span style={{ fontSize: 13, color: '#9FC2E0' }}>{t.grandTotal}</span>
+              <span style={{ fontSize: 13, color: '#9FC2E0' }}>{hasRx ? t.estimateRx : t.grandTotal}</span>
               <span className="grand-total" style={{ fontSize: 38, fontWeight: 700, letterSpacing: '-.03em', lineHeight: 1.05 }}>฿{ui.fmt(total)}</span>
             </div>
             <button onClick={startBooking} className="h-cta" style={{ width: '100%', border: 0, background: '#17B8A6', color: '#042F2A', fontSize: 16.5, fontWeight: 700, padding: 19, borderRadius: 14, cursor: 'pointer', transition: 'background .18s' }}>{ctaLabel} · {visitDate} {slot}</button>
@@ -933,7 +999,7 @@ export default function App() {
             <div className="bar-row" style={{ ...ui.wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 11, color: '#9FC2E0', letterSpacing: '.04em' }}>{t.grandTotal}</span>
+                  <span style={{ fontSize: 11, color: '#9FC2E0', letterSpacing: '.04em' }}>{hasRx ? t.estimateRx : t.grandTotal}</span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-.025em', lineHeight: 1.1 }}>฿{ui.fmt(total)}</span>
                 </span>
                 <span className="bar-summary" style={{ fontSize: 12, color: '#9FC2E0', lineHeight: 1.5 }}>{barSummary}</span>
