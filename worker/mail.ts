@@ -49,7 +49,7 @@ export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKi
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        authorization: 'Bearer ' + env.RESEND_API_KEY.trim().replace(/^["']|["']$/g, ''), // tolerate a pasted newline or quotes
+        authorization: 'Bearer ' + cleanKey(env.RESEND_API_KEY), // tolerate a pasted newline or quotes
         'content-type': 'application/json',
         // booked/reminder go out once per booking; staff-triggered mails may repeat on purpose.
         'idempotency-key': kind === 'booked' || kind === 'reminder' ? `${b.id}-${kind}` : `${b.id}-${kind}-${Date.now()}`,
@@ -77,6 +77,32 @@ const log = (env: MailEnv, id: string, kind: MailKind, to: string, status: 'sent
   env.DB.prepare('INSERT INTO email_log (booking_id, kind, at, to_addr, status, provider_id, error) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)')
     .bind(id, kind, new Date().toISOString(), to, status, providerId, error).run()
     .catch(e => console.error('email_log write', e));
+
+const cleanKey = (k: string) => k.trim().replace(/^["']|["']$/g, '');
+
+/** Staff diagnostic: describes the stored key (never returns it) and asks Resend whether it accepts it. */
+export async function mailCheck(env: MailEnv) {
+  const raw = env.RESEND_API_KEY || '';
+  const key = cleanKey(raw);
+  const shape = {
+    set: !!raw,
+    length: key.length,
+    startsWith_re_: key.startsWith('re_'),
+    last4: key.length > 8 ? key.slice(-4) : '',
+    hadWhitespaceOrQuotes: raw !== key,
+    nonAscii: /[^\x21-\x7e]/.test(key),
+  };
+  if (!key) return { shape, verdict: 'ยังไม่ได้ตั้ง RESEND_API_KEY' };
+  const res = await fetch('https://api.resend.com/domains', { headers: { authorization: 'Bearer ' + key }, signal: AbortSignal.timeout(8000) }).catch(() => null);
+  const body = res ? await res.json<{ message?: string; name?: string; data?: { name: string; status: string }[] }>().catch(() => ({})) : {};
+  const msg = (body as { message?: string }).message || '';
+  const verdict = !res ? 'ติดต่อ Resend ไม่ได้'
+    : res.ok ? 'API key ใช้ได้ (Full access)'
+    : /restricted/i.test(msg) ? 'API key ใช้ได้ (Sending access)'
+    : /invalid/i.test(msg) ? 'Resend ไม่รู้จัก API key นี้ — ตั้งค่าใหม่'
+    : 'Resend ตอบ ' + res.status;
+  return { shape, verdict, resend: { status: res?.status ?? null, message: msg, domains: (body as { data?: { name: string; status: string }[] }).data?.map(d => ({ name: d.name, status: d.status })) } };
+}
 
 /** Cron: remind every active booking with an email whose visit is tomorrow (Bangkok), once. */
 export async function sendReminders(env: MailEnv): Promise<void> {

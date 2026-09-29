@@ -1,6 +1,7 @@
 // Back-office API. Every handler here runs only after authenticateAdmin() succeeded.
 //   GET  /api/admin/me
 //   GET  /api/admin/summary
+//   GET  /api/admin/mail-check      is RESEND_API_KEY accepted by Resend? (shape of the key, never the key)
 //   GET  /api/admin/bookings?status=&branch=&q=&from=&to=&page=
 //   GET  /api/admin/bookings/:ref
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
@@ -11,7 +12,7 @@ import { BRANCH_IDS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
 import { notifyItemsChanged, type LineEnv } from './line';
-import { mailCustomer, type MailEnv } from './mail';
+import { mailCheck, mailCustomer, type MailEnv } from './mail';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
@@ -32,6 +33,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
 
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'me') return json({ email });
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
+  if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);
 
   if (req.method === 'GET' && parts.length === 1) return listBookings(url, env);
