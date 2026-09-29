@@ -256,7 +256,7 @@ export default function StdApp() {
             </div>
           </div>
           <div className="s-hero-card">
-            <img src="/img/std/hero.svg" alt="" />
+            <img src="/img/std/hero.webp" alt="STI screening: HIV, syphilis, hepatitis" width="1000" height="625" />
             <div className="s-from">
               <div className="s-from-l">{t.heroPriceLabel}</div>
               <div className="s-from-n">880</div>
