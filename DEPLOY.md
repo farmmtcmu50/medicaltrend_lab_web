@@ -108,3 +108,22 @@ npx wrangler d1 execute medical-trend-booking --remote \
 - หลังบ้านส่วนอื่นตามดีไซน์: ปฏิทินคิว, จ่ายงานให้นักเทคนิคการแพทย์, แผนที่เส้นทาง, ชำระเงิน, ฐานข้อมูลลูกค้า, จัดการผู้ใช้
 - แจ้งเตือน LINE OA / SMS / อีเมล เมื่อมีการจองใหม่
 - ป้องกันสแปมฟอร์ม (แนะนำเพิ่ม Cloudflare Turnstile ก่อนโปรโมตเว็บ)
+
+## แจ้งเตือนการจองเข้ากลุ่ม LINE พนักงาน
+
+ใช้ Messaging API ของ LINE OA ที่มีอยู่ (worker/line.ts) ทุกการจองจากหน้าหลักและหน้า /std จะส่งข้อความสรุปเข้ากลุ่มที่ผูกไว้ หากส่งไม่สำเร็จ การจองยังบันทึกตามปกติ (ดู error ได้ด้วย `npx wrangler tail`)
+
+1. LINE Official Account Manager → ตั้งค่า → Messaging API → เปิดใช้งาน (เปิดแล้วปิดคืนไม่ได้)
+2. LINE Developers Console → channel ของ OA → Basic settings: คัดลอก **Channel secret** / Messaging API: กด Issue **Channel access token (long-lived)**
+3. ตั้ง secret (ไม่ต้องใส่ใน wrangler.jsonc):
+   ```
+   npx wrangler secret put LINE_CHANNEL_SECRET
+   npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
+   npx wrangler secret put LINE_BIND_CODE      # รหัสลับที่ตั้งเอง เช่น MT-7Q4K9
+   ```
+4. Messaging API → Webhook URL = `https://lab.medicaltrend.stream/api/line/webhook` → Verify → เปิด Use webhook
+   (ถ้า OA เคยใช้ Webhook กับระบบอื่น ให้จด URL เดิมไว้ และเปลี่ยนกลับหลังผูกกลุ่มเสร็จ — การส่งแจ้งเตือนไม่ใช้ Webhook)
+5. OA Manager → ตั้งค่า → การตั้งค่าบัญชี → เปิด "อนุญาตให้บัญชีเข้าร่วมแชทกลุ่ม" แล้วเชิญ OA เข้ากลุ่มพนักงาน
+6. พิมพ์ในกลุ่ม: `ผูกแจ้งเตือน <LINE_BIND_CODE>` → บอทตอบยืนยัน
+   - `สถานะแจ้งเตือน` ตรวจว่ากลุ่มนี้รับแจ้งเตือนอยู่ · `ยกเลิกแจ้งเตือน <LINE_BIND_CODE>` เลิกผูก · เตะบอทออกจากกลุ่ม = เลิกผูกอัตโนมัติ
+7. ข้อความแจ้งเตือนหักโควตาข้อความของ OA (นับตามจำนวนสมาชิกในกลุ่ม) ตรวจการใช้งานได้ใน OA Manager

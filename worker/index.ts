@@ -3,6 +3,7 @@
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
 //   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
+//   POST /api/line/webhook  LINE OA events; new bookings are pushed to the staff LINE group (see worker/line.ts)
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
@@ -15,10 +16,11 @@ import { cleanRef } from '../shared/ref';
 
 import { authenticateAdmin, type AccessEnv } from './access';
 import { handleAdmin } from './admin';
+import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
-export interface Env extends AccessEnv {
+export interface Env extends AccessEnv, LineEnv {
   DB: D1Database;
   UPLOADS: R2Bucket;
   ASSETS: Fetcher;
@@ -37,7 +39,8 @@ export default {
       if (url.pathname === '/api/catalog' && req.method === 'GET') return await catalogResponse(env, ctx);
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
       if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
-      if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env);
+      if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env, ctx);
+      if (url.pathname === '/api/line/webhook' && req.method === 'POST') return await handleLineWebhook(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
         if (!auth.ok) {
@@ -197,6 +200,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
     throw err;
   }
 
+  ctx.waitUntil(notifyBooking(env, id));
   return json({ ok: true, ref, total, travelFee: travel, subtotal }, 201);
 }
 

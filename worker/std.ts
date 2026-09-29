@@ -3,9 +3,10 @@
 import { BRANCH_IDS, type BranchId } from '../shared/catalog';
 import { STD_BOOKING_DAYS, branchHours, priceStd } from '../shared/std';
 import { cleanRef } from '../shared/ref';
+import { notifyBooking, type LineEnv } from './line';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
-interface Env { DB: D1Database }
+type Env = LineEnv;
 
 interface StdPayload {
   name?: string; email?: string; phone?: string; branch?: string;
@@ -16,7 +17,7 @@ interface StdPayload {
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
-export async function createStdBooking(req: Request, env: Env): Promise<Response> {
+export async function createStdBooking(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!(req.headers.get('content-type') || '').includes('application/json')) return json({ error: 'json_required' }, 415);
   const p = await req.json<StdPayload>().catch(() => null);
   if (!p || typeof p !== 'object') return json({ error: 'bad_request', detail: 'payload' }, 400);
@@ -71,5 +72,6 @@ export async function createStdBooking(req: Request, env: Env): Promise<Response
       .bind(id, now.toISOString()),
   ]);
 
+  ctx.waitUntil(notifyBooking(env, id));
   return json({ ok: true, ref, total: priced.total }, 201);
 }
