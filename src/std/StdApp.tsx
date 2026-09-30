@@ -5,15 +5,18 @@ import {
   STD_BOOKING_DAYS, STD_BRANCHES, STD_COVERS, STD_KEY_ORDER, STD_PACKAGES, STD_PATHOGENS, TIER_CAPS, TIER_PRICES,
   branchHours, tierPrice, type StdKey,
 } from '../../shared/std';
+import { PRICING, SLOTS, travelFee, travelTierLabel } from '../../shared/catalog';
+import { BRANCH_INFO } from '../../shared/branches';
 import { detectRef } from '../ref';
+import { useHomeLocation } from '../useHomeLocation';
 import { bookingCopy, copyAll, noticeCopy, stiCopy, type StdLang } from './copy';
 
 const money = (n: number) => n.toLocaleString('en-US');
 const PKG_PRICES = STD_PACKAGES.map(p => p.price);
 
-interface Form { name: string; email: string; phone: string; branch: string; pkgs: StdKey[]; date: string; slot: string; note: string; consent: boolean }
-const emptyForm = (): Form => ({ name: '', email: '', phone: '', branch: '', pkgs: [], date: '', slot: '', note: '', consent: false });
-type Errs = Partial<Record<'name' | 'email' | 'phone' | 'branch' | 'pkg' | 'pick' | 'date' | 'slot' | 'consent', string>>;
+interface Form { where: 'branch' | 'home'; name: string; email: string; phone: string; branch: string; pkgs: StdKey[]; date: string; slot: string; note: string; consent: boolean }
+const emptyForm = (): Form => ({ where: 'branch', name: '', email: '', phone: '', branch: '', pkgs: [], date: '', slot: '', note: '', consent: false });
+type Errs = Partial<Record<'name' | 'email' | 'phone' | 'branch' | 'address' | 'pkg' | 'pick' | 'date' | 'slot' | 'consent', string>>;
 
 /** Bangkok wall-clock "now" as a Date whose UTC fields hold Bangkok time. */
 const bkkNow = () => new Date(Date.now() + 7 * 3600_000);
@@ -47,6 +50,9 @@ export default function StdApp() {
   const sc = stiCopy(lang);
   const nc = noticeCopy(lang);
   const c = bookingCopy(lang);
+  const L = (th: string, en: string) => (lang === 'th' ? th : en);
+  const homeMode = f.where === 'home';
+  const loc = useHomeLocation(homeMode, { pinned: L('ปักหมุดแล้ว', 'Pinned'), fromMaps: L('ตำแหน่งจาก Google Maps', 'Location from Google Maps') });
 
   useEffect(() => { document.documentElement.lang = lang; document.title = lang === 'th' ? 'ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ เชียงใหม่ · Medical Trend' : 'HIV & STD Testing Chiang Mai · Medical Trend'; }, [lang]);
   const setLang = (l: StdLang) => { try { localStorage.setItem('mt_lang', l); } catch { /* ignore */ } setLangState(l); };
@@ -112,7 +118,9 @@ export default function StdApp() {
   const cartName = items.map(x => x.name).join(' + ');
   let cartSub = unsure ? sc.unsureSub : items.map(x => x.name.split(' · ')[0] + ' ' + money(x.price || 0)).join('  +  ');
   if (hasCustom) cartSub += '  ·  ' + (n ? picked.map(k => STD_PATHOGENS[k][0]).join(', ') : sc.needPick);
-  const totalText = total === null ? '—' : money(total) + ' ' + t.baht;
+  const travel = homeMode ? travelFee('home', loc.distance, 1) : 0;
+  const grand = (total ?? 0) + travel;
+  const totalText = total === null && !homeMode ? '—' : money(grand) + ' ' + t.baht;
   const tierIdx = n === 0 ? -1 : TIER_CAPS.findIndex(cap => n <= cap);
   let hint = sc.hintNone;
   if (n > 0) { const room = TIER_CAPS[tierIdx] - n; hint = n === 14 ? sc.hintFull : room > 0 ? sc.hintRoom(room) : sc.hintNext(money(TIER_PRICES[tierIdx + 1])); }
@@ -141,15 +149,23 @@ export default function StdApp() {
     for (let d = 1; d <= dim; d++) {
       const dt = new Date(Date.UTC(y, m, d));
       const key = ymdUTC(dt);
-      const closed = !branchId || !branchHours(branchId, dt.getUTCDay());
+      const closed = homeMode ? false : !branchId || !branchHours(branchId, dt.getUTCDay());
       out.push({ blank: false, key, label: String(d), disabled: closed || dt < today || dt > maxDate });
     }
     return out;
-  }, [lead, dim, y, m, branchId, today.getTime(), maxDate.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lead, dim, y, m, branchId, homeMode, today.getTime(), maxDate.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let slots: string[] = [];
   let slotMsg = '';
-  if (!branchId) slotMsg = c.pickBranchFirst;
+  if (homeMode) {
+    if (!f.date) slotMsg = c.pickDateFirst;
+    else {
+      const now = bkkNow();
+      const isToday = ymdUTC(now) === f.date;
+      slots = SLOTS.filter(sl => !isToday || +sl.slice(0, 2) > now.getUTCHours());
+      if (!slots.length) slotMsg = c.noSlots;
+    }
+  } else if (!branchId) slotMsg = c.pickBranchFirst;
   else if (!f.date) slotMsg = c.pickDateFirst;
   else {
     const dt = new Date(f.date + 'T00:00:00Z');
@@ -162,6 +178,7 @@ export default function StdApp() {
   const fmtDate = (ymd: string) => { if (!ymd) return ''; const p = ymd.split('-'); return (+p[2]) + ' ' + c.months[+p[1] - 1] + ' ' + (c.be ? +p[0] + 543 : p[0]); };
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF(prev => ({ ...prev, [k]: v })); clearErr(k as keyof Errs); };
+  const chooseWhere = (w: Form['where']) => { setF(prev => ({ ...prev, where: w, date: '', slot: '' })); clearErr('branch', 'address', 'date', 'slot'); };
   const chooseBranch = (v: string) => { setF(prev => ({ ...prev, branch: prev.branch === v ? '' : v, date: '', slot: '' })); clearErr('branch'); };
 
   // ---------------------------------------------------------------- submit
@@ -171,7 +188,10 @@ export default function StdApp() {
     if (!f.name.trim()) e.name = c.eName;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = c.eEmail;
     if (!/^0\d{8,9}$/.test(f.phone.replace(/[\s-]/g, ''))) e.phone = c.ePhone;
-    if (f.branch === '') e.branch = c.eBranch;
+    if (!homeMode && f.branch === '') e.branch = c.eBranch;
+    if (homeMode && loc.address.trim().length < 5) e.address = L('กรุณากรอกที่อยู่ หรือวางลิงก์ Google Maps / กดปักหมุด', 'Please enter your address, paste a Google Maps link or pin your location');
+    if (homeMode && loc.outOfArea) e.address = L('ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการเจาะเลือดถึงบ้าน (เกิน ' + PRICING.maxKm + ' กม.) กรุณาโทร 095-247-2631', 'This location is outside our home-collection area. Please call 095-247-2631');
+    if (homeMode && loc.distInfo?.status === 'loading') return;
     if (!f.pkgs.length) e.pkg = c.ePkg;
     if (hasCustom && !picked.length) e.pick = c.ePick;
     if (!f.date) e.date = c.eDate;
@@ -188,14 +208,22 @@ export default function StdApp() {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           name: f.name.trim(), email: f.email.trim(), phone: f.phone.replace(/[\s-]/g, ''),
-          branch: STD_BRANCHES[+f.branch], packages: f.pkgs, pathogens: hasCustom ? picked : [],
-          date: f.date, time: f.slot, note: f.note.trim(), pdpaConsent: true, expectedTotal: total ?? 0, lang, ref,
+          ...(homeMode
+            ? { mode: 'home', address: loc.address.trim(), lat: loc.coords?.lat ?? null, lng: loc.coords?.lng ?? null, mapUrl: loc.mapLink?.url ?? null, distanceKm: loc.distance }
+            : { mode: 'lab', branch: STD_BRANCHES[+f.branch] }),
+          packages: f.pkgs, pathogens: hasCustom ? picked : [],
+          date: f.date, time: f.slot, note: f.note.trim(), pdpaConsent: true, expectedTotal: grand, lang, ref,
         }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.ref) {
-        setDone({ ref: body.ref, date: fmtDate(f.date), time: f.slot, branch: t.branches[+f.branch].name, pkg: cartName, total: totalText });
+        setDone({ ref: body.ref, date: fmtDate(f.date), time: f.slot, branch: homeMode ? L('เจาะเลือดถึงบ้าน', 'Home collection') : t.branches[+f.branch].name, pkg: cartName, total: money(body.total ?? grand) + ' ' + t.baht });
         document.getElementById('booking')?.scrollIntoView({ block: 'start' });
+      } else if (body.error === 'out_of_area') {
+        setErrs({ address: L('ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการเจาะเลือดถึงบ้าน กรุณาโทร 095-247-2631', 'This location is outside our home-collection area. Please call 095-247-2631') });
+        document.getElementById('booking')?.scrollIntoView({ block: 'start' });
+      } else if (body.error === 'price_changed') {
+        setServerErr(L('ค่าบริการถูกคำนวณใหม่เป็น ' + money(body.total) + ' บาท (ระยะทางจากสาขาที่ใกล้ที่สุด) กรุณาตรวจสอบแล้วกดยืนยันอีกครั้ง', 'The fee was recalculated to ' + money(body.total) + ' THB (distance from the nearest branch). Please check and confirm again.'));
       } else if (body.error === 'slot_unavailable') {
         setErrs({ slot: c.noSlots }); setF(prev => ({ ...prev, slot: '' }));
       } else {
@@ -207,7 +235,7 @@ export default function StdApp() {
       setSending(false);
     }
   };
-  const again = () => { setDone(null); setF(emptyForm()); setPicked([]); setNotice(''); setErrs({}); setMo(0); };
+  const again = () => { setDone(null); loc.reset(); setF(emptyForm()); setPicked([]); setNotice(''); setErrs({}); setMo(0); };
 
   // ---------------------------------------------------------------- styles for stateful controls
   const selStyle = (on: boolean, err?: boolean): CSSProperties => ({
@@ -404,6 +432,21 @@ export default function StdApp() {
                       <Err k="phone" />
                     </div>
                     <div className="s-field" style={{ gap: 8 }}>
+                      <div className="s-label">{L('สถานที่ตรวจ', 'Where')}</div>
+                      <div className="s-opts2">
+                        {([['branch', L('ที่สาขา', 'At a branch'), L('เข้ารับบริการ 4 สาขา', 'Walk in at one of 4 branches')], ['home', L('เจาะเลือดถึงบ้าน', 'Home collection'), L('ทีมไปเก็บตัวอย่างถึงที่ · เริ่มต้น ฿250', 'We come to you · from ฿250')]] as const).map(([w, l, a]) => {
+                          const on = f.where === w;
+                          return (
+                            <button key={w} type="button" className="s-opt" aria-pressed={on} onClick={() => chooseWhere(w)} style={selStyle(on)}>
+                              <span className="s-opt-l">{l}</span>
+                              <span className="s-opt-a" style={{ color: on ? '#C4D2E6' : '#4E5E78' }}>{a}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {!homeMode ? (
+                    <div className="s-field" style={{ gap: 8 }}>
                       <div className="s-label">{c.branch}</div>
                       <div className="s-opts2">
                         {t.branches.map((b, i) => {
@@ -418,6 +461,55 @@ export default function StdApp() {
                       </div>
                       <Err k="branch" />
                     </div>
+                    ) : (
+                    <div className="s-field" style={{ gap: 8 }}>
+                      <label htmlFor="bk-addr" className="s-label">{L('ที่อยู่สำหรับเจาะเลือด', 'Collection address')}</label>
+                      <div style={{ position: 'relative' }}>
+                        <input id="bk-addr" className="s-input" autoComplete="street-address" maxLength={500} value={loc.address}
+                          onChange={e => { loc.onAddressChange(e.target.value); clearErr('address'); }}
+                          placeholder={L('พิมพ์ที่อยู่ หรือวางลิงก์ Google Maps', 'Type your address or paste a Google Maps link')}
+                          style={{ ...inputBorder('address'), paddingRight: 110 }} />
+                        <button type="button" onClick={() => loc.pin(() => setErrs(e => ({ ...e, address: L('ระบุตำแหน่งไม่ได้ กรุณาพิมพ์ที่อยู่หรือวางลิงก์ Google Maps', 'Could not get your location. Please type the address or paste a Google Maps link') })))}
+                          style={{ position: 'absolute', right: 6, top: 6, height: 38, padding: '0 12px', borderRadius: 10, border: 0, background: '#E6F1FA', color: '#15508A', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                          {loc.locating ? '…' : L('ปักหมุด', 'Pin me')}
+                        </button>
+                      </div>
+                      {loc.mapLink && (
+                        <div className="s-infobox" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14 }}>
+                          <span style={{ flex: 1, minWidth: 0, color: '#15508A', fontWeight: 600 }}>
+                            {loc.mapLink.status === 'resolving' ? L('กำลังอ่านตำแหน่งจากลิงก์…', 'Reading the location…')
+                              : loc.mapLink.status === 'nocoords' ? L('บันทึกลิงก์แล้ว · เจ้าหน้าที่จะเปิดดูตำแหน่งจากลิงก์', 'Link saved · staff will open it')
+                              : (loc.mapLink.fromPin ? L('ปักหมุดตำแหน่งแล้ว', 'Location pinned') : L('ได้ตำแหน่งจาก Google Maps แล้ว', 'Location read from Google Maps'))}
+                          </span>
+                          <a href={loc.mapLink.url} target="_blank" rel="noopener" style={{ fontWeight: 600 }}>{L('เปิดดู', 'Open')} ↗</a>
+                          <button type="button" onClick={loc.clearLink} aria-label={L('ลบตำแหน่ง', 'Remove location')} style={{ border: 0, background: 'transparent', color: '#15508A', fontSize: 18, cursor: 'pointer' }}>×</button>
+                        </div>
+                      )}
+                      <Err k="address" />
+                      <div className="s-infobox" style={{ gap: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 15 }}>
+                          <span style={{ fontWeight: 600, color: '#15508A' }}>{L('ค่าบริการเจาะเลือดถึงบ้าน', 'Home collection fee')}</span>
+                          <span style={{ fontWeight: 700 }}>{money(travel)} {t.baht}</span>
+                        </div>
+                        {loc.distInfo?.status === 'ok' ? (
+                          <div style={{ fontSize: 14, color: '#3D4F6B', lineHeight: 1.5 }}>
+                            {(loc.distInfo.method === 'road' ? L('ระยะทางขับรถ ', 'Driving distance ') : L('ระยะทางโดยประมาณ ', 'Estimated distance ')) + loc.distInfo.km + L(' กม. · ใกล้สาขา ', ' km · nearest branch ') + BRANCH_INFO[loc.distInfo.branch].name[lang === 'th' ? 0 : 1]}
+                          </div>
+                        ) : loc.distInfo?.status === 'loading' ? (
+                          <div style={{ fontSize: 14, color: '#3D4F6B' }}>{L('กำลังคำนวณระยะทาง…', 'Calculating distance…')}</div>
+                        ) : (
+                          <>
+                            <input type="range" aria-label={L('ระยะทางโดยประมาณ', 'Estimated distance')} min={PRICING.minKm} max={PRICING.maxKm} value={loc.distance} onChange={e => loc.setDistance(+e.target.value)} style={{ width: '100%', accentColor: '#1C75BC' }} />
+                            <div style={{ fontSize: 14, color: '#3D4F6B', lineHeight: 1.5 }}>
+                              {L('ประมาณ ', 'About ') + loc.distance + L(' กม. จากสาขา · ', ' km from a branch · ')}
+                              {loc.distInfo?.status === 'fail' ? L('คำนวณอัตโนมัติไม่สำเร็จ เจ้าหน้าที่จะยืนยันอีกครั้ง', 'automatic calculation failed; staff will confirm') : L('วางลิงก์ Google Maps หรือกดปักหมุดเพื่อคำนวณอัตโนมัติ', 'paste a Maps link or pin to calculate automatically')}
+                            </div>
+                          </>
+                        )}
+                        <div style={{ fontSize: 13, color: '#4E5E78' }}>{L('ช่วง ' + travelTierLabel(loc.distance) + ' กม. · เหมาจ่ายต่อครั้ง · ช่วงเวลาเจาะเลือดถึงบ้านทุกวัน', travelTierLabel(loc.distance) + ' km band · flat per visit · home visits every day')}</div>
+                      </div>
+                    </div>
+                    )}
                     <div className="s-field" style={{ gap: 8 }}>
                       <div className="s-label">{c.pkg}</div>
                       <div className="s-chipsrow">
@@ -529,7 +621,7 @@ export default function StdApp() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div className="s-addon-t">{ad.t}</div>
                 <div className="s-addon-d">{ad.d}</div>
-                {i === 0 && <a href="/?mode=home&ref=std-home-addon" style={{ fontSize: 15, fontWeight: 600 }}>{lang === 'th' ? 'จองเจาะเลือดถึงบ้าน คำนวณค่าเดินทางอัตโนมัติ →' : 'Book home collection with automatic travel fee →'}</a>}
+                {i === 0 && <a href="#booking" onClick={() => chooseWhere('home')} style={{ fontSize: 15, fontWeight: 600 }}>{lang === 'th' ? 'จองเจาะเลือดถึงบ้านจากหน้านี้ คำนวณค่าบริการอัตโนมัติ →' : 'Book home collection here, fee calculated automatically →'}</a>}
               </div>
               <div className="s-addon-p">
                 <div className="s-addon-pl">{t.from}</div>
