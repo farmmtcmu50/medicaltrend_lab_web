@@ -7,12 +7,13 @@
 //   GET  /api/admin/bookings/:ref
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
 //   POST /api/admin/bookings/:ref/note     {"note": "..."}
+//   POST /api/admin/bookings/:ref/branch   {"branch": "hangdong"}  home collection only; fee unchanged + LINE alert
 //   POST /api/admin/bookings/:ref/items    {"persons": [[{kind, name}]], "expectedUpdatedAt": "..."} re-price + LINE alert
 //   GET  /api/admin/bookings/:ref/lab-order
 import { BRANCH_IDS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
-import { notifyItemsChanged, type LineEnv } from './line';
+import { notifyBranchChanged, notifyItemsChanged, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
 import { handlePopularAdmin } from './popular';
 
@@ -69,6 +70,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   }
 
   if (req.method === 'POST' && parts.length === 3 && parts[2] === 'items') return editItems(req, env, email, ctx, ref, row.id);
+  if (req.method === 'POST' && parts.length === 3 && parts[2] === 'branch') return setBranch(req, env, email, ctx, ref, row.id);
 
   if (req.method === 'POST' && parts.length === 3 && (parts[2] === 'status' || parts[2] === 'note')) {
     const body = await req.json<{ status?: string; note?: string }>().catch(() => null);
@@ -98,6 +100,27 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   }
 
   return json({ error: 'not_found' }, 404);
+}
+
+/** Moves a home-collection booking to another branch. The fee the customer was quoted stays as it is. */
+async function setBranch(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
+  const body = await req.json<{ branch?: unknown }>().catch(() => null);
+  const to = typeof body?.branch === 'string' ? body.branch : '';
+  if (!(BRANCH_IDS as readonly string[]).includes(to)) return json({ error: 'bad_request', detail: 'branch' }, 400);
+  const b = await env.DB.prepare('SELECT mode, branch, status FROM bookings WHERE id = ?1')
+    .bind(id).first<{ mode: 'lab' | 'home'; branch: string | null; status: Status }>();
+  if (!b) return json({ error: 'not_found' }, 404);
+  if (b.mode !== 'home') return json({ error: 'bad_request', detail: 'lab bookings keep the branch the customer chose' }, 400);
+  if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  if (b.branch === to) return json(await bookingDetail(env, ref));
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE bookings SET branch = ?1, updated_at = ?2 WHERE id = ?3').bind(to, now, id),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, from_status, to_status) VALUES (?1, ?2, ?3, 'branch', ?4, ?5)")
+      .bind(id, now, email, b.branch, to),
+  ]);
+  ctx.waitUntil(notifyBranchChanged(env, id, email, b.branch));
+  return json(await bookingDetail(env, ref));
 }
 
 async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
@@ -162,7 +185,8 @@ async function listBookings(url: URL, env: Env) {
   if (source === 'web' || source === 'std') add('source = ?', source);
   const branch = p.get('branch');
   if (branch === 'home') where.push("mode = 'home'");
-  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) { where.push("mode = 'lab'"); add('branch = ?', branch); }
+  // A branch's queue: its lab visits plus the home collections it is responsible for.
+  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) add('branch = ?', branch);
   const from = p.get('from'), to = p.get('to');
   if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) add('visit_date >= ?', from);
   if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) add('visit_date <= ?', to);

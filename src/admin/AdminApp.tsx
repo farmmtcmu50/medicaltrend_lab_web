@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { BRANCH_IDS } from '../../shared/catalog';
 import {
-  BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META,
+  BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META, whereShort,
   type AdminBooking, type AdminRow, type AdminSummary, type Status,
 } from '../../shared/admin';
 import { refLabel } from '../../shared/ref';
@@ -16,7 +16,7 @@ const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
 const bkkToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 const thDate = (ymd: string) => new Date(ymd + 'T00:00:00+07:00').toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
 const thDateTime = (iso: string) => new Date(iso).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
-const branchLabel = (mode: string, branch: string | null) => mode === 'home' ? 'บริการถึงบ้าน' : BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES] || '—';
+const branchName = (branch: string | null) => BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES] || branch || '—';
 
 const pill = (m: { c: string; bg: string }): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: '6px 10px',
@@ -350,7 +350,7 @@ function BookingList({ filters, setFilters }: { filters: ListQuery; setFilters: 
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.contact_phone}</span>
                 </span>
                 <span style={r.source === 'std' ? stdPill : channelPill(r.mode)}>{r.source === 'std' ? 'STD' : r.mode === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
-                <span style={{ color: '#3D5674', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{branchLabel(r.mode, r.branch)}</span>
+                <span title={r.mode === 'home' ? 'บริการถึงบ้าน · ' + (r.branch ? branchName(r.branch) : 'ยังไม่ระบุสาขา') : branchName(r.branch)} style={{ color: r.mode === 'home' && !r.branch ? '#A26A00' : '#3D5674', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{whereShort(r.mode, r.branch)}</span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span>{thDate(r.visit_date)}</span>
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.slot}</span>
@@ -385,9 +385,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
+  const [branchPick, setBranchPick] = useState('');
   const load = useCallback(() => {
     setErr('');
-    api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); }).catch(e => setErr(e.code || 'network'));
+    api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); setBranchPick(x.branch || ''); }).catch(e => setErr(e.code || 'network'));
   }, [ref]);
   useEffect(() => { load(); }, [load]);
 
@@ -407,6 +408,14 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
     finally { setBusy(false); }
   };
+  const saveBranch = async () => {
+    if (!branchPick || branchPick === b.branch) return;
+    if (!confirm('ย้ายงาน ' + b.ref + ' ไปให้ ' + branchName(branchPick) + ' รับผิดชอบ?\nค่าบริการถึงบ้านของลูกค้าคงเดิม และระบบจะแจ้งเตือนในกลุ่ม LINE')) return;
+    setBusy(true);
+    try { const x = await api.setBranch(b.ref, branchPick); setB(x); setBranchPick(x.branch || ''); toast(b.ref + ' → ' + branchName(x.branch)); }
+    catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
+    finally { setBusy(false); }
+  };
   const saveNote = async () => {
     setBusy(true);
     try { const x = await api.setNote(b.ref, note); setB(x); setNote(x.staff_note || ''); toast('บันทึกหมายเหตุแล้ว'); }
@@ -414,6 +423,9 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     finally { setBusy(false); }
   };
 
+  // The branch the distance (and fee) was measured from: the one before any staff reassignment.
+  const firstMove = b.events.find(e => e.action === 'branch');
+  const bookedNearest = firstMove ? firstMove.from_status : b.branch;
   const persons = Array.from({ length: b.people }, (_, i) => b.items.filter(it => it.person_no === i + 1));
   const isHome = b.mode === 'home';
   const mapUrl = b.map_url ? b.map_url : b.latitude != null && b.longitude != null
@@ -423,10 +435,26 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     ['ลูกค้า', b.contact_name],
     ['เบอร์ติดต่อ', <a href={'tel:' + b.contact_phone}>{b.contact_phone}</a>],
     ['วัน เวลา', thDate(b.visit_date) + ' · ' + b.slot],
-    [isHome ? 'ช่องทาง' : 'สาขา', branchLabel(b.mode, b.branch)],
+    isHome
+      ? ['สาขาที่รับผิดชอบ', b.status === 'cancelled' ? (b.branch ? branchName(b.branch) : 'ยังไม่ระบุสาขา') : (
+        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select aria-label="สาขาที่รับผิดชอบ" value={branchPick} disabled={busy} onChange={e => setBranchPick(e.target.value)}
+            style={{ border: '1.5px solid ' + (b.branch ? '#DFE8F2' : '#F3D9A6'), borderRadius: 9, padding: '6px 8px', fontSize: 12.5, fontWeight: 600, background: b.branch ? '#fff' : '#FFF8EA', color: '#0F2540', width: '100%', maxWidth: 320 }}>
+            {!b.branch && <option value="">— ยังไม่ระบุสาขา —</option>}
+            {BRANCH_IDS.map(id => <option key={id} value={id}>{BRANCH_NAMES[id]}{id === bookedNearest ? ' (ใกล้สุดตอนจอง)' : ''}</option>)}
+          </select>
+          {branchPick && branchPick !== b.branch && (
+            <span style={{ display: 'flex', gap: 6 }}>
+              <button onClick={saveBranch} disabled={busy} style={{ border: 0, background: '#1466C7', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}>บันทึก</button>
+              <button onClick={() => setBranchPick(b.branch || '')} disabled={busy} style={{ border: 0, background: 'transparent', color: '#7C93AD', fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}>ยกเลิก</button>
+            </span>
+          )}
+        </span>
+      )]
+      : ['สาขา', branchName(b.branch)],
     ...(isHome ? [
       ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
-      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (b.branch ? ' จาก' + (BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES] || b.branch) : ' (ลูกค้าประมาณเอง)')],
+      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (bookedNearest ? ' จาก' + branchName(bookedNearest) + ' (ใกล้สุดตอนจอง)' : ' (ลูกค้าประมาณเอง)')],
     ] as [string, ReactNode][] : []),
     ['LINE ID', b.contact_line || '—'],
     ['อีเมล', b.contact_email ? <a href={'mailto:' + b.contact_email}>{b.contact_email}</a> : '—'],
@@ -606,6 +634,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                     {e.action === 'created' ? 'ลูกค้าจองผ่านหน้าเว็บ'
                       : e.action === 'status' ? (STATUS_META[e.from_status as Status]?.label || e.from_status) + ' → ' + (STATUS_META[e.to_status as Status]?.label || e.to_status)
                         : e.action === 'items' ? 'แก้ไขรายการตรวจ: ' + (e.note || '')
+                          : e.action === 'branch' ? 'เปลี่ยนสาขาที่รับผิดชอบ: ' + (e.from_status ? branchName(e.from_status) : 'ยังไม่ระบุ') + ' → ' + branchName(e.to_status)
                           : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
                   </div>
                   <div style={{ color: '#8FA6C0' }}>{thDateTime(e.at)} · {e.actor === 'customer' ? 'ลูกค้า' : e.actor}</div>
