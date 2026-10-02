@@ -8,6 +8,7 @@ import {
 } from '../../shared/admin';
 import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
+import BookingCalendar from './BookingCalendar';
 import ItemEditor from './ItemEditor';
 import PopularAdmin from './PopularAdmin';
 
@@ -31,11 +32,12 @@ const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', b
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
 
-type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'popular' } | { view: 'detail'; ref: string };
+type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'calendar' } | { view: 'popular' } | { view: 'detail'; ref: string };
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
   if (h.startsWith('b/')) return { view: 'detail', ref: decodeURIComponent(h.slice(2)) };
   if (h === 'bookings') return { view: 'bookings' };
+  if (h === 'calendar') return { view: 'calendar' };
   if (h === 'popular') return { view: 'popular' };
   return { view: 'dash' };
 }
@@ -47,6 +49,8 @@ export default function AdminApp() {
   const [authError, setAuthError] = useState('');
   const [toast, setToast] = useState('');
   const [filters, setFilters] = useState<ListQuery>({ status: 'all', branch: 'all', source: 'all', q: '', from: '', to: '', page: 1 });
+  const [calDay, setCalDay] = useState(bkkToday);
+  const [calMonth, setCalMonth] = useState(() => bkkToday().slice(0, 7));
 
   useEffect(() => {
     const on = () => setRoute(parseHash());
@@ -70,6 +74,7 @@ export default function AdminApp() {
   const views: Record<Route['view'], [string, string]> = {
     dash: ['ภาพรวมวันนี้', 'สรุปคิว รายได้ และงานค้างของทุกสาขา · ข้อมูลจากหน้าเว็บจอง lab.medicaltrend.stream'],
     bookings: ['รายการจองทั้งหมด', 'ค้นหา กรองตามสถานะ สาขา และวันนัด แล้วกดเปิดเพื่อจัดการรายการนั้น'],
+    calendar: ['ปฏิทินนัด', 'นัดทั้งหมดตามวันนัดหมาย · กดวันที่เพื่อดูรายการนัดของวันนั้น แล้วกดรายการเพื่อจัดการ'],
     popular: ['Popular tests', 'รูปโฆษณาและรายการตรวจยอดนิยมใน STEP 2 ของหน้าจอง · เก็บไว้หลายรายการแล้วสลับแสดงหรือซ่อนได้'],
     detail: ['รายละเอียดการจอง', 'ตรวจรายการของผู้รับบริการแต่ละคน ยืนยันนัด อัปเดตสถานะ และบันทึกหมายเหตุ'],
   };
@@ -108,6 +113,7 @@ export default function AdminApp() {
         <nav className="a-aside-nav" style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <NavBtn on={route.view === 'dash'} label="ภาพรวมวันนี้" onClick={() => go('/')} />
           <NavBtn on={route.view === 'bookings' || route.view === 'detail'} label="รายการจอง" onClick={() => go('/bookings')} />
+          <NavBtn on={route.view === 'calendar'} label="ปฏิทินนัด" onClick={() => go('/calendar')} />
           <NavBtn on={route.view === 'popular'} label="Popular tests" onClick={() => go('/popular')} />
           <a href="/" target="_blank" rel="noopener" className="a-nav" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, padding: '11px 12px', borderRadius: 11, color: '#DCEBFA' }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: 'rgba(255,255,255,.3)' }} />หน้าเว็บจอง ↗
@@ -130,8 +136,14 @@ export default function AdminApp() {
             <h1 style={{ margin: 0, fontSize: 'clamp(21px, 2.2vw, 27px)', fontWeight: 700, letterSpacing: '-.025em', lineHeight: 1.2 }}>{title}</h1>
             <p style={{ margin: '5px 0 0', fontSize: 13, color: '#536C89', lineHeight: 1.5 }}>{sub}</p>
           </div>
-          {route.view === 'bookings' && (
+          {(route.view === 'bookings' || route.view === 'calendar') && (
             <>
+              <span role="group" aria-label="มุมมอง" style={{ display: 'inline-flex', background: '#fff', border: '1.5px solid #DFE8F2', borderRadius: 11, padding: 3, gap: 2 }}>
+                {([['bookings', 'รายการ'], ['calendar', 'ปฏิทิน']] as const).map(([v, label]) => (
+                  <button key={v} onClick={() => go('/' + v)} aria-pressed={route.view === v}
+                    style={{ border: 0, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', background: route.view === v ? '#1466C7' : 'transparent', color: route.view === v ? '#fff' : '#536C89' }}>{label}</button>
+                ))}
+              </span>
               <label style={{ flex: '0 1 250px', display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #DFE8F2', borderRadius: 11, padding: '9px 12px' }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7C93AD" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></svg>
                 <input type="search" aria-label="ค้นหา" value={filters.q} onChange={e => setFilters(f => ({ ...f, q: e.target.value, page: 1 }))} placeholder="ค้นหารหัส ชื่อ เบอร์โทร" style={{ border: 0, outline: 'none', width: '100%', fontSize: 13, color: '#0F2540', background: 'transparent' }} />
@@ -152,6 +164,8 @@ export default function AdminApp() {
 
         {route.view === 'dash' && <Dashboard openList={openList} />}
         {route.view === 'bookings' && <BookingList filters={filters} setFilters={setFilters} />}
+        {route.view === 'calendar' && <BookingCalendar filters={filters} setFilters={setFilters} month={calMonth} setMonth={m => { setCalMonth(m); setCalDay(m === bkkToday().slice(0, 7) ? bkkToday() : m + '-01'); }} day={calDay}
+          setDay={d => { setCalDay(d); setCalMonth(d.slice(0, 7)); }} open={ref => go('/b/' + ref)} />}
         {route.view === 'popular' && <PopularAdmin toast={setToast} />}
         {route.view === 'detail' && <BookingDetail key={route.ref} ref_={route.ref} toast={setToast} />}
       </main>

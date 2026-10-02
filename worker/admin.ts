@@ -3,7 +3,7 @@
 //   GET  /api/admin/summary
 //   /api/admin/popular…              popular cards on the booking page (worker/popular.ts)
 //   GET  /api/admin/mail-check      is RESEND_API_KEY accepted by Resend? (shape of the key, never the key)
-//   GET  /api/admin/bookings?status=&branch=&q=&from=&to=&page=
+//   GET  /api/admin/bookings?status=&branch=&q=&from=&to=&page=   (+ calendar=1: whole from–to range, no paging)
 //   GET  /api/admin/bookings/:ref
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
 //   POST /api/admin/bookings/:ref/note     {"note": "..."}
@@ -20,6 +20,7 @@ interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
 
 const PAGE_SIZE = 50;
+const CALENDAR_MAX = 1500;
 const REF_RE = /^MT-\d{6}-[2-9A-HJ-NP-Z]{4}$/;
 
 export async function handleAdmin(req: Request, env: Env, email: string, ctx: AdminCtx): Promise<Response> {
@@ -174,6 +175,16 @@ async function listBookings(url: URL, env: Env) {
   }
   const page = Math.max(1, Math.min(1000, Number(p.get('page')) || 1));
   const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+
+  // Calendar view: every booking in a visible month grid (≤ 6 weeks), no paging.
+  if (p.get('calendar') === '1') {
+    const days = from && to ? (Date.parse(to) - Date.parse(from)) / 86_400_000 : NaN;
+    if (!(days >= 0 && days <= 45)) return json({ error: 'bad_request', detail: 'calendar needs from/to within 45 days' }, 400);
+    const rows = await env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total, source,
+        (lab_order_key IS NOT NULL AND NOT EXISTS (SELECT 1 FROM booking_items i WHERE i.booking_id = bookings.id)) AS rx_pending
+      FROM bookings ${w} ORDER BY visit_date ASC, slot ASC, created_at ASC LIMIT ${CALENDAR_MAX}`).bind(...args).all();
+    return json({ rows: rows.results as unknown as AdminRow[], total: rows.results.length, page: 1, pageSize: CALENDAR_MAX });
+  }
 
   const [rows, count] = await env.DB.batch([
     env.DB.prepare(`SELECT ref, created_at, status, mode, branch, visit_date, slot, people, contact_name, contact_phone, total, source,

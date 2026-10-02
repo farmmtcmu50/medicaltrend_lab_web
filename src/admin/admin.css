@@ -23,3 +23,32 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   .a-aside-foot { display: none !important; }
   .a-main { padding: 16px 14px 48px !important; }
 }
+
+/* Booking calendar (month grid) */
+.a-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.a-cal-head { padding: 9px 10px; font-size: 11px; font-weight: 700; letter-spacing: .05em; background: #F7FAFD; border-bottom: 1px solid #E4ECF5; }
+.a-cal-cell { display: flex; flex-direction: column; gap: 5px; min-height: 112px; padding: 7px 7px 8px; text-align: left; font: inherit; color: inherit;
+  background: #fff; border: 0; border-right: 1px solid #EEF3F9; border-bottom: 1px solid #EEF3F9; cursor: pointer; min-width: 0; transition: background .14s; }
+.a-cal-cell:nth-child(7n + 7) { border-right: 0; }
+.a-cal-cell:hover { background: #F7FAFD; }
+.a-cal-out { background: #FBFCFE; }
+.a-cal-out .a-cal-date { color: #B5C5D7; }
+.a-cal-sel, .a-cal-sel:hover { background: #EAF3FF; box-shadow: inset 0 0 0 2px #1466C7; }
+.a-cal-num { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.a-cal-date { font-size: 12.5px; font-weight: 700; width: 24px; height: 24px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+.a-cal-today .a-cal-date { background: #1466C7; color: #fff; }
+.a-cal-count { font-size: 10.5px; font-weight: 700; color: #0B4F9E; white-space: nowrap; }
+.a-cal-items { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.a-cal-item { display: block; font-size: 10.5px; line-height: 1.35; padding: 2px 5px; border-left: 3px solid; border-radius: 4px; color: #0F2540;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-cal-more { font-size: 10.5px; color: #536C89; font-weight: 600; padding-left: 4px; }
+.a-cal-dots { display: none; gap: 3px; }
+.a-cal-dots i { width: 6px; height: 6px; border-radius: 999px; display: block; }
+
+@media (max-width: 760px) {
+  .a-cal-cell { min-height: 58px; padding: 5px 4px; align-items: center; }
+  .a-cal-items, .a-cal-count { display: none; }
+  .a-cal-num { justify-content: center; }
+  .a-cal-dots { display: flex; }
+  .a-cal-head { padding: 8px 4px; text-align: center; }
+}

@@ -26,6 +26,11 @@ export const api = {
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== '' && v !== 'all') p.set(k, String(v));
     return call<{ rows: AdminRow[]; total: number; page: number; pageSize: number }>('/bookings?' + p);
   },
+  calendar: (q: ListQuery, from: string, to: string) => {
+    const p = new URLSearchParams({ calendar: '1', from, to });
+    for (const k of ['status', 'branch', 'source', 'q'] as const) { const v = q[k]; if (v && v !== 'all') p.set(k, v); }
+    return call<{ rows: AdminRow[] }>('/bookings?' + p);
+  },
   get: (ref: string) => call<AdminBooking>('/bookings/' + ref),
   setStatus: (ref: string, status: Status) => post<AdminBooking>('/bookings/' + ref + '/status', { status }),
   setNote: (ref: string, note: string) => post<AdminBooking>('/bookings/' + ref + '/note', { note }),
