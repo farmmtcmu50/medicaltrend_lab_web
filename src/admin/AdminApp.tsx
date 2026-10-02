@@ -10,6 +10,7 @@ import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 import BookingCalendar from './BookingCalendar';
 import ItemEditor from './ItemEditor';
+import LocationEditor from './LocationEditor';
 import PopularAdmin from './PopularAdmin';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
@@ -26,7 +27,7 @@ const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg:
 const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
 const rxPill = pill({ c: '#A26A00', bg: '#FFF4E0' });
 const MAIL_LABELS: Record<string, string> = {
-  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน',
+  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน', relocated: 'แจ้งปรับค่าบริการถึงบ้าน (แก้หมุด)',
 };
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
@@ -386,6 +387,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
   const [branchPick, setBranchPick] = useState('');
+  const [relocating, setRelocating] = useState(false);
   const load = useCallback(() => {
     setErr('');
     api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); setBranchPick(x.branch || ''); }).catch(e => setErr(e.code || 'network'));
@@ -423,9 +425,14 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     finally { setBusy(false); }
   };
 
-  // The branch the distance (and fee) was measured from: the one before any staff reassignment.
-  const firstMove = b.events.find(e => e.action === 'branch');
-  const bookedNearest = firstMove ? firstMove.from_status : b.branch;
+  // The branch the distance (and fee) was measured from: the nearest one at booking or at the last pin
+  // change, before any manual reassignment after it.
+  let bookedNearest: string | null | undefined;
+  for (const e of b.events) {
+    if (e.action === 'location') bookedNearest = e.to_status;
+    else if (e.action === 'branch' && bookedNearest === undefined) bookedNearest = e.from_status;
+  }
+  if (bookedNearest === undefined) bookedNearest = b.branch;
   const persons = Array.from({ length: b.people }, (_, i) => b.items.filter(it => it.person_no === i + 1));
   const isHome = b.mode === 'home';
   const mapUrl = b.map_url ? b.map_url : b.latitude != null && b.longitude != null
@@ -453,7 +460,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
       )]
       : ['สาขา', branchName(b.branch)],
     ...(isHome ? [
-      ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
+      ['ที่อยู่เข้าบริการ', <>{b.status !== 'cancelled' && !relocating && <button onClick={() => { setEditing(false); setRelocating(true); }} className="a-pale" style={{ ...outlineBtn, padding: '4px 10px', fontSize: 11, float: 'right', marginLeft: 6 }}>แก้ไขหมุด</button>}{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
       ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (bookedNearest ? ' จาก' + branchName(bookedNearest) + ' (ใกล้สุดตอนจอง)' : ' (ลูกค้าประมาณเอง)')],
     ] as [string, ReactNode][] : []),
     ['LINE ID', b.contact_line || '—'],
@@ -517,6 +524,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {relocating && (
+            <LocationEditor b={b} toast={toast} onCancel={() => setRelocating(false)} onConflict={() => { setRelocating(false); load(); }}
+              onSaved={x => { setB(x); setBranchPick(x.branch || ''); setRelocating(false); }} />
+          )}
           {editing ? (
             <ItemEditor b={b} toast={toast} onCancel={() => setEditing(false)} onConflict={() => { setEditing(false); load(); }}
               onSaved={x => { setB(x); setEditing(false); }} />
@@ -524,7 +535,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={cardTitle}>ผู้รับบริการ {b.people} คน</span>
-              {b.status !== 'cancelled' && <button onClick={() => setEditing(true)} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
+              {b.status !== 'cancelled' && <button onClick={() => { setRelocating(false); setEditing(true); }} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
             </div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
               {persons.map((items, i) => (
@@ -634,6 +645,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                     {e.action === 'created' ? 'ลูกค้าจองผ่านหน้าเว็บ'
                       : e.action === 'status' ? (STATUS_META[e.from_status as Status]?.label || e.from_status) + ' → ' + (STATUS_META[e.to_status as Status]?.label || e.to_status)
                         : e.action === 'items' ? 'แก้ไขรายการตรวจ: ' + (e.note || '')
+                          : e.action === 'location' ? 'แก้ไขหมุดตำแหน่ง: ' + (e.note || '') + (e.from_status !== e.to_status ? ' · สาขา ' + (e.from_status ? branchName(e.from_status) : 'ยังไม่ระบุ') + ' → ' + branchName(e.to_status) : '')
                           : e.action === 'branch' ? 'เปลี่ยนสาขาที่รับผิดชอบ: ' + (e.from_status ? branchName(e.from_status) : 'ยังไม่ระบุ') + ' → ' + branchName(e.to_status)
                           : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
                   </div>

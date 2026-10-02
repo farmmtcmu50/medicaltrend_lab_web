@@ -61,7 +61,9 @@ export default {
           return new Response(msg, { status: auth.status, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
         }
         if (url.pathname.startsWith('/api/admin')) {
-          return await handleAdmin(req, env, auth.email, { waitUntil: p => ctx.waitUntil(p), catalog: () => loadCatalog(env, ctx) });
+          return await handleAdmin(req, env, auth.email, {
+            waitUntil: p => ctx.waitUntil(p), catalog: () => loadCatalog(env, ctx), distance: at => distanceFrom(env, ctx, at),
+          });
         }
         const page = await env.ASSETS.fetch(new Request(new URL('/admin', url), req));
         const res = new Response(page.body, page);

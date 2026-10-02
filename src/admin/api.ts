@@ -33,6 +33,8 @@ export const api = {
   },
   get: (ref: string) => call<AdminBooking>('/bookings/' + ref),
   setStatus: (ref: string, status: Status) => post<AdminBooking>('/bookings/' + ref + '/status', { status }),
+  setLocation: (ref: string, data: { lat: number; lng: number; mapUrl: string | null; address: string; expectedUpdatedAt: string | null }) =>
+    post<AdminBooking>('/bookings/' + ref + '/location', data),
   setBranch: (ref: string, branch: string) => post<AdminBooking>('/bookings/' + ref + '/branch', { branch }),
   setNote: (ref: string, note: string) => post<AdminBooking>('/bookings/' + ref + '/note', { note }),
   editItems: (ref: string, persons: EditItem[][], expectedUpdatedAt: string | null) =>
