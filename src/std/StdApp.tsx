@@ -5,7 +5,8 @@ import {
   STD_BOOKING_DAYS, STD_BRANCHES, STD_COVERS, STD_KEY_ORDER, STD_PACKAGES, STD_PATHOGENS, TIER_CAPS, TIER_PRICES,
   branchHours, tierPrice, type StdKey,
 } from '../../shared/std';
-import { PRICING, SLOTS, travelFee, travelTierLabel } from '../../shared/catalog';
+import { PRICING, SLOTS, maxKm, minHomeFee, travelFee, travelTierLabel } from '../../shared/catalog';
+import { useHomePricing } from '../usePricing';
 import { BRANCH_INFO } from '../../shared/branches';
 import { detectRef } from '../ref';
 import { useHomeLocation } from '../useHomeLocation';
@@ -52,7 +53,8 @@ export default function StdApp() {
   const c = bookingCopy(lang);
   const L = (th: string, en: string) => (lang === 'th' ? th : en);
   const homeMode = f.where === 'home';
-  const loc = useHomeLocation(homeMode, { pinned: L('ปักหมุดแล้ว', 'Pinned'), fromMaps: L('ตำแหน่งจาก Google Maps', 'Location from Google Maps') });
+  const hp = useHomePricing();
+  const loc = useHomeLocation(homeMode, { pinned: L('ปักหมุดแล้ว', 'Pinned'), fromMaps: L('ตำแหน่งจาก Google Maps', 'Location from Google Maps') }, hp);
 
   useEffect(() => { document.documentElement.lang = lang; document.title = lang === 'th' ? 'ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ เชียงใหม่ · Medical Trend' : 'HIV & STD Testing Chiang Mai · Medical Trend'; }, [lang]);
   const setLang = (l: StdLang) => { try { localStorage.setItem('mt_lang', l); } catch { /* ignore */ } setLangState(l); };
@@ -118,7 +120,7 @@ export default function StdApp() {
   const cartName = items.map(x => x.name).join(' + ');
   let cartSub = unsure ? sc.unsureSub : items.map(x => x.name.split(' · ')[0] + ' ' + money(x.price || 0)).join('  +  ');
   if (hasCustom) cartSub += '  ·  ' + (n ? picked.map(k => STD_PATHOGENS[k][0]).join(', ') : sc.needPick);
-  const travel = homeMode ? travelFee('home', loc.distance, 1) : 0;
+  const travel = homeMode ? travelFee('home', loc.distance, 1, hp) : 0;
   const grand = (total ?? 0) + travel;
   const totalText = total === null && !homeMode ? '—' : money(grand) + ' ' + t.baht;
   const tierIdx = n === 0 ? -1 : TIER_CAPS.findIndex(cap => n <= cap);
@@ -190,7 +192,7 @@ export default function StdApp() {
     if (!/^0\d{8,9}$/.test(f.phone.replace(/[\s-]/g, ''))) e.phone = c.ePhone;
     if (!homeMode && f.branch === '') e.branch = c.eBranch;
     if (homeMode && loc.address.trim().length < 5) e.address = L('กรุณากรอกที่อยู่ หรือวางลิงก์ Google Maps / กดปักหมุด', 'Please enter your address, paste a Google Maps link or pin your location');
-    if (homeMode && loc.outOfArea) e.address = L('ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการเจาะเลือดถึงบ้าน (เกิน ' + PRICING.maxKm + ' กม.) กรุณาโทร 095-247-2631', 'This location is outside our home-collection area. Please call 095-247-2631');
+    if (homeMode && loc.outOfArea) e.address = L('ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการเจาะเลือดถึงบ้าน (เกิน ' + maxKm(hp) + ' กม.) กรุณาโทร 095-247-2631', 'This location is outside our home-collection area. Please call 095-247-2631');
     if (homeMode && loc.distInfo?.status === 'loading') return;
     if (!f.pkgs.length) e.pkg = c.ePkg;
     if (hasCustom && !picked.length) e.pick = c.ePick;
@@ -434,7 +436,7 @@ export default function StdApp() {
                     <div className="s-field" style={{ gap: 8 }}>
                       <div className="s-label">{L('สถานที่ตรวจ', 'Where')}</div>
                       <div className="s-opts2">
-                        {([['branch', L('ที่สาขา', 'At a branch'), L('เข้ารับบริการ 4 สาขา', 'Walk in at one of 4 branches')], ['home', L('เจาะเลือดถึงบ้าน', 'Home collection'), L('ทีมไปเก็บตัวอย่างถึงที่ · เริ่มต้น ฿250', 'We come to you · from ฿250')]] as const).map(([w, l, a]) => {
+                        {([['branch', L('ที่สาขา', 'At a branch'), L('เข้ารับบริการ 4 สาขา', 'Walk in at one of 4 branches')], ['home', L('เจาะเลือดถึงบ้าน', 'Home collection'), L('ทีมไปเก็บตัวอย่างถึงที่ · เริ่มต้น ฿' + minHomeFee(hp), 'We come to you · from ฿' + minHomeFee(hp))]] as const).map(([w, l, a]) => {
                           const on = f.where === w;
                           return (
                             <button key={w} type="button" className="s-opt" aria-pressed={on} onClick={() => chooseWhere(w)} style={selStyle(on)}>
@@ -499,14 +501,14 @@ export default function StdApp() {
                           <div style={{ fontSize: 14, color: '#3D4F6B' }}>{L('กำลังคำนวณระยะทาง…', 'Calculating distance…')}</div>
                         ) : (
                           <>
-                            <input type="range" aria-label={L('ระยะทางโดยประมาณ', 'Estimated distance')} min={PRICING.minKm} max={PRICING.maxKm} value={loc.distance} onChange={e => loc.setDistance(+e.target.value)} style={{ width: '100%', accentColor: '#1C75BC' }} />
+                            <input type="range" aria-label={L('ระยะทางโดยประมาณ', 'Estimated distance')} min={PRICING.minKm} max={maxKm(hp)} value={loc.distance} onChange={e => loc.setDistance(+e.target.value)} style={{ width: '100%', accentColor: '#1C75BC' }} />
                             <div style={{ fontSize: 14, color: '#3D4F6B', lineHeight: 1.5 }}>
                               {L('ประมาณ ', 'About ') + loc.distance + L(' กม. จากสาขา · ', ' km from a branch · ')}
                               {loc.distInfo?.status === 'fail' ? L('คำนวณอัตโนมัติไม่สำเร็จ เจ้าหน้าที่จะยืนยันอีกครั้ง', 'automatic calculation failed; staff will confirm') : L('วางลิงก์ Google Maps หรือกดปักหมุดเพื่อคำนวณอัตโนมัติ', 'paste a Maps link or pin to calculate automatically')}
                             </div>
                           </>
                         )}
-                        <div style={{ fontSize: 13, color: '#4E5E78' }}>{L('ช่วง ' + travelTierLabel(loc.distance) + ' กม. · เหมาจ่ายต่อครั้ง · ช่วงเวลาเจาะเลือดถึงบ้านทุกวัน', travelTierLabel(loc.distance) + ' km band · flat per visit · home visits every day')}</div>
+                        <div style={{ fontSize: 13, color: '#4E5E78' }}>{L('ช่วง ' + travelTierLabel(loc.distance, hp) + ' กม. · เหมาจ่ายต่อครั้ง · ช่วงเวลาเจาะเลือดถึงบ้านทุกวัน', travelTierLabel(loc.distance, hp) + ' km band · flat per visit · home visits every day')}</div>
                       </div>
                     </div>
                     )}

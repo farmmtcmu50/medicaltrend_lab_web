@@ -12,7 +12,7 @@
 //                                          nearest branch, distance and fee re-computed; LINE alert + customer email if the price changed
 //   POST /api/admin/bookings/:ref/items    {"persons": [[{kind, name}]], "expectedUpdatedAt": "..."} re-price + LINE alert
 //   GET  /api/admin/bookings/:ref/lab-order
-import { BRANCH_IDS, PRICING, travelFee, type Catalog } from '../shared/catalog';
+import { BRANCH_IDS, maxKm, travelFee, type Catalog } from '../shared/catalog';
 import type { DistanceResult } from '../shared/geo';
 import { isMapUrl } from '../shared/maps';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
@@ -20,6 +20,7 @@ import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, price
 import { notifyBranchChanged, notifyItemsChanged, notifyLocationChanged, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
 import { handlePopularAdmin } from './popular';
+import { handleSettingsAdmin, loadHomePricing } from './pricing';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx {
@@ -49,6 +50,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'me') return json({ email });
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
   if (parts[0] === 'popular') return handlePopularAdmin(req, env, email, parts, ctx.waitUntil);
+  if (parts[0] === 'settings') return handleSettingsAdmin(req, env, email, parts);
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);
 
@@ -160,9 +162,10 @@ async function setLocation(req: Request, env: Env, email: string, ctx: AdminCtx,
 
   const d = await ctx.distance({ lat, lng }).catch(() => null);
   if (!d) return json({ error: 'distance_unavailable' }, 503);
-  if (d.km > PRICING.maxKm) return json({ error: 'out_of_area', km: d.km }, 422);
+  const hp = await loadHomePricing(env);
+  if (d.km > maxKm(hp)) return json({ error: 'out_of_area', km: d.km }, 422);
 
-  const travel = travelFee('home', d.km, b.people);
+  const travel = travelFee('home', d.km, b.people, hp);
   const total = b.items_subtotal + travel;
   const now = new Date().toISOString();
   const parts = [`ระยะ ${b.distance_km ?? '-'} → ${d.km} กม.`];
@@ -212,7 +215,7 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
     return json(await bookingDetail(env, ref));
   }
 
-  const travel = editedTravelFee(b, persons.length);
+  const travel = editedTravelFee(b, persons.length, await loadHomePricing(env));
   const total = edit.subtotal + travel;
   const now = new Date().toISOString();
   const summary = describeEdit(edit, b.total, total);

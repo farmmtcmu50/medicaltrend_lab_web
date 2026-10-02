@@ -2,7 +2,8 @@
 // Stored in the same bookings tables as the main site (source = 'std'), so it shows up in the Booking Console.
 // mode 'home': blood/sample collection at the customer's address, charged with the same home tariff and slots
 // as the main site; the distance is recomputed from the coordinates (nearest branch) when there are any.
-import { BRANCH_IDS, PRICING, SLOTS, travelFee, type BranchId } from '../shared/catalog';
+import { BRANCH_IDS, PRICING, SLOTS, maxKm, travelFee, type BranchId } from '../shared/catalog';
+import { loadHomePricing } from './pricing';
 import { isMapUrl } from '../shared/maps';
 import { STD_BOOKING_DAYS, branchHours, priceStd } from '../shared/std';
 import { cleanRef } from '../shared/ref';
@@ -45,6 +46,7 @@ export async function createStdBooking(req: Request, env: Env, ctx: ExecutionCon
   let branch: BranchId | null = null;
   let address: string | null = null, lat: number | null = null, lng: number | null = null, mapUrl: string | null = null;
   let distanceKm: number | null = null;
+  const hp = await loadHomePricing(env);
   if (home) {
     // Same 2-hour windows as home collection on the main site.
     if (!(SLOTS as readonly string[]).includes(time)) return json({ error: 'slot_unavailable' }, 409);
@@ -55,11 +57,11 @@ export async function createStdBooking(req: Request, env: Env, ctx: ExecutionCon
     const link = str(p.mapUrl, 500);
     if (link && /^https:\/\//.test(link) && isMapUrl(link)) mapUrl = link;
     distanceKm = Math.round(Number(p.distanceKm));
-    if (!(distanceKm >= PRICING.minKm && distanceKm <= PRICING.maxKm)) return bad('distanceKm');
+    if (!(distanceKm >= PRICING.minKm && distanceKm <= maxKm(hp))) return bad('distanceKm');
     if (lat != null && lng != null) {
       const d = await distanceFrom(env, ctx, { lat, lng }).catch(() => null);
       if (d) {
-        if (d.km > PRICING.maxKm) return json({ error: 'out_of_area', km: d.km }, 422);
+        if (d.km > maxKm(hp)) return json({ error: 'out_of_area', km: d.km }, 422);
         distanceKm = d.km;
         branch = d.branch;
       }
@@ -83,7 +85,7 @@ export async function createStdBooking(req: Request, env: Env, ctx: ExecutionCon
   } catch (e) {
     return bad('packages: ' + (e as Error).message);
   }
-  const travel = home ? travelFee('home', distanceKm ?? 1, 1) : 0;
+  const travel = home ? travelFee('home', distanceKm ?? 1, 1, hp) : 0;
   const total = priced.total + travel;
   if (Math.round(Number(p.expectedTotal)) !== total) return json({ error: 'price_changed', total, travelFee: travel }, 409);
 

@@ -1,5 +1,6 @@
 // Cloudflare Worker for lab.medicaltrend.stream
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
+//   GET  /api/pricing   home-collection fee rules set in the Booking Console (worker/pricing.ts)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
 //   GET  /api/posters/:file  poster images for the popular cards (R2), managed in the Booking Console (worker/popular.ts)
@@ -10,7 +11,7 @@
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
-  BRANCH_IDS, PATIENT_TYPES, PRICING, SHEET_ID, SHEET_TAB, SLOTS,
+  BRANCH_IDS, PATIENT_TYPES, PRICING, SHEET_ID, maxKm, SHEET_TAB, SLOTS,
   buildCatalog, parseSheet, priceSelection, snapshotCatalog, travelFee,
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
@@ -23,6 +24,7 @@ import { distanceFrom, distanceResponse, expandMapLink } from './geo';
 import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { loadPopular, servePoster } from './popular';
+import { loadHomePricing, pricingResponse } from './pricing';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
@@ -43,6 +45,7 @@ export default {
     const url = new URL(req.url);
     try {
       if (url.pathname === '/api/catalog' && req.method === 'GET') return await catalogResponse(env, ctx);
+      if (url.pathname === '/api/pricing' && req.method === 'GET') return await pricingResponse(env);
       if (url.pathname === '/api/bookings' && req.method === 'POST') return await createBooking(req, env, ctx);
       if (url.pathname === '/api/maps/resolve' && req.method === 'POST') return await resolveMapLink(req);
       if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env, ctx);
@@ -162,9 +165,10 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   const file = form.get('labOrder');
   const upload = file instanceof File && file.size > 0 ? file : null;
 
+  const hp = await loadHomePricing(env);
   let v: ReturnType<typeof validate>;
   try {
-    v = validate(p, upload);
+    v = validate(p, upload, maxKm(hp));
   } catch (e) {
     if (e instanceof BadRequest) return json({ error: 'bad_request', detail: e.message }, 400);
     throw e;
@@ -174,7 +178,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   if (p.mode === 'home' && v.lat != null && v.lng != null) {
     const d = await distanceFrom(env, ctx, { lat: v.lat, lng: v.lng }).catch(() => null);
     if (d) {
-      if (d.km > PRICING.maxKm) return json({ error: 'out_of_area', km: d.km }, 422);
+      if (d.km > maxKm(hp)) return json({ error: 'out_of_area', km: d.km }, 422);
       v.distanceKm = d.km;
       v.branch = d.branch;
     }
@@ -183,7 +187,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   const cat = await loadCatalog(env, ctx);
   const { priced, unknown, subtotal } = priceSelection(cat, p.persons);
   if (unknown.length) return json({ error: 'catalog_changed', unknown }, 409);
-  const travel = travelFee(p.mode, v.distanceKm ?? 0, p.persons.length);
+  const travel = travelFee(p.mode, v.distanceKm ?? 0, p.persons.length, hp);
   const total = subtotal + travel;
   if (total !== Math.round(Number(p.expectedTotal))) return json({ error: 'price_changed', total }, 409);
 
@@ -232,7 +236,7 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
   return json({ ok: true, ref, total, travelFee: travel, subtotal }, 201);
 }
 
-function validate(p: BookingPayload, upload: File | null) {
+function validate(p: BookingPayload, upload: File | null, areaKm: number) {
   need(p && typeof p === 'object', 'payload');
   need(p.mode === 'lab' || p.mode === 'home', 'mode');
   need((SLOTS as readonly string[]).includes(p.slot), 'slot');
@@ -270,7 +274,7 @@ function validate(p: BookingPayload, upload: File | null) {
     need((PATIENT_TYPES as readonly string[]).includes(p.patientType || ''), 'patientType');
     patientType = p.patientType!;
     distanceKm = Math.round(Number(p.distanceKm));
-    need(distanceKm >= PRICING.minKm && distanceKm <= PRICING.maxKm, 'distanceKm');
+    need(distanceKm >= PRICING.minKm && distanceKm <= areaKm, 'distanceKm');
     if (typeof p.lat === 'number' && typeof p.lng === 'number' && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180) {
       lat = p.lat; lng = p.lng;
     }

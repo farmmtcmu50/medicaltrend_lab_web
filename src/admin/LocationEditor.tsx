@@ -2,7 +2,8 @@
 // nearest branch, road distance and the new home-visit fee, then save. The Worker re-computes everything.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { BRANCH_NAMES, type AdminBooking } from '../../shared/admin';
-import { PRICING, travelFee } from '../../shared/catalog';
+import { maxKm, travelFee } from '../../shared/catalog';
+import { useHomePricing } from '../usePricing';
 import type { DistanceResult } from '../../shared/geo';
 import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../../shared/maps';
 import { api, ApiError } from './api';
@@ -32,6 +33,8 @@ export default function LocationEditor({ b, toast, onCancel, onSaved, onConflict
   const [dist, setDist] = useState<Dist | null>(null);
   const [busy, setBusy] = useState(false);
   const req = useRef(0);
+  const hp = useHomePricing();
+  const areaKm = maxKm(hp);
 
   const onLink = (text: string) => {
     setLink(text);
@@ -73,8 +76,8 @@ export default function LocationEditor({ b, toast, onCancel, onSaved, onConflict
   }, [pin]);
 
   const ok = dist?.status === 'ok' ? dist : null;
-  const outOfArea = !!ok && ok.km > PRICING.maxKm;
-  const newFee = ok && !outOfArea ? travelFee('home', ok.km, b.people) : null;
+  const outOfArea = !!ok && ok.km > areaKm;
+  const newFee = ok && !outOfArea ? travelFee('home', ok.km, b.people, hp) : null;
   const newTotal = newFee !== null ? b.items_subtotal + newFee : null;
   const canSave = !!pin && !!ok && !outOfArea && address.trim().length >= 3 && !busy;
 
@@ -93,7 +96,7 @@ export default function LocationEditor({ b, toast, onCancel, onSaved, onConflict
     } catch (e) {
       const code = (e as ApiError).code || 'network';
       if (code === 'conflict') { toast('มีผู้แก้ไขการจองนี้ก่อนหน้า กรุณาตรวจสอบแล้วลองใหม่'); onConflict(); return; }
-      toast(code === 'out_of_area' ? 'ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการ (เกิน ' + PRICING.maxKm + ' กม.)'
+      toast(code === 'out_of_area' ? 'ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการ (เกิน ' + areaKm + ' กม.)'
         : code === 'distance_unavailable' ? 'คำนวณระยะทางไม่สำเร็จ ลองใหม่อีกครั้ง' : 'บันทึกไม่สำเร็จ (' + code + ')');
     } finally { setBusy(false); }
   };
@@ -138,7 +141,7 @@ export default function LocationEditor({ b, toast, onCancel, onSaved, onConflict
       <div style={{ marginTop: 14 }}>
         {dist?.status === 'loading' && <div style={{ fontSize: 12.5, color: '#7C93AD' }}>กำลังคำนวณระยะทาง…</div>}
         {dist?.status === 'fail' && <div style={{ fontSize: 12.5, color: '#A3242A' }}>{dist.why}</div>}
-        {outOfArea && <div style={{ fontSize: 12.5, color: '#A3242A' }}>ตำแหน่งนี้ห่าง {ok!.km} กม. เกินพื้นที่ให้บริการ ({PRICING.maxKm} กม.)</div>}
+        {outOfArea && <div style={{ fontSize: 12.5, color: '#A3242A' }}>ตำแหน่งนี้ห่าง {ok!.km} กม. เกินพื้นที่ให้บริการ ({areaKm} กม.)</div>}
         {ok && !outOfArea && (
           <div>
             {row('สาขาที่ใกล้ที่สุด', branchName(b.branch), branchName(ok.branch))}
