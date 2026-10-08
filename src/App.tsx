@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, PRICING, SLOTS, maxKm, minHomeFee, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
+  BRANCH_IDS, PRICING, SLOTS, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { detectRef } from './ref';
-import { useHomePricing } from './usePricing';
 import type { DistanceResult } from '../shared/geo';
 import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../shared/maps';
 import { DICT, type Lang } from './i18n';
@@ -56,7 +55,6 @@ export default function App() {
   const [fileError, setFileError] = useState('');
   const [branch, setBranch] = useState<BranchId>('sankamphaeng');
   const [distance, setDistance] = useState(8);
-  const hp = useHomePricing();
   // Distance worked out by the Worker from the customer's coordinates (nearest branch, road km).
   const [distInfo, setDistInfo] = useState<{ status: 'loading' | 'fail' } | (DistanceResult & { status: 'ok' }) | null>(null);
   const [visitDate, setVisitDate] = useState(() => bkkDate(1));
@@ -124,13 +122,12 @@ export default function App() {
   const act = Math.min(active, persons.length - 1);
   const cur = persons[act];
   const peopleTotal = persons.reduce((a, p) => a + personSum(p), 0);
-  const travel = travelFee(mode, distance, persons.length, hp);
+  const travel = travelFee(mode, distance, persons.length);
   const total = peopleTotal + travel;
   const isHome = mode === 'home';
   const hasRx = !!file;
   const rxOnly = hasRx && persons.every(p => p.pks.length + p.picked.length === 0);
-  const outOfArea = isHome && distInfo?.status === 'ok' && distInfo.km > maxKm(hp);
-  const outOfAreaMsg = t.outOfArea.replace('40', String(maxKm(hp)));
+  const outOfArea = isHome && distInfo?.status === 'ok' && distInfo.km > PRICING.maxKm;
 
   const updatePerson = (i: number, fn: (p: Person) => Person) =>
     setPersons(ps => ps.map((p, j) => (j === i ? fn(p) : p)));
@@ -172,7 +169,7 @@ export default function App() {
         if (!live) return;
         if (r.ok && typeof r.km === 'number' && r.branch && r.method) {
           setDistInfo({ status: 'ok', ok: true, km: r.km, branch: r.branch, method: r.method });
-          setDistance(Math.min(Math.max(r.km, PRICING.minKm), maxKm(hp)));
+          setDistance(Math.min(Math.max(r.km, PRICING.minKm), PRICING.maxKm));
         } else setDistInfo({ status: 'fail' });
       })
       .catch(() => { if (live) setDistInfo({ status: 'fail' }); });
@@ -243,7 +240,7 @@ export default function App() {
   const startBooking = () => {
     if (!hasRx && persons.some(p => p.pks.length + p.picked.length === 0)) return setBookError(t.errEmpty);
     if (isHome && address.trim().length < 5) return setBookError(t.errAddress);
-    if (outOfArea) return setBookError(outOfAreaMsg);
+    if (outOfArea) return setBookError(t.outOfArea);
     if (isHome && distInfo?.status === 'loading') return;
     if (!visitDate || visitDate < bkkDate(0)) return setBookError(t.errDate);
     setBookError('');
@@ -281,9 +278,9 @@ export default function App() {
     };
   }).concat(isHome ? [{
     label: L('ค่าบริการเจาะเลือดถึงบ้าน', 'Home collection fee'),
-    note: L('ระยะ ' + travelTierLabel(distance, hp) + ' กม. · เหมาจ่ายต่อครั้ง ไม่เกิน ' + hp.includedPeople + ' ท่าน', travelTierLabel(distance, hp) + ' km · flat per visit, up to ' + hp.includedPeople + ' people') +
-      (persons.length > hp.includedPeople
-        ? L(' + ท่านที่ ' + (hp.includedPeople + 1) + ' ขึ้นไป ฿' + hp.extraPersonFee + '/ท่าน', ' + ฿' + hp.extraPersonFee + ' per extra person')
+    note: L('ระยะ ' + travelTierLabel(distance) + ' กม. · เหมาจ่ายต่อครั้ง ไม่เกิน 5 ท่าน', travelTierLabel(distance) + ' km · flat per visit, up to 5 people') +
+      (persons.length > PRICING.includedPeople
+        ? L(' + ท่านที่ 6 ขึ้นไป ฿' + PRICING.extraPersonFee + '/ท่าน', ' + ฿' + PRICING.extraPersonFee + ' per extra person')
         : ''),
     value: travel ? '฿' + ui.fmt(travel) : L('ฟรี', 'Free'),
   }] : []).concat(hasRx && !rxOnly ? [{
@@ -358,7 +355,7 @@ export default function App() {
       </div>
       {distInfo?.status === 'ok' ? (
         <div role="status" style={{ fontSize: 12, lineHeight: 1.55, padding: '9px 11px', borderRadius: 10, border: '1px solid ' + (outOfArea ? '#F3CDB5' : '#BFE5DE'), background: outOfArea ? '#FFF1E8' : '#F4FBF9', color: outOfArea ? '#9A5220' : '#0A6E62' }}>
-          {outOfArea ? outOfAreaMsg : <>
+          {outOfArea ? t.outOfArea : <>
             <b>{(distInfo.method === 'road' ? t.distRoad : t.distStraight) + ' ' + distInfo.km + ' ' + km}</b>
             {' · ' + t.distFrom + ' ' + (branchList(L).find(b => b.id === distInfo.branch)?.name || distInfo.branch)}
             <span style={{ display: 'block', opacity: .8 }}>{t.distAuto}</span>
@@ -368,9 +365,9 @@ export default function App() {
         <div role="status" style={{ fontSize: 12, color: '#6B7F99' }}>{t.distLoading}</div>
       ) : (
         <>
-          <input id="dist" type="range" min={PRICING.minKm} max={maxKm(hp)} step={1} value={distance} onChange={e => setDistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#1466C7', height: 6, cursor: 'pointer' }} />
+          <input id="dist" type="range" min={PRICING.minKm} max={PRICING.maxKm} step={1} value={distance} onChange={e => setDistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#1466C7', height: 6, cursor: 'pointer' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8FA6C0', marginTop: 6 }}>
-            <span>1 {km}</span><span>{t.cityFree.replace('250', String(minHomeFee(hp)))}</span><span>{maxKm(hp)} {km}</span>
+            <span>1 {km}</span><span>{t.cityFree}</span><span>{PRICING.maxKm} {km}</span>
           </div>
           <div style={{ fontSize: 11.5, color: distInfo?.status === 'fail' ? '#9A5220' : '#8FA6C0', marginTop: 6, lineHeight: 1.5 }}>{distInfo?.status === 'fail' ? t.distFail : t.distManual}</div>
         </>

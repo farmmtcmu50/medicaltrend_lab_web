@@ -21,21 +21,10 @@ export interface Catalog {
 
 export const PRICING = {
   minKm: 1,
+  maxKm: 40,          // beyond this: outside the home-collection area
   maxPeople: 8,
-};
-
-/** Home-collection fee rules, set in the Booking Console (Settings) and stored in app_settings. */
-export interface HomePricing {
-  /** Fee per visit by distance from the nearest branch (whole km, rounded up), ascending upToKm. The last tier ends the service area. */
-  tiers: { upToKm: number; fee: number }[];
-  /** People covered by the visit fee. */
-  includedPeople: number;
-  /** Fee for each person beyond includedPeople. */
-  extraPersonFee: number;
-}
-
-export const DEFAULT_HOME_PRICING: HomePricing = {
-  tiers: [
+  /** Home collection fee per visit by distance from the nearest branch (whole km, rounded up). */
+  homeTiers: [
     { upToKm: 3, fee: 250 },
     { upToKm: 6, fee: 300 },
     { upToKm: 10, fee: 350 },
@@ -43,33 +32,9 @@ export const DEFAULT_HOME_PRICING: HomePricing = {
     { upToKm: 20, fee: 450 },
     { upToKm: 40, fee: 600 },
   ],
-  includedPeople: 5,
-  extraPersonFee: 50,
+  includedPeople: 5,  // the visit fee covers up to 5 people
+  extraPersonFee: 50, // each person beyond that
 };
-
-/** Service area limit: the end of the last tier. */
-export const maxKm = (hp: HomePricing = DEFAULT_HOME_PRICING) => hp.tiers[hp.tiers.length - 1].upToKm;
-/** Lowest visit fee, for "from ฿…" labels. */
-export const minHomeFee = (hp: HomePricing = DEFAULT_HOME_PRICING) => Math.min(...hp.tiers.map(t => t.fee));
-
-/** Checks staff input; returns a clean copy or the reason it was refused. */
-export function validateHomePricing(raw: unknown): { ok: true; pricing: HomePricing } | { ok: false; error: string } {
-  const r = raw as Partial<HomePricing> | null;
-  const int = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? v : NaN);
-  if (!r || !Array.isArray(r.tiers) || r.tiers.length < 1 || r.tiers.length > 12) return { ok: false, error: 'tiers' };
-  const tiers: HomePricing['tiers'] = [];
-  for (const t of r.tiers) {
-    const upToKm = int(t?.upToKm), fee = int(t?.fee);
-    if (!(upToKm >= 1 && upToKm <= 200)) return { ok: false, error: 'tier_km' };
-    if (!(fee >= 0 && fee <= 100_000)) return { ok: false, error: 'tier_fee' };
-    if (tiers.length && upToKm <= tiers[tiers.length - 1].upToKm) return { ok: false, error: 'tier_order' };
-    tiers.push({ upToKm, fee });
-  }
-  const includedPeople = int(r.includedPeople), extraPersonFee = int(r.extraPersonFee);
-  if (!(includedPeople >= 1 && includedPeople <= PRICING.maxPeople)) return { ok: false, error: 'included_people' };
-  if (!(extraPersonFee >= 0 && extraPersonFee <= 100_000)) return { ok: false, error: 'extra_person_fee' };
-  return { ok: true, pricing: { tiers, includedPeople, extraPersonFee } };
-}
 
 export const SLOTS = ['06:00–08:00', '08:00–10:00', '10:00–12:00', '16:00–18:00'] as const;
 export const BRANCH_IDS = ['sankamphaeng', 'hangdong', 'watket', 'phayao'] as const;
@@ -208,20 +173,20 @@ export function posterFor(name: string): string {
 
 // ---------- pricing ----------
 
-/** Home-collection fee: distance tier (per visit, up to includedPeople) + extraPersonFee for each extra person. */
-export function travelFee(mode: 'lab' | 'home', distanceKm: number, people = 1, hp: HomePricing = DEFAULT_HOME_PRICING): number {
+/** Home-collection fee: distance tier (per visit, up to 5 people) + ฿50 for each extra person. */
+export function travelFee(mode: 'lab' | 'home', distanceKm: number, people = 1): number {
   if (mode === 'lab') return 0;
   const d = Math.max(PRICING.minKm, Math.ceil(distanceKm));
-  const tier = hp.tiers.find(t => d <= t.upToKm) ?? hp.tiers[hp.tiers.length - 1];
-  return tier.fee + Math.max(0, people - hp.includedPeople) * hp.extraPersonFee;
+  const tier = PRICING.homeTiers.find(t => d <= t.upToKm) ?? PRICING.homeTiers[PRICING.homeTiers.length - 1];
+  return tier.fee + Math.max(0, people - PRICING.includedPeople) * PRICING.extraPersonFee;
 }
 
 /** Distance range of the fee tier, e.g. "4–6" for 5 km. */
-export function travelTierLabel(distanceKm: number, hp: HomePricing = DEFAULT_HOME_PRICING): string {
+export function travelTierLabel(distanceKm: number): string {
   const d = Math.max(PRICING.minKm, Math.ceil(distanceKm));
-  const i = hp.tiers.findIndex(t => d <= t.upToKm);
-  const t = hp.tiers[i < 0 ? hp.tiers.length - 1 : i];
-  const from = i <= 0 ? PRICING.minKm : hp.tiers[i - 1].upToKm + 1;
+  const i = PRICING.homeTiers.findIndex(t => d <= t.upToKm);
+  const t = PRICING.homeTiers[i < 0 ? PRICING.homeTiers.length - 1 : i];
+  const from = i <= 0 ? PRICING.minKm : PRICING.homeTiers[i - 1].upToKm + 1;
   return `${from}–${t.upToKm}`;
 }
 

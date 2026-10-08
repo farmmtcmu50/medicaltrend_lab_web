@@ -3,7 +3,6 @@
 //   priced     after staff edit the tests in the Booking Console (new total / lab-order price)
 //   confirmed  staff set the status to "ยืนยันแล้ว"
 //   cancelled  staff set the status to "ยกเลิก"
-//   relocated  staff moved a home collection's pin and the home-visit fee changed
 //   reminder   daily cron (18:00 Bangkok) for visits tomorrow
 // Only bookings with a contact email get mail. Every attempt is logged in email_log; failures never
 // affect the booking or the staff action. Secret: RESEND_API_KEY. Optional vars: MAIL_FROM, MAIL_REPLY_TO.
@@ -19,9 +18,7 @@ export interface MailEnv {
   MAIL_REPLY_TO?: string;
 }
 
-export type MailKind = 'booked' | 'priced' | 'confirmed' | 'cancelled' | 'reminder' | 'relocated';
-/** Previous home-visit fee and total, for 'relocated'. */
-export interface PriceBefore { travel: number; total: number }
+export type MailKind = 'booked' | 'priced' | 'confirmed' | 'cancelled' | 'reminder';
 
 const SITE = 'https://lab.medicaltrend.stream';
 const DEFAULT_FROM = 'MedicalTrend Lab <lab@medicaltrend.co.th>';
@@ -31,25 +28,24 @@ const MAIN_PHONE = '095 247 2631';
 interface Row {
   id: string; ref: string; mode: 'lab' | 'home'; source: string; branch: string | null; status: string;
   visit_date: string; slot: string; address: string | null; distance_km: number | null; people: number;
-  latitude?: number | null; longitude?: number | null; map_url?: string | null;
   contact_name: string; contact_email: string | null; lab_order_key: string | null;
   items_subtotal: number; travel_fee: number; total: number; lang: string;
 }
 interface Item { person_no: number; name: string; price: number }
 
 /** Sends one customer email about a booking and logs it. Never throws. */
-export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKind, before?: PriceBefore): Promise<void> {
+export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKind): Promise<void> {
   let to = '';
   try {
     if (!env.RESEND_API_KEY) return;
-    const b = await env.DB.prepare(`SELECT id, ref, mode, source, branch, status, visit_date, slot, address, latitude, longitude, map_url, distance_km, people,
+    const b = await env.DB.prepare(`SELECT id, ref, mode, source, branch, status, visit_date, slot, address, distance_km, people,
         contact_name, contact_email, lab_order_key, items_subtotal, travel_fee, total, lang FROM bookings WHERE id = ?1`)
       .bind(bookingId).first<Row>();
     if (!b?.contact_email) return;
     to = b.contact_email;
     const items = (await env.DB.prepare('SELECT person_no, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id')
       .bind(bookingId).all<Item>()).results;
-    const mail = render(b, items, kind, before);
+    const mail = render(b, items, kind);
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -134,7 +130,7 @@ function longDate(ymd: string, en: boolean) {
   return `วัน${TH_DAYS[d.getUTCDay()]}ที่ ${d.getUTCDate()} ${TH_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}`;
 }
 
-export function render(b: Row, items: Item[], kind: MailKind, before?: PriceBefore): { subject: string; html: string; text: string } {
+export function render(b: Row, items: Item[], kind: MailKind): { subject: string; html: string; text: string } {
   const en = b.lang === 'en';
   const L = (th: string, eng: string) => (en ? eng : th);
   const std = b.source === 'std';
@@ -146,7 +142,6 @@ export function render(b: Row, items: Item[], kind: MailKind, before?: PriceBefo
     confirmed: L(`ยืนยันนัดหมาย ${b.ref}`, `Appointment confirmed ${b.ref}`),
     cancelled: L(`ยกเลิกการจอง ${b.ref}`, `Booking cancelled ${b.ref}`),
     reminder: L(`เตือนนัดพรุ่งนี้ ${b.ref}`, `Reminder: your appointment tomorrow ${b.ref}`),
-    relocated: L(`แจ้งปรับค่าบริการถึงบ้าน ${b.ref}`, `Updated home visit fee for booking ${b.ref}`),
   }[kind] + ' · MedicalTrend Lab';
 
   const hello = L(`เรียน คุณ${b.contact_name}`, `Dear ${b.contact_name},`);
@@ -161,11 +156,6 @@ export function render(b: Row, items: Item[], kind: MailKind, before?: PriceBefo
     cancelled: L('การจองด้านล่างถูกยกเลิกแล้ว หากคุณไม่ได้เป็นผู้ขอยกเลิก หรือต้องการนัดหมายใหม่ กรุณาติดต่อเรา',
       'The booking below has been cancelled. If you did not ask for this, or would like a new appointment, please contact us.'),
     reminder: L('ขอเตือนว่าพรุ่งนี้คุณมีนัดหมายกับเรา', 'This is a reminder of your appointment with us tomorrow.'),
-    relocated: before
-      ? L(`เจ้าหน้าที่ได้ปรับปรุงตำแหน่งสถานที่เจาะเลือดของคุณ ทำให้ค่าบริการถึงบ้านเปลี่ยนจาก ${baht(before.travel)} เป็น ${baht(b.travel_fee)} และยอดรวมเปลี่ยนจาก ${baht(before.total)} เป็น ${baht(b.total)} รายละเอียดล่าสุดมีดังนี้`,
-        `Our staff have updated the location for your home blood collection. The home visit fee changed from ${baht(before.travel)} to ${baht(b.travel_fee)} and the total from ${baht(before.total)} to ${baht(b.total)}. Here are the latest details.`)
-      : L('เจ้าหน้าที่ได้ปรับปรุงตำแหน่งสถานที่เจาะเลือดและค่าบริการถึงบ้านของคุณ รายละเอียดล่าสุดมีดังนี้',
-        'Our staff have updated the location and home visit fee of your booking. Here are the latest details.'),
   }[kind];
 
   // --- details
@@ -176,8 +166,7 @@ export function render(b: Row, items: Item[], kind: MailKind, before?: PriceBefo
   const branch = b.branch && BRANCH_INFO[b.branch as BranchId];
   if (b.mode === 'home') {
     rows.push([L('บริการ', 'Service'), L('เจาะเลือดถึงบ้าน', 'Home blood collection')]);
-    const pin = b.map_url || (b.latitude != null && b.longitude != null ? `https://www.google.com/maps?q=${b.latitude},${b.longitude}` : '');
-    if (b.address || pin) rows.push([L('ที่อยู่', 'Address'), esc(b.address || '') + (pin ? `${b.address ? '<br>' : ''}<a href="${esc(pin)}" style="color:#0B4F9E">${L('ดูหมุดบนแผนที่', 'View pin on map')}</a>` : '')]);
+    if (b.address) rows.push([L('ที่อยู่', 'Address'), esc(b.address)]);
   } else if (branch) {
     rows.push([L('สถานที่', 'Location'),
       `${esc(branch.name[en ? 1 : 0])}<br><span style="color:#536C89">${esc(branch.address[en ? 1 : 0])}</span><br>` +

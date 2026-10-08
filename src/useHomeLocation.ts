@@ -1,14 +1,14 @@
 // Address / Google Maps link / "pin my location" handling for home collection, plus the distance to the
 // nearest branch from GET /api/distance. Used by the /std booking form (the main page has the same flow inline).
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_HOME_PRICING, PRICING, maxKm, type HomePricing } from '../shared/catalog';
+import { PRICING } from '../shared/catalog';
 import type { DistanceResult } from '../shared/geo';
 import { findMapUrl, isShortMapUrl, mapsLinkFor, parseMapUrl } from '../shared/maps';
 
 export type MapLink = { url: string; status: 'resolving' | 'ok' | 'nocoords'; fromPin?: boolean };
 export type DistInfo = { status: 'loading' | 'fail' } | (DistanceResult & { status: 'ok' }) | null;
 
-export function useHomeLocation(active: boolean, labels: { pinned: string; fromMaps: string }, hp: HomePricing = DEFAULT_HOME_PRICING) {
+export function useHomeLocation(active: boolean, labels: { pinned: string; fromMaps: string }) {
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [mapLink, setMapLink] = useState<MapLink | null>(null);
@@ -27,12 +27,12 @@ export function useHomeLocation(active: boolean, labels: { pinned: string; fromM
         if (!live) return;
         if (r.ok && typeof r.km === 'number' && r.branch && r.method) {
           setDistInfo({ status: 'ok', ok: true, km: r.km, branch: r.branch, method: r.method });
-          setDistance(Math.min(Math.max(r.km, PRICING.minKm), maxKm(hp)));
+          setDistance(Math.min(Math.max(r.km, PRICING.minKm), PRICING.maxKm));
         } else setDistInfo({ status: 'fail' });
       })
       .catch(() => { if (live) setDistInfo({ status: 'fail' }); });
     return () => { live = false; };
-  }, [active, coords, hp]);
+  }, [active, coords]);
 
   const onAddressChange = (text: string) => {
     const url = findMapUrl(text);
@@ -86,7 +86,7 @@ export function useHomeLocation(active: boolean, labels: { pinned: string; fromM
 
   const clearLink = () => { req.current++; setMapLink(null); setCoords(null); };
   const reset = () => { req.current++; setAddress(''); setCoords(null); setMapLink(null); setDistInfo(null); setDistance(5); };
-  const outOfArea = active && distInfo?.status === 'ok' && distInfo.km > maxKm(hp);
+  const outOfArea = active && distInfo?.status === 'ok' && distInfo.km > PRICING.maxKm;
 
   return { address, setAddress, coords, mapLink, locating, distance, setDistance, distInfo, outOfArea, onAddressChange, pin, clearLink, reset };
 }

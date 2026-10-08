@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { AdminBooking } from '../../shared/admin';
 import { MAX_PERSONS, editedTravelFee, priceBook, priceEdit, type BookItem, type EditItem } from '../../shared/itemEdit';
-import { useHomePricing } from '../usePricing';
 import { api, type ApiError } from './api';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -35,8 +34,7 @@ export default function ItemEditor({ b, onSaved, onCancel, onConflict, toast }: 
   }, []);
 
   const preview = useMemo(() => priceEdit(b.items, persons, book || []), [b.items, persons, book]);
-  const hp = useHomePricing();
-  const travel = editedTravelFee(b, persons.length, hp);
+  const travel = editedTravelFee(b, persons.length);
   const newTotal = preview.subtotal + travel;
   const changed = preview.added.length > 0 || preview.removed.length > 0 || persons.length !== b.people;
   const isNew = (p: number, it: EditItem) => preview.added.some(x => x.person_no === p + 1 && x.kind === it.kind && x.name === it.name);
