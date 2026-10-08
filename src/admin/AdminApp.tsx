@@ -10,6 +10,7 @@ import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 import BookingCalendar from './BookingCalendar';
 import ItemEditor from './ItemEditor';
+import RescheduleEditor from './RescheduleEditor';
 import PopularAdmin from './PopularAdmin';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
@@ -26,7 +27,7 @@ const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg:
 const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
 const rxPill = pill({ c: '#A26A00', bg: '#FFF4E0' });
 const MAIL_LABELS: Record<string, string> = {
-  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน',
+  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน', rescheduled: 'แจ้งเปลี่ยนแปลงนัดหมาย',
 };
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
@@ -385,6 +386,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
+  const [moving, setMoving] = useState(false);
   const load = useCallback(() => {
     setErr('');
     api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); }).catch(e => setErr(e.code || 'network'));
@@ -479,6 +481,15 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
               </button>
             ))}
           </div>
+          {b.status !== 'cancelled' && (
+            <>
+              <div style={{ marginTop: 6, fontSize: 11, color: '#7C93AD', letterSpacing: '.04em' }}>นัดหมาย</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                <button onClick={() => { setEditing(false); setMoving(true); }} disabled={moving} aria-pressed={moving}
+                  style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1.5px solid #CFE0F1', background: moving ? '#EAF3FF' : '#fff', color: '#0B4F9E' }}>เลื่อน / แก้ไขนัด</button>
+              </div>
+            </>
+          )}
           <div style={{ marginTop: 6, fontSize: 11, color: '#7C93AD', letterSpacing: '.04em' }}>ติดต่อลูกค้า</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
             <a href={'tel:' + b.contact_phone} style={contactBtn}>โทร {b.contact_phone}</a>
@@ -489,6 +500,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {moving && (
+            <RescheduleEditor b={b} toast={toast} onCancel={() => setMoving(false)} onConflict={() => { setMoving(false); load(); }}
+              onSaved={x => { setB(x); setMoving(false); }} />
+          )}
           {editing ? (
             <ItemEditor b={b} toast={toast} onCancel={() => setEditing(false)} onConflict={() => { setEditing(false); load(); }}
               onSaved={x => { setB(x); setEditing(false); }} />
@@ -496,7 +511,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={cardTitle}>ผู้รับบริการ {b.people} คน</span>
-              {b.status !== 'cancelled' && <button onClick={() => setEditing(true)} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
+              {b.status !== 'cancelled' && <button onClick={() => { setMoving(false); setEditing(true); }} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
             </div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
               {persons.map((items, i) => (
@@ -606,7 +621,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                     {e.action === 'created' ? 'ลูกค้าจองผ่านหน้าเว็บ'
                       : e.action === 'status' ? (STATUS_META[e.from_status as Status]?.label || e.from_status) + ' → ' + (STATUS_META[e.to_status as Status]?.label || e.to_status)
                         : e.action === 'items' ? 'แก้ไขรายการตรวจ: ' + (e.note || '')
-                          : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
+                          : e.action === 'reschedule' ? 'เลื่อน/แก้ไขนัด: ' + (e.note || '') + (e.from_status?.split('|')[2] !== e.to_status?.split('|')[2] ? ' · สาขา ' + branchLabel('lab', e.to_status?.split('|')[2] || null) : '')
+                          : e.action === 'note' ? 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')
+                            // older event kinds (branch / pin changes) recorded by a previous version
+                            : ({ branch: 'เปลี่ยนสาขาที่รับผิดชอบ', location: 'แก้ไขหมุดตำแหน่ง' }[e.action as string] || e.action) + (e.note ? ': ' + e.note : '')}
                   </div>
                   <div style={{ color: '#8FA6C0' }}>{thDateTime(e.at)} · {e.actor === 'customer' ? 'ลูกค้า' : e.actor}</div>
                 </div>

@@ -3,6 +3,7 @@
 //                           "ผูกแจ้งเตือน <LINE_BIND_CODE>" in it (the OA is public, so joining alone is not enough).
 //   notifyBooking()         pushes a summary of a new booking to the bound group; failures never affect the booking.
 //   notifyItemsChanged()    pushes what staff changed in a booking's tests from the Booking Console.
+//   notifyRescheduled()     pushes an appointment staff moved to another date / time / branch.
 // Secrets (wrangler secret put): LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_BIND_CODE.
 // Optional var LINE_GROUP_ID overrides the group bound through the webhook.
 import { BRANCH_NAMES, PATIENT_LABELS } from '../shared/admin';
@@ -127,6 +128,12 @@ export async function notifyItemsChanged(
   await pushAbout(env, bookingId, 'items alert', (b, items) => itemsChangedMessage(b, items, actor, edit, oldTotal));
 }
 
+export interface Appointment { visit_date: string; slot: string; branch: string | null }
+
+export async function notifyRescheduled(env: LineEnv, bookingId: string, actor: string, before: Appointment, message: string): Promise<void> {
+  await pushAbout(env, bookingId, 'reschedule alert', b => rescheduledMessage(b, actor, before, message));
+}
+
 async function pushAbout(env: LineEnv, bookingId: string, what: string, render: (b: BookingRow, items: ItemRow[]) => string) {
   try {
     if (!env.LINE_CHANNEL_ACCESS_TOKEN) return;
@@ -197,6 +204,26 @@ function itemLines(b: BookingRow, items: ItemRow[]): string[] {
     if (!mine.length) L.push(b.lab_order_name ? ' • ตามใบสั่งแพทย์ · รอเจ้าหน้าที่แจ้งค่าตรวจ' : ' • ยังไม่ได้เลือก (ให้เจ้าหน้าที่ติดต่อกลับ)');
   }
   return L;
+}
+
+const placeName = (mode: string, branch: string | null) =>
+  mode === 'home' ? 'เจาะเลือดถึงบ้าน' : (branch && BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES]) || branch || '-';
+
+export function rescheduledMessage(b: BookingRow, actor: string, before: Appointment, message: string): string {
+  const L: string[] = [
+    `📆 เลื่อน/แก้ไขนัด · ${b.ref}`,
+    `โดย ${actor}`,
+    '',
+    `👤 ${b.contact_name} · 📞 ${phone(b.contact_phone)} · ${b.people} ท่าน`,
+    `เดิม: ${thaiDate(before.visit_date)} · ${before.slot}` + (before.branch !== b.branch ? ` · ${placeName(b.mode, before.branch)}` : ''),
+    `ใหม่: ${thaiDate(b.visit_date)} · ${b.slot}` + (before.branch !== b.branch ? ` · ${placeName(b.mode, b.branch)}` : ''),
+  ];
+  if (before.branch === b.branch) L.push(`📍 ${placeName(b.mode, b.branch)}`);
+  if (b.mode === 'home' && b.address) L.push(`🏠 ${b.address}`);
+  if (message) L.push('', `💬 ข้อความถึงลูกค้า: ${message}`);
+  L.push('', b.contact_email ? '📧 ส่งอีเมลแจ้งลูกค้าแล้ว' : '☎️ ลูกค้าไม่มีอีเมล กรุณาโทรแจ้งนัดใหม่');
+  L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);
+  return L.join('\n');
 }
 
 export function itemsChangedMessage(

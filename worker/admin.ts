@@ -8,12 +8,14 @@
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
 //   POST /api/admin/bookings/:ref/note     {"note": "..."}
 //   POST /api/admin/bookings/:ref/items    {"persons": [[{kind, name}]], "expectedUpdatedAt": "..."} re-price + LINE alert
+//   POST /api/admin/bookings/:ref/reschedule {visitDate, slot, branch?, message?, expectedUpdatedAt}  + customer email + LINE alert
 //   GET  /api/admin/bookings/:ref/lab-order
-import { BRANCH_IDS, type Catalog } from '../shared/catalog';
+import { BRANCH_IDS, SLOTS, type Catalog } from '../shared/catalog';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
-import { notifyItemsChanged, type LineEnv } from './line';
+import { notifyItemsChanged, notifyRescheduled, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
+import { addDays, bangkokToday } from './util';
 import { handlePopularAdmin } from './popular';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
@@ -69,6 +71,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   }
 
   if (req.method === 'POST' && parts.length === 3 && parts[2] === 'items') return editItems(req, env, email, ctx, ref, row.id);
+  if (req.method === 'POST' && parts.length === 3 && parts[2] === 'reschedule') return reschedule(req, env, email, ctx, ref, row.id);
 
   if (req.method === 'POST' && parts.length === 3 && (parts[2] === 'status' || parts[2] === 'note')) {
     const body = await req.json<{ status?: string; note?: string }>().catch(() => null);
@@ -98,6 +101,53 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   }
 
   return json({ error: 'not_found' }, 404);
+}
+
+const TH_DAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const shortDate = (ymd: string) => { const d = new Date(ymd + 'T00:00:00Z'); return `${TH_DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${TH_MONTHS[d.getUTCMonth()]} ${String(d.getUTCFullYear() + 543).slice(2)}`; };
+const RESCHEDULE_DAYS = 180;
+
+/**
+ * Moves an appointment to another date / time (and, for lab visits, another branch). Prices are unchanged.
+ * The customer is emailed the new appointment; the next-day reminder follows the new date.
+ */
+async function reschedule(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
+  const body = await req.json<{ visitDate?: unknown; slot?: unknown; branch?: unknown; message?: unknown; expectedUpdatedAt?: unknown }>().catch(() => null);
+  const bad = (detail: string) => json({ error: 'bad_request', detail }, 400);
+  if (!body) return bad('body');
+  const visitDate = typeof body.visitDate === 'string' ? body.visitDate : '';
+  const today = bangkokToday();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate) || Number.isNaN(Date.parse(visitDate)) || visitDate < today || visitDate > addDays(today, RESCHEDULE_DAYS)) return bad('visitDate');
+  const slot = typeof body.slot === 'string' ? body.slot.trim() : '';
+  // The main site books 2-hour windows; the STD page books hourly at a branch ("09:00").
+  if (!(SLOTS as readonly string[]).includes(slot) && !/^([01]\d|2[0-3]):00$/.test(slot)) return bad('slot');
+  const message = typeof body.message === 'string' ? body.message.trim().slice(0, 500) : '';
+
+  const b = await env.DB.prepare('SELECT mode, status, branch, visit_date, slot, updated_at FROM bookings WHERE id = ?1').bind(id)
+    .first<{ mode: 'lab' | 'home'; status: Status; branch: string | null; visit_date: string; slot: string; updated_at: string | null }>();
+  if (!b) return json({ error: 'not_found' }, 404);
+  if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  if ((body.expectedUpdatedAt ?? null) !== b.updated_at) return json({ error: 'conflict' }, 409);
+  let branch = b.branch;
+  if (b.mode === 'lab' && body.branch !== undefined && body.branch !== null) {
+    if (typeof body.branch !== 'string' || !(BRANCH_IDS as readonly string[]).includes(body.branch)) return bad('branch');
+    branch = body.branch;
+  }
+  if (visitDate === b.visit_date && slot === b.slot && branch === b.branch) return json(await bookingDetail(env, ref));
+
+  const now = new Date().toISOString();
+  const pack = (d: string, s: string, br: string | null) => [d, s, br ?? ''].join('|');
+  const summary = `${shortDate(b.visit_date)} ${b.slot} → ${shortDate(visitDate)} ${slot}` + (message ? ' · แจ้งลูกค้า: ' + message : '');
+  await env.DB.batch([
+    env.DB.prepare('UPDATE bookings SET visit_date = ?1, slot = ?2, branch = ?3, updated_at = ?4 WHERE id = ?5').bind(visitDate, slot, branch, now, id),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, from_status, to_status, note) VALUES (?1, ?2, ?3, 'reschedule', ?4, ?5, ?6)")
+      .bind(id, now, email, pack(b.visit_date, b.slot, b.branch), pack(visitDate, slot, branch), summary),
+  ]);
+  const before = { visit_date: b.visit_date, slot: b.slot, branch: b.branch };
+  ctx.waitUntil(mailCustomer(env, id, 'rescheduled', { before, message }));
+  ctx.waitUntil(notifyRescheduled(env, id, email, before, message));
+  return json(await bookingDetail(env, ref));
 }
 
 async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {

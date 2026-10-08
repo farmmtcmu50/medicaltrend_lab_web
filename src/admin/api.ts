@@ -33,6 +33,8 @@ export const api = {
   },
   get: (ref: string) => call<AdminBooking>('/bookings/' + ref),
   setStatus: (ref: string, status: Status) => post<AdminBooking>('/bookings/' + ref + '/status', { status }),
+  reschedule: (ref: string, data: { visitDate: string; slot: string; branch: string | null; message: string; expectedUpdatedAt: string | null }) =>
+    post<AdminBooking>('/bookings/' + ref + '/reschedule', data),
   setNote: (ref: string, note: string) => post<AdminBooking>('/bookings/' + ref + '/note', { note }),
   editItems: (ref: string, persons: EditItem[][], expectedUpdatedAt: string | null) =>
     post<AdminBooking>('/bookings/' + ref + '/items', { persons, expectedUpdatedAt }),

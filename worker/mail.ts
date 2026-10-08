@@ -3,6 +3,7 @@
 //   priced     after staff edit the tests in the Booking Console (new total / lab-order price)
 //   confirmed  staff set the status to "ยืนยันแล้ว"
 //   cancelled  staff set the status to "ยกเลิก"
+//   rescheduled staff moved the date / time (or branch) in the Booking Console
 //   reminder   daily cron (18:00 Bangkok) for visits tomorrow
 // Only bookings with a contact email get mail. Every attempt is logged in email_log; failures never
 // affect the booking or the staff action. Secret: RESEND_API_KEY. Optional vars: MAIL_FROM, MAIL_REPLY_TO.
@@ -18,7 +19,9 @@ export interface MailEnv {
   MAIL_REPLY_TO?: string;
 }
 
-export type MailKind = 'booked' | 'priced' | 'confirmed' | 'cancelled' | 'reminder';
+export type MailKind = 'booked' | 'priced' | 'confirmed' | 'cancelled' | 'reminder' | 'rescheduled';
+/** Extra context for 'rescheduled': the previous appointment and an optional note from staff. */
+export interface MailExtra { before?: { visit_date: string; slot: string; branch: string | null }; message?: string }
 
 const SITE = 'https://lab.medicaltrend.stream';
 const DEFAULT_FROM = 'MedicalTrend Lab <lab@medicaltrend.co.th>';
@@ -34,7 +37,7 @@ interface Row {
 interface Item { person_no: number; name: string; price: number }
 
 /** Sends one customer email about a booking and logs it. Never throws. */
-export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKind): Promise<void> {
+export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKind, extra?: MailExtra): Promise<void> {
   let to = '';
   try {
     if (!env.RESEND_API_KEY) return;
@@ -45,14 +48,14 @@ export async function mailCustomer(env: MailEnv, bookingId: string, kind: MailKi
     to = b.contact_email;
     const items = (await env.DB.prepare('SELECT person_no, name, price FROM booking_items WHERE booking_id = ?1 ORDER BY person_no, id')
       .bind(bookingId).all<Item>()).results;
-    const mail = render(b, items, kind);
+    const mail = render(b, items, kind, extra);
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         authorization: 'Bearer ' + cleanKey(env.RESEND_API_KEY), // tolerate a pasted newline or quotes
         'content-type': 'application/json',
         // booked/reminder go out once per booking; staff-triggered mails may repeat on purpose.
-        'idempotency-key': kind === 'booked' || kind === 'reminder' ? `${b.id}-${kind}` : `${b.id}-${kind}-${Date.now()}`,
+        'idempotency-key': kind === 'booked' ? `${b.id}-booked` : kind === 'reminder' ? `${b.id}-reminder-${b.visit_date}` : `${b.id}-${kind}-${Date.now()}`,
       },
       body: JSON.stringify({
         from: env.MAIL_FROM || DEFAULT_FROM,
@@ -110,7 +113,9 @@ export async function sendReminders(env: MailEnv): Promise<void> {
   const tomorrow = addDays(bangkokToday(), 1);
   const rows = (await env.DB.prepare(`SELECT id FROM bookings b WHERE visit_date = ?1 AND contact_email IS NOT NULL
       AND status IN ('pending', 'confirmed', 'assigned')
-      AND NOT EXISTS (SELECT 1 FROM email_log e WHERE e.booking_id = b.id AND e.kind = 'reminder' AND e.status = 'sent')`)
+      AND NOT EXISTS (SELECT 1 FROM email_log e WHERE e.booking_id = b.id AND e.kind = 'reminder' AND e.status = 'sent'
+        -- a reminder sent before the appointment was moved does not count
+        AND e.at > COALESCE((SELECT MAX(v.at) FROM booking_events v WHERE v.booking_id = b.id AND v.action = 'reschedule'), ''))`)
     .bind(tomorrow).all<{ id: string }>()).results;
   for (const r of rows) {
     await mailCustomer(env, r.id, 'reminder');
@@ -130,7 +135,7 @@ function longDate(ymd: string, en: boolean) {
   return `วัน${TH_DAYS[d.getUTCDay()]}ที่ ${d.getUTCDate()} ${TH_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}`;
 }
 
-export function render(b: Row, items: Item[], kind: MailKind): { subject: string; html: string; text: string } {
+export function render(b: Row, items: Item[], kind: MailKind, extra?: MailExtra): { subject: string; html: string; text: string } {
   const en = b.lang === 'en';
   const L = (th: string, eng: string) => (en ? eng : th);
   const std = b.source === 'std';
@@ -142,6 +147,7 @@ export function render(b: Row, items: Item[], kind: MailKind): { subject: string
     confirmed: L(`ยืนยันนัดหมาย ${b.ref}`, `Appointment confirmed ${b.ref}`),
     cancelled: L(`ยกเลิกการจอง ${b.ref}`, `Booking cancelled ${b.ref}`),
     reminder: L(`เตือนนัดพรุ่งนี้ ${b.ref}`, `Reminder: your appointment tomorrow ${b.ref}`),
+    rescheduled: L(`แจ้งเปลี่ยนแปลงนัดหมาย ${b.ref}`, `Your appointment has changed ${b.ref}`),
   }[kind] + ' · MedicalTrend Lab';
 
   const hello = L(`เรียน คุณ${b.contact_name}`, `Dear ${b.contact_name},`);
@@ -156,13 +162,22 @@ export function render(b: Row, items: Item[], kind: MailKind): { subject: string
     cancelled: L('การจองด้านล่างถูกยกเลิกแล้ว หากคุณไม่ได้เป็นผู้ขอยกเลิก หรือต้องการนัดหมายใหม่ กรุณาติดต่อเรา',
       'The booking below has been cancelled. If you did not ask for this, or would like a new appointment, please contact us.'),
     reminder: L('ขอเตือนว่าพรุ่งนี้คุณมีนัดหมายกับเรา', 'This is a reminder of your appointment with us tomorrow.'),
+    rescheduled: L('เจ้าหน้าที่ได้เปลี่ยนแปลงนัดหมายของคุณแล้ว รายละเอียดนัดหมายใหม่มีดังนี้ หากวันและเวลาใหม่ไม่สะดวก กรุณาติดต่อเรา',
+      'Our staff have changed your appointment. The new details are below. If the new date or time does not suit you, please contact us.'),
   }[kind];
 
   // --- details
   const rows: [string, string][] = [
     [L('เลขที่จอง', 'Booking reference'), `<b style="font-size:16px;letter-spacing:.03em">${esc(b.ref)}</b>`],
-    [L('วันและเวลา', 'Date & time'), esc(longDate(b.visit_date, en) + ' · ' + b.slot)],
+    [L('วันและเวลา', 'Date & time'), kind === 'rescheduled' ? `<b>${esc(longDate(b.visit_date, en) + ' · ' + b.slot)}</b>` : esc(longDate(b.visit_date, en) + ' · ' + b.slot)],
   ];
+  const before = kind === 'rescheduled' ? extra?.before : undefined;
+  if (before) {
+    const was = longDate(before.visit_date, en) + ' · ' + before.slot +
+      (before.branch !== b.branch && before.branch && BRANCH_INFO[before.branch as BranchId] ? ' · ' + BRANCH_INFO[before.branch as BranchId].name[en ? 1 : 0] : '');
+    rows.push([L('นัดเดิม', 'Previous appointment'), `<span style="color:#8FA6C0;text-decoration:line-through">${esc(was)}</span>`]);
+  }
+  if (kind === 'rescheduled' && extra?.message) rows.push([L('ข้อความจากเจ้าหน้าที่', 'Message from our staff'), esc(extra.message)]);
   const branch = b.branch && BRANCH_INFO[b.branch as BranchId];
   if (b.mode === 'home') {
     rows.push([L('บริการ', 'Service'), L('เจาะเลือดถึงบ้าน', 'Home blood collection')]);
