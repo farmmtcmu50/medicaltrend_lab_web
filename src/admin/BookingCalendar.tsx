@@ -1,7 +1,7 @@
 // Calendar view of the booking list: a month grid by visit date plus the agenda of the chosen day.
 // Uses the same filters as the list (status, branch, page, search); the month replaces the date range.
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { BRANCH_NAMES, STATUSES, STATUS_META, type AdminRow } from '../../shared/admin';
+import { STATUSES, STATUS_META, whereShort, type AdminRow } from '../../shared/admin';
 import { api, type ListQuery } from './api';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -14,7 +14,6 @@ const monthLabel = (ym: string) => new Date(ym + '-01T00:00:00+07:00').toLocaleD
 const dayLabel = (s: string) => new Date(s + 'T00:00:00+07:00').toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
 export const shiftMonth = (ym: string, n: number) => { const d = new Date(ym + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + n); return ymd(d).slice(0, 7); };
 const slotStart = (slot: string) => slot.slice(0, 5);
-const branchShort = (r: AdminRow) => r.mode === 'home' ? 'ถึงบ้าน' : (BRANCH_NAMES[r.branch as keyof typeof BRANCH_NAMES] || '—').split('—').pop()!.trim();
 
 /** Sunday-first 6-week grid (or 5 when the month fits) covering the month. */
 function gridDays(ym: string): string[] {
@@ -128,7 +127,7 @@ export default function BookingCalendar({ filters, setFilters, month, setMonth, 
                       <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.contact_name}</span>
                       <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.contact_phone}</span>
                     </span>
-                    <span style={pill(r.mode === 'home' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#0B4F9E', bg: '#EAF3FF' })}>{r.mode === 'home' ? 'เจาะที่บ้าน' : branchShort(r)}</span>
+                    <span style={pill(r.mode === 'home' ? { c: '#0B6E60', bg: '#DFF5F0' } : { c: '#0B4F9E', bg: '#EAF3FF' })}>{whereShort(r.mode, r.branch)}</span>
                     {r.source === 'std' && <span style={pill({ c: '#7A3E9D', bg: '#F4EAFB' })}>STD</span>}
                     <span style={{ fontSize: 12, color: '#536C89', whiteSpace: 'nowrap' }}>{r.people} คน</span>
                     <span style={{ fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', minWidth: 70, textAlign: 'right' }}>{r.rx_pending ? <span style={pill({ c: '#A26A00', bg: '#FFF4E0' })}>รอแจ้งราคา</span> : '฿' + fmt(r.total)}</span>

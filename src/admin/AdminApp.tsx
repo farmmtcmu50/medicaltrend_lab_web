@@ -3,21 +3,23 @@
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { BRANCH_IDS } from '../../shared/catalog';
 import {
-  BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META,
+  BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META, whereShort,
   type AdminBooking, type AdminRow, type AdminSummary, type Status,
 } from '../../shared/admin';
 import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 import BookingCalendar from './BookingCalendar';
 import ItemEditor from './ItemEditor';
+import LocationEditor from './LocationEditor';
 import RescheduleEditor from './RescheduleEditor';
 import PopularAdmin from './PopularAdmin';
+import SettingsAdmin from './SettingsAdmin';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
 const bkkToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 const thDate = (ymd: string) => new Date(ymd + 'T00:00:00+07:00').toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit', timeZone: 'Asia/Bangkok' });
 const thDateTime = (iso: string) => new Date(iso).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
-const branchLabel = (mode: string, branch: string | null) => mode === 'home' ? 'บริการถึงบ้าน' : BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES] || '—';
+const branchName = (branch: string | null) => BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES] || branch || '—';
 
 const pill = (m: { c: string; bg: string }): CSSProperties => ({
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, padding: '6px 10px',
@@ -27,19 +29,20 @@ const channelPill = (mode: string) => pill(mode === 'home' ? { c: '#0B6E60', bg:
 const stdPill = pill({ c: '#7A3E9D', bg: '#F4EAFB' });
 const rxPill = pill({ c: '#A26A00', bg: '#FFF4E0' });
 const MAIL_LABELS: Record<string, string> = {
-  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน', rescheduled: 'แจ้งเปลี่ยนแปลงนัดหมาย',
+  booked: 'ยืนยันการจอง', priced: 'แจ้งยอดค่าบริการ', confirmed: 'ยืนยันนัดหมาย', cancelled: 'แจ้งยกเลิก', reminder: 'เตือนนัดล่วงหน้า 1 วัน', relocated: 'แจ้งปรับค่าบริการถึงบ้าน (แก้หมุด)', rescheduled: 'แจ้งเปลี่ยนแปลงนัดหมาย',
 };
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 20 };
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
 
-type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'calendar' } | { view: 'popular' } | { view: 'detail'; ref: string };
+type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'calendar' } | { view: 'popular' } | { view: 'settings' } | { view: 'detail'; ref: string };
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
   if (h.startsWith('b/')) return { view: 'detail', ref: decodeURIComponent(h.slice(2)) };
   if (h === 'bookings') return { view: 'bookings' };
   if (h === 'calendar') return { view: 'calendar' };
   if (h === 'popular') return { view: 'popular' };
+  if (h === 'settings') return { view: 'settings' };
   return { view: 'dash' };
 }
 const go = (hash: string) => { location.hash = hash; };
@@ -77,6 +80,7 @@ export default function AdminApp() {
     bookings: ['รายการจองทั้งหมด', 'ค้นหา กรองตามสถานะ สาขา และวันนัด แล้วกดเปิดเพื่อจัดการรายการนั้น'],
     calendar: ['ปฏิทินนัด', 'นัดทั้งหมดตามวันนัดหมาย · กดวันที่เพื่อดูรายการนัดของวันนั้น แล้วกดรายการเพื่อจัดการ'],
     popular: ['Popular tests', 'รูปโฆษณาและรายการตรวจยอดนิยมใน STEP 2 ของหน้าจอง · เก็บไว้หลายรายการแล้วสลับแสดงหรือซ่อนได้'],
+    settings: ['ตั้งค่า', 'อัตราค่าบริการเจาะเลือดถึงบ้าน · มีผลกับหน้าจองและการคำนวณในหลังบ้านทันทีหลังบันทึก'],
     detail: ['รายละเอียดการจอง', 'ตรวจรายการของผู้รับบริการแต่ละคน ยืนยันนัด อัปเดตสถานะ และบันทึกหมายเหตุ'],
   };
   const [title, sub] = views[route.view];
@@ -116,6 +120,7 @@ export default function AdminApp() {
           <NavBtn on={route.view === 'bookings' || route.view === 'detail'} label="รายการจอง" onClick={() => go('/bookings')} />
           <NavBtn on={route.view === 'calendar'} label="ปฏิทินนัด" onClick={() => go('/calendar')} />
           <NavBtn on={route.view === 'popular'} label="Popular tests" onClick={() => go('/popular')} />
+          <NavBtn on={route.view === 'settings'} label="ตั้งค่า" onClick={() => go('/settings')} />
           <a href="/" target="_blank" rel="noopener" className="a-nav" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, padding: '11px 12px', borderRadius: 11, color: '#DCEBFA' }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: 'rgba(255,255,255,.3)' }} />หน้าเว็บจอง ↗
           </a>
@@ -168,6 +173,7 @@ export default function AdminApp() {
         {route.view === 'calendar' && <BookingCalendar filters={filters} setFilters={setFilters} month={calMonth} setMonth={m => { setCalMonth(m); setCalDay(m === bkkToday().slice(0, 7) ? bkkToday() : m + '-01'); }} day={calDay}
           setDay={d => { setCalDay(d); setCalMonth(d.slice(0, 7)); }} open={ref => go('/b/' + ref)} />}
         {route.view === 'popular' && <PopularAdmin toast={setToast} />}
+        {route.view === 'settings' && <SettingsAdmin toast={setToast} />}
         {route.view === 'detail' && <BookingDetail key={route.ref} ref_={route.ref} toast={setToast} />}
       </main>
 
@@ -351,7 +357,7 @@ function BookingList({ filters, setFilters }: { filters: ListQuery; setFilters: 
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.contact_phone}</span>
                 </span>
                 <span style={r.source === 'std' ? stdPill : channelPill(r.mode)}>{r.source === 'std' ? 'STD' : r.mode === 'home' ? 'เจาะที่บ้าน' : 'ที่แล็บ'}</span>
-                <span style={{ color: '#3D5674', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{branchLabel(r.mode, r.branch)}</span>
+                <span title={r.mode === 'home' ? 'บริการถึงบ้าน · ' + (r.branch ? branchName(r.branch) : 'ยังไม่ระบุสาขา') : branchName(r.branch)} style={{ color: r.mode === 'home' && !r.branch ? '#A26A00' : '#3D5674', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{whereShort(r.mode, r.branch)}</span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span>{thDate(r.visit_date)}</span>
                   <span style={{ fontSize: 11, color: '#7C93AD' }}>{r.slot}</span>
@@ -387,9 +393,11 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
   const [note, setNote] = useState('');
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [branchPick, setBranchPick] = useState('');
+  const [relocating, setRelocating] = useState(false);
   const load = useCallback(() => {
     setErr('');
-    api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); }).catch(e => setErr(e.code || 'network'));
+    api.get(ref).then(x => { setB(x); setNote(x.staff_note || ''); setBranchPick(x.branch || ''); }).catch(e => setErr(e.code || 'network'));
   }, [ref]);
   useEffect(() => { load(); }, [load]);
 
@@ -409,6 +417,14 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
     finally { setBusy(false); }
   };
+  const saveBranch = async () => {
+    if (!branchPick || branchPick === b.branch) return;
+    if (!confirm('ย้ายงาน ' + b.ref + ' ไปให้ ' + branchName(branchPick) + ' รับผิดชอบ?\nค่าบริการถึงบ้านของลูกค้าคงเดิม และระบบจะแจ้งเตือนในกลุ่ม LINE')) return;
+    setBusy(true);
+    try { const x = await api.setBranch(b.ref, branchPick); setB(x); setBranchPick(x.branch || ''); toast(b.ref + ' → ' + branchName(x.branch)); }
+    catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
+    finally { setBusy(false); }
+  };
   const saveNote = async () => {
     setBusy(true);
     try { const x = await api.setNote(b.ref, note); setB(x); setNote(x.staff_note || ''); toast('บันทึกหมายเหตุแล้ว'); }
@@ -416,6 +432,14 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     finally { setBusy(false); }
   };
 
+  // The branch the distance (and fee) was measured from: the nearest one at booking or at the last pin
+  // change, before any manual reassignment after it.
+  let bookedNearest: string | null | undefined;
+  for (const e of b.events) {
+    if (e.action === 'location') bookedNearest = e.to_status;
+    else if (e.action === 'branch' && bookedNearest === undefined) bookedNearest = e.from_status;
+  }
+  if (bookedNearest === undefined) bookedNearest = b.branch;
   const persons = Array.from({ length: b.people }, (_, i) => b.items.filter(it => it.person_no === i + 1));
   const isHome = b.mode === 'home';
   const mapUrl = b.map_url ? b.map_url : b.latitude != null && b.longitude != null
@@ -425,10 +449,26 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     ['ลูกค้า', b.contact_name],
     ['เบอร์ติดต่อ', <a href={'tel:' + b.contact_phone}>{b.contact_phone}</a>],
     ['วัน เวลา', thDate(b.visit_date) + ' · ' + b.slot],
-    [isHome ? 'ช่องทาง' : 'สาขา', branchLabel(b.mode, b.branch)],
+    isHome
+      ? ['สาขาที่รับผิดชอบ', b.status === 'cancelled' ? (b.branch ? branchName(b.branch) : 'ยังไม่ระบุสาขา') : (
+        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select aria-label="สาขาที่รับผิดชอบ" value={branchPick} disabled={busy} onChange={e => setBranchPick(e.target.value)}
+            style={{ border: '1.5px solid ' + (b.branch ? '#DFE8F2' : '#F3D9A6'), borderRadius: 9, padding: '6px 8px', fontSize: 12.5, fontWeight: 600, background: b.branch ? '#fff' : '#FFF8EA', color: '#0F2540', width: '100%', maxWidth: 320 }}>
+            {!b.branch && <option value="">— ยังไม่ระบุสาขา —</option>}
+            {BRANCH_IDS.map(id => <option key={id} value={id}>{BRANCH_NAMES[id]}{id === bookedNearest ? ' (ใกล้สุดตอนจอง)' : ''}</option>)}
+          </select>
+          {branchPick && branchPick !== b.branch && (
+            <span style={{ display: 'flex', gap: 6 }}>
+              <button onClick={saveBranch} disabled={busy} style={{ border: 0, background: '#1466C7', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 12px', borderRadius: 9, cursor: 'pointer' }}>บันทึก</button>
+              <button onClick={() => setBranchPick(b.branch || '')} disabled={busy} style={{ border: 0, background: 'transparent', color: '#7C93AD', fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}>ยกเลิก</button>
+            </span>
+          )}
+        </span>
+      )]
+      : ['สาขา', branchName(b.branch)],
     ...(isHome ? [
-      ['ที่อยู่เข้าบริการ', <>{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
-      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (b.branch ? ' จาก' + (BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES] || b.branch) : ' (ลูกค้าประมาณเอง)')],
+      ['ที่อยู่เข้าบริการ', <>{b.status !== 'cancelled' && !relocating && <button onClick={() => { setEditing(false); setMoving(false); setRelocating(true); }} className="a-pale" style={{ ...outlineBtn, padding: '4px 10px', fontSize: 11, float: 'right', marginLeft: 6 }}>แก้ไขหมุด</button>}{b.address}{mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener">{b.map_url ? 'ลิงก์ Google Maps จากลูกค้า ↗' : 'แผนที่ ↗'}</a></>}{b.latitude != null && <span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontWeight: 500 }}>{b.latitude}, {b.longitude}</span>}</>],
+      ['ประเภทผู้รับบริการ · ระยะทาง', (PATIENT_LABELS[b.patient_type || ''] || '—') + ' · ' + b.distance_km + ' กม.' + (bookedNearest ? ' จาก' + branchName(bookedNearest) + ' (ใกล้สุดตอนจอง)' : ' (ลูกค้าประมาณเอง)')],
     ] as [string, ReactNode][] : []),
     ['LINE ID', b.contact_line || '—'],
     ['อีเมล', b.contact_email ? <a href={'mailto:' + b.contact_email}>{b.contact_email}</a> : '—'],
@@ -485,7 +525,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
             <>
               <div style={{ marginTop: 6, fontSize: 11, color: '#7C93AD', letterSpacing: '.04em' }}>นัดหมาย</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                <button onClick={() => { setEditing(false); setMoving(true); }} disabled={moving} aria-pressed={moving}
+                <button onClick={() => { setEditing(false); setRelocating(false); setMoving(true); }} disabled={moving} aria-pressed={moving}
                   style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1.5px solid #CFE0F1', background: moving ? '#EAF3FF' : '#fff', color: '#0B4F9E' }}>เลื่อน / แก้ไขนัด</button>
               </div>
             </>
@@ -504,6 +544,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
             <RescheduleEditor b={b} toast={toast} onCancel={() => setMoving(false)} onConflict={() => { setMoving(false); load(); }}
               onSaved={x => { setB(x); setMoving(false); }} />
           )}
+          {relocating && (
+            <LocationEditor b={b} toast={toast} onCancel={() => setRelocating(false)} onConflict={() => { setRelocating(false); load(); }}
+              onSaved={x => { setB(x); setBranchPick(x.branch || ''); setRelocating(false); }} />
+          )}
           {editing ? (
             <ItemEditor b={b} toast={toast} onCancel={() => setEditing(false)} onConflict={() => { setEditing(false); load(); }}
               onSaved={x => { setB(x); setEditing(false); }} />
@@ -511,7 +555,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
               <span style={cardTitle}>ผู้รับบริการ {b.people} คน</span>
-              {b.status !== 'cancelled' && <button onClick={() => { setMoving(false); setEditing(true); }} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
+              {b.status !== 'cancelled' && <button onClick={() => { setMoving(false); setRelocating(false); setEditing(true); }} className="a-pale" style={outlineBtn}>แก้ไขรายการตรวจ</button>}
             </div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
               {persons.map((items, i) => (
@@ -621,10 +665,10 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                     {e.action === 'created' ? 'ลูกค้าจองผ่านหน้าเว็บ'
                       : e.action === 'status' ? (STATUS_META[e.from_status as Status]?.label || e.from_status) + ' → ' + (STATUS_META[e.to_status as Status]?.label || e.to_status)
                         : e.action === 'items' ? 'แก้ไขรายการตรวจ: ' + (e.note || '')
-                          : e.action === 'reschedule' ? 'เลื่อน/แก้ไขนัด: ' + (e.note || '') + (e.from_status?.split('|')[2] !== e.to_status?.split('|')[2] ? ' · สาขา ' + branchLabel('lab', e.to_status?.split('|')[2] || null) : '')
-                          : e.action === 'note' ? 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')
-                            // older event kinds (branch / pin changes) recorded by a previous version
-                            : ({ branch: 'เปลี่ยนสาขาที่รับผิดชอบ', location: 'แก้ไขหมุดตำแหน่ง' }[e.action as string] || e.action) + (e.note ? ': ' + e.note : '')}
+                          : e.action === 'reschedule' ? 'เลื่อน/แก้ไขนัด: ' + (e.note || '') + (e.from_status?.split('|')[2] !== e.to_status?.split('|')[2] ? ' · สาขา ' + branchName(e.to_status?.split('|')[2] || null) : '')
+                          : e.action === 'location' ? 'แก้ไขหมุดตำแหน่ง: ' + (e.note || '') + (e.from_status !== e.to_status ? ' · สาขา ' + (e.from_status ? branchName(e.from_status) : 'ยังไม่ระบุ') + ' → ' + branchName(e.to_status) : '')
+                          : e.action === 'branch' ? 'เปลี่ยนสาขาที่รับผิดชอบ: ' + (e.from_status ? branchName(e.from_status) : 'ยังไม่ระบุ') + ' → ' + branchName(e.to_status)
+                          : 'แก้หมายเหตุ' + (e.note ? ': ' + e.note : ' (ลบ)')}
                   </div>
                   <div style={{ color: '#8FA6C0' }}>{thDateTime(e.at)} · {e.actor === 'customer' ? 'ลูกค้า' : e.actor}</div>
                 </div>

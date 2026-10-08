@@ -25,6 +25,14 @@ export const BRANCH_NAMES: Record<BranchId, string> = {
   phayao: 'เมดิคอลเทรนด์ เฮลธ์แคร์ สหคลินิก — พะเยา',
 };
 
+/** Area part of a branch name, e.g. 'หางดง'. */
+export const branchArea = (id: string | null | undefined) =>
+  id ? (BRANCH_NAMES[id as BranchId] || id).split('—').pop()!.trim() : '';
+
+/** Short where-label for lists: 'สันกำแพง', 'ถึงบ้าน · หางดง', or 'ถึงบ้าน · ยังไม่ระบุสาขา'. */
+export const whereShort = (mode: string, branch: string | null) =>
+  mode === 'home' ? 'ถึงบ้าน · ' + (branchArea(branch) || 'ยังไม่ระบุสาขา') : branchArea(branch) || '—';
+
 export const PATIENT_LABELS: Record<string, string> = { general: 'ทั่วไป', elderly: 'ผู้สูงอายุ', bedridden: 'ติดเตียง' };
 
 export interface AdminRow {
@@ -44,7 +52,7 @@ export interface AdminBooking extends AdminRow {
   referrer: string | null;
   items: { person_no: number; kind: 'package' | 'test'; name: string; price: number }[];
   emails: { at: string; kind: string; to_addr: string; status: 'sent' | 'failed'; error: string | null }[];
-  events: { at: string; actor: string; action: 'created' | 'status' | 'note' | 'items' | 'reschedule'; from_status: string | null; to_status: string | null; note: string | null }[];
+  events: { at: string; actor: string; action: 'created' | 'status' | 'note' | 'items' | 'branch' | 'location' | 'reschedule'; from_status: string | null; to_status: string | null; note: string | null }[];
 }
 
 export interface AdminSummary {

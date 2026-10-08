@@ -1,5 +1,5 @@
 import type { AdminBooking, AdminRow, AdminSummary, PopularRow, Status } from '../../shared/admin';
-import type { Catalog } from '../../shared/catalog';
+import type { Catalog, HomePricing } from '../../shared/catalog';
 import type { EditItem } from '../../shared/itemEdit';
 
 export class ApiError extends Error {
@@ -15,6 +15,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 const post = <T>(path: string, data: unknown) =>
   call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+
+export interface PricingSetting { pricing: HomePricing; isDefault: boolean; updatedAt: string | null; updatedBy: string | null }
 
 export interface ListQuery { status?: string; branch?: string; source?: string; q?: string; from?: string; to?: string; page?: number }
 
@@ -35,6 +37,9 @@ export const api = {
   setStatus: (ref: string, status: Status) => post<AdminBooking>('/bookings/' + ref + '/status', { status }),
   reschedule: (ref: string, data: { visitDate: string; slot: string; branch: string | null; message: string; expectedUpdatedAt: string | null }) =>
     post<AdminBooking>('/bookings/' + ref + '/reschedule', data),
+  setLocation: (ref: string, data: { lat: number; lng: number; mapUrl: string | null; address: string; expectedUpdatedAt: string | null }) =>
+    post<AdminBooking>('/bookings/' + ref + '/location', data),
+  setBranch: (ref: string, branch: string) => post<AdminBooking>('/bookings/' + ref + '/branch', { branch }),
   setNote: (ref: string, note: string) => post<AdminBooking>('/bookings/' + ref + '/note', { note }),
   editItems: (ref: string, persons: EditItem[][], expectedUpdatedAt: string | null) =>
     post<AdminBooking>('/bookings/' + ref + '/items', { persons, expectedUpdatedAt }),
@@ -53,5 +58,8 @@ export const api = {
   popularOrder: (ids: string[]) => post<{ items: PopularRow[] }>('/popular/order', { ids }),
   popularActive: (id: string, active: boolean) => post<{ items: PopularRow[] }>('/popular/' + id + '/active', { active }),
   popularDelete: (id: string) => post<{ items: PopularRow[] }>('/popular/' + id + '/delete', {}),
+  settings: () => call<PricingSetting>('/settings'),
+  saveHomePricing: (pricing: HomePricing) => post<PricingSetting>('/settings/home-pricing', { pricing }),
+  resetHomePricing: () => post<PricingSetting>('/settings/home-pricing', { reset: true }),
   labOrderUrl: (ref: string) => '/api/admin/bookings/' + ref + '/lab-order',
 };

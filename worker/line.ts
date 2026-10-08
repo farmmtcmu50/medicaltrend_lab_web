@@ -4,6 +4,8 @@
 //   notifyBooking()         pushes a summary of a new booking to the bound group; failures never affect the booking.
 //   notifyItemsChanged()    pushes what staff changed in a booking's tests from the Booking Console.
 //   notifyRescheduled()     pushes an appointment staff moved to another date / time / branch.
+//   notifyBranchChanged()   pushes a home collection moved to another branch.
+//   notifyLocationChanged() pushes a home collection's new pin, distance and fee.
 // Secrets (wrangler secret put): LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, LINE_BIND_CODE.
 // Optional var LINE_GROUP_ID overrides the group bound through the webhook.
 import { BRANCH_NAMES, PATIENT_LABELS } from '../shared/admin';
@@ -134,6 +136,16 @@ export async function notifyRescheduled(env: LineEnv, bookingId: string, actor: 
   await pushAbout(env, bookingId, 'reschedule alert', b => rescheduledMessage(b, actor, before, message));
 }
 
+export async function notifyBranchChanged(env: LineEnv, bookingId: string, actor: string, from: string | null): Promise<void> {
+  await pushAbout(env, bookingId, 'branch alert', b => branchChangedMessage(b, actor, from));
+}
+
+export async function notifyLocationChanged(
+  env: LineEnv, bookingId: string, actor: string, old: { branch: string | null; km: number | null; travel: number; total: number },
+): Promise<void> {
+  await pushAbout(env, bookingId, 'location alert', b => locationChangedMessage(b, actor, old));
+}
+
 async function pushAbout(env: LineEnv, bookingId: string, what: string, render: (b: BookingRow, items: ItemRow[]) => string) {
   try {
     if (!env.LINE_CHANNEL_ACCESS_TOKEN) return;
@@ -206,6 +218,8 @@ function itemLines(b: BookingRow, items: ItemRow[]): string[] {
   return L;
 }
 
+const branchName = (id: string | null) => id ? BRANCH_NAMES[id as keyof typeof BRANCH_NAMES] || id : 'ยังไม่ระบุสาขา';
+
 const placeName = (mode: string, branch: string | null) =>
   mode === 'home' ? 'เจาะเลือดถึงบ้าน' : (branch && BRANCH_NAMES[branch as keyof typeof BRANCH_NAMES]) || branch || '-';
 
@@ -226,10 +240,52 @@ export function rescheduledMessage(b: BookingRow, actor: string, before: Appoint
   return L.join('\n');
 }
 
+export function branchChangedMessage(b: BookingRow, actor: string, from: string | null): string {
+  const L: string[] = [
+    `🔁 เปลี่ยนสาขาที่รับผิดชอบ · ${b.ref}`,
+    `โดย ${actor}`,
+    '',
+    `จาก: ${branchName(from)}`,
+    `เป็น: ${branchName(b.branch)}`,
+    '',
+    `🏠 เจาะเลือดถึงบ้าน · ${b.people} ท่าน`,
+    `👤 ${b.contact_name} · 📞 ${phone(b.contact_phone)}`,
+    `📅 ${thaiDate(b.visit_date)} · ${b.slot}`,
+  ];
+  if (b.address) L.push(`📍 ${b.address}`);
+  const map = b.map_url || (b.latitude != null && b.longitude != null ? `https://maps.google.com/?q=${b.latitude},${b.longitude}` : null);
+  if (map) L.push(`🗺️ ${map}`);
+  L.push(`💰 ยอดรวม ${baht(b.total)} (ค่าบริการถึงบ้านคงเดิม ${baht(b.travel_fee)})`);
+  L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);
+  return L.join('\n');
+}
+
+export function locationChangedMessage(
+  b: BookingRow, actor: string, old: { branch: string | null; km: number | null; travel: number; total: number },
+): string {
+  const L: string[] = [`📍 แก้ไขหมุดตำแหน่ง · ${b.ref}`, `โดย ${actor}`, '', `🏠 เจาะเลือดถึงบ้าน · ${b.people} ท่าน`,
+    `👤 ${b.contact_name} · 📞 ${phone(b.contact_phone)}`, `📅 ${thaiDate(b.visit_date)} · ${b.slot}`];
+  if (b.address) L.push(`📍 ${b.address}`);
+  const map = b.map_url || (b.latitude != null && b.longitude != null ? `https://maps.google.com/?q=${b.latitude},${b.longitude}` : null);
+  if (map) L.push(`🗺️ ${map}`);
+  L.push('', `🚗 ระยะทาง ${old.km ?? '-'} → ${b.distance_km} กม.`);
+  if (old.branch !== b.branch) L.push(`🏥 สาขาที่รับผิดชอบ: ${branchName(old.branch)} → ${branchName(b.branch)}`);
+  else L.push(`🏥 สาขาที่รับผิดชอบ: ${branchName(b.branch)}`);
+  if (old.travel !== b.travel_fee) {
+    L.push(`💵 ค่าบริการถึงบ้าน ${baht(old.travel)} → ${baht(b.travel_fee)}`);
+    L.push(`💰 ยอดรวม ${baht(old.total)} → ${baht(b.total)}`);
+    L.push(b.contact_email ? '📧 ส่งอีเมลแจ้งยอดใหม่ให้ลูกค้าแล้ว' : '☎️ ลูกค้าไม่มีอีเมล กรุณาโทรแจ้งยอดใหม่');
+  } else {
+    L.push(`💰 ค่าบริการเท่าเดิม (ยอดรวม ${baht(b.total)})`);
+  }
+  L.push('', 'เปิดดูในหลังบ้าน:', `${SITE}/admin#b/${b.ref}`);
+  return L.join('\n');
+}
+
 export function itemsChangedMessage(
   b: BookingRow, items: ItemRow[], actor: string, edit: Pick<PricedEdit, 'added' | 'removed'>, oldTotal: number,
 ): string {
-  const where = b.mode === 'home' ? 'เจาะเลือดถึงบ้าน' : (b.branch && BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES]) || b.branch || '-';
+  const where = b.mode === 'home' ? 'เจาะเลือดถึงบ้าน · ' + branchName(b.branch) : (b.branch && BRANCH_NAMES[b.branch as keyof typeof BRANCH_NAMES]) || b.branch || '-';
   const L: string[] = [
     `✏️ แก้ไขรายการตรวจ · ${b.ref}`,
     `โดย ${actor}`,

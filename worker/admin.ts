@@ -7,19 +7,29 @@
 //   GET  /api/admin/bookings/:ref
 //   POST /api/admin/bookings/:ref/status   {"status": "..."}
 //   POST /api/admin/bookings/:ref/note     {"note": "..."}
+//   POST /api/admin/bookings/:ref/branch   {"branch": "hangdong"}  home collection only; fee unchanged + LINE alert
+//   POST /api/admin/bookings/:ref/location {lat, lng, mapUrl, address, expectedUpdatedAt}  home collection: new pin →
+//                                          nearest branch, distance and fee re-computed; LINE alert + customer email if the price changed
 //   POST /api/admin/bookings/:ref/items    {"persons": [[{kind, name}]], "expectedUpdatedAt": "..."} re-price + LINE alert
 //   POST /api/admin/bookings/:ref/reschedule {visitDate, slot, branch?, message?, expectedUpdatedAt}  + customer email + LINE alert
 //   GET  /api/admin/bookings/:ref/lab-order
-import { BRANCH_IDS, SLOTS, type Catalog } from '../shared/catalog';
+import { BRANCH_IDS, SLOTS, maxKm, travelFee, type Catalog } from '../shared/catalog';
+import type { DistanceResult } from '../shared/geo';
+import { isMapUrl } from '../shared/maps';
 import { STATUSES, type AdminBooking, type AdminRow, type AdminSummary, type Status } from '../shared/admin';
 import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, priceBook, priceEdit, type EditItem, type StoredItem } from '../shared/itemEdit';
-import { notifyItemsChanged, notifyRescheduled, type LineEnv } from './line';
+import { notifyBranchChanged, notifyItemsChanged, notifyLocationChanged, notifyRescheduled, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
 import { addDays, bangkokToday } from './util';
 import { handlePopularAdmin } from './popular';
+import { handleSettingsAdmin, loadHomePricing } from './pricing';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
-export interface AdminCtx { waitUntil: (p: Promise<unknown>) => void; catalog: () => Promise<Catalog> }
+export interface AdminCtx {
+  waitUntil: (p: Promise<unknown>) => void;
+  catalog: () => Promise<Catalog>;
+  distance: (at: { lat: number; lng: number }) => Promise<DistanceResult | null>;
+}
 
 const PAGE_SIZE = 50;
 const CALENDAR_MAX = 1500;
@@ -42,6 +52,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'me') return json({ email });
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
   if (parts[0] === 'popular') return handlePopularAdmin(req, env, email, parts, ctx.waitUntil);
+  if (parts[0] === 'settings') return handleSettingsAdmin(req, env, email, parts);
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);
 
@@ -71,6 +82,8 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   }
 
   if (req.method === 'POST' && parts.length === 3 && parts[2] === 'items') return editItems(req, env, email, ctx, ref, row.id);
+  if (req.method === 'POST' && parts.length === 3 && parts[2] === 'branch') return setBranch(req, env, email, ctx, ref, row.id);
+  if (req.method === 'POST' && parts.length === 3 && parts[2] === 'location') return setLocation(req, env, email, ctx, ref, row.id);
   if (req.method === 'POST' && parts.length === 3 && parts[2] === 'reschedule') return reschedule(req, env, email, ctx, ref, row.id);
 
   if (req.method === 'POST' && parts.length === 3 && (parts[2] === 'status' || parts[2] === 'note')) {
@@ -150,6 +163,77 @@ async function reschedule(req: Request, env: Env, email: string, ctx: AdminCtx, 
   return json(await bookingDetail(env, ref));
 }
 
+/** Moves a home-collection booking to another branch. The fee the customer was quoted stays as it is. */
+async function setBranch(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
+  const body = await req.json<{ branch?: unknown }>().catch(() => null);
+  const to = typeof body?.branch === 'string' ? body.branch : '';
+  if (!(BRANCH_IDS as readonly string[]).includes(to)) return json({ error: 'bad_request', detail: 'branch' }, 400);
+  const b = await env.DB.prepare('SELECT mode, branch, status FROM bookings WHERE id = ?1')
+    .bind(id).first<{ mode: 'lab' | 'home'; branch: string | null; status: Status }>();
+  if (!b) return json({ error: 'not_found' }, 404);
+  if (b.mode !== 'home') return json({ error: 'bad_request', detail: 'lab bookings keep the branch the customer chose' }, 400);
+  if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  if (b.branch === to) return json(await bookingDetail(env, ref));
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE bookings SET branch = ?1, updated_at = ?2 WHERE id = ?3').bind(to, now, id),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, from_status, to_status) VALUES (?1, ?2, ?3, 'branch', ?4, ?5)")
+      .bind(id, now, email, b.branch, to),
+  ]);
+  ctx.waitUntil(notifyBranchChanged(env, id, email, b.branch));
+  return json(await bookingDetail(env, ref));
+}
+
+const baht = (n: number) => '฿' + n.toLocaleString('en-US');
+
+/**
+ * Moves a home collection's pin. The distance, nearest branch and home-visit fee are re-computed exactly as
+ * for a new booking; the tests keep their prices. The customer is emailed when the total changes.
+ */
+async function setLocation(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
+  const body = await req.json<{ lat?: unknown; lng?: unknown; mapUrl?: unknown; address?: unknown; expectedUpdatedAt?: unknown }>().catch(() => null);
+  const bad = (detail: string) => json({ error: 'bad_request', detail }, 400);
+  if (!body) return bad('body');
+  const lat = Number(body.lat), lng = Number(body.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < 5 || lat > 21 || lng < 97 || lng > 106) return bad('location');
+  const address = typeof body.address === 'string' ? body.address.trim().slice(0, 500) : '';
+  if (address.length < 3) return bad('address');
+  const mapUrl = typeof body.mapUrl === 'string' && body.mapUrl.trim() ? body.mapUrl.trim().slice(0, 500) : null;
+  if (mapUrl && !isMapUrl(mapUrl)) return bad('mapUrl');
+
+  const b = await env.DB.prepare(`SELECT mode, status, branch, distance_km, people, items_subtotal, travel_fee, total, address, updated_at
+      FROM bookings WHERE id = ?1`).bind(id)
+    .first<{ mode: 'lab' | 'home'; status: Status; branch: string | null; distance_km: number | null; people: number; items_subtotal: number;
+      travel_fee: number; total: number; address: string | null; updated_at: string | null }>();
+  if (!b) return json({ error: 'not_found' }, 404);
+  if (b.mode !== 'home') return bad('lab bookings have no pin');
+  if (b.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  if ((body.expectedUpdatedAt ?? null) !== b.updated_at) return json({ error: 'conflict' }, 409);
+
+  const d = await ctx.distance({ lat, lng }).catch(() => null);
+  if (!d) return json({ error: 'distance_unavailable' }, 503);
+  const hp = await loadHomePricing(env);
+  if (d.km > maxKm(hp)) return json({ error: 'out_of_area', km: d.km }, 422);
+
+  const travel = travelFee('home', d.km, b.people, hp);
+  const total = b.items_subtotal + travel;
+  const now = new Date().toISOString();
+  const parts = [`ระยะ ${b.distance_km ?? '-'} → ${d.km} กม.`];
+  if (travel !== b.travel_fee) parts.push(`ค่าบริการถึงบ้าน ${baht(b.travel_fee)} → ${baht(travel)} · ยอดรวม ${baht(b.total)} → ${baht(total)}`);
+  else parts.push('ค่าบริการเท่าเดิม');
+  if (address !== (b.address || '')) parts.push('ที่อยู่: ' + address);
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE bookings SET latitude = ?1, longitude = ?2, map_url = ?3, address = ?4, distance_km = ?5, branch = ?6,
+        travel_fee = ?7, total = ?8, updated_at = ?9 WHERE id = ?10`)
+      .bind(lat, lng, mapUrl, address, d.km, d.branch, travel, total, now, id),
+    env.DB.prepare("INSERT INTO booking_events (booking_id, at, actor, action, from_status, to_status, note) VALUES (?1, ?2, ?3, 'location', ?4, ?5, ?6)")
+      .bind(id, now, email, b.branch, d.branch, parts.join(' · ')),
+  ]);
+  ctx.waitUntil(notifyLocationChanged(env, id, email, { branch: b.branch, km: b.distance_km, travel: b.travel_fee, total: b.total }));
+  if (total !== b.total) ctx.waitUntil(mailCustomer(env, id, 'relocated', { price: { travel: b.travel_fee, total: b.total } }));
+  return json(await bookingDetail(env, ref));
+}
+
 async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, ref: string, id: string) {
   const body = await req.json<{ persons?: unknown; expectedUpdatedAt?: unknown }>().catch(() => null);
   const bad = (detail: string) => json({ error: 'bad_request', detail }, 400);
@@ -181,7 +265,7 @@ async function editItems(req: Request, env: Env, email: string, ctx: AdminCtx, r
     return json(await bookingDetail(env, ref));
   }
 
-  const travel = editedTravelFee(b, persons.length);
+  const travel = editedTravelFee(b, persons.length, await loadHomePricing(env));
   const total = edit.subtotal + travel;
   const now = new Date().toISOString();
   const summary = describeEdit(edit, b.total, total);
@@ -212,7 +296,8 @@ async function listBookings(url: URL, env: Env) {
   if (source === 'web' || source === 'std') add('source = ?', source);
   const branch = p.get('branch');
   if (branch === 'home') where.push("mode = 'home'");
-  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) { where.push("mode = 'lab'"); add('branch = ?', branch); }
+  // A branch's queue: its lab visits plus the home collections it is responsible for.
+  else if (branch && (BRANCH_IDS as readonly string[]).includes(branch)) add('branch = ?', branch);
   const from = p.get('from'), to = p.get('to');
   if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) add('visit_date >= ?', from);
   if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) add('visit_date <= ?', to);
