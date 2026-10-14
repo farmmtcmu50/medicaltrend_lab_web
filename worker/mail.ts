@@ -234,6 +234,9 @@ export function render(b: Row, items: Item[], kind: MailKind, extra?: MailExtra)
   }
 
   const contactPhone = (branch && branch.phone) || MAIN_PHONE;
+  // Confirmed appointments get a link to the printable slip (/slip asks for the booking phone number).
+  const slipUrl = ['confirmed', 'reminder', 'rescheduled'].includes(kind) ? `${SITE}/slip?ref=${encodeURIComponent(b.ref)}` : '';
+  const slipBtn = slipUrl ? `<p style="margin:18px 0 0;text-align:center"><a href="${slipUrl}" style="display:inline-block;background:#1466C7;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 22px;border-radius:999px">${L('ดู / พิมพ์ใบนัดหมาย', 'View / print appointment slip')}</a></p>` : '';
   const html = `<!doctype html><html><body style="margin:0;background:#EEF3F9;font-family:'Sarabun','Tahoma','Segoe UI',Arial,sans-serif;color:#0F2540">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3F9;padding:24px 12px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden">
@@ -245,6 +248,7 @@ export function render(b: Row, items: Item[], kind: MailKind, extra?: MailExtra)
 ${rows.map(([k, v]) => `<tr><td style="padding:10px 12px 10px 0;color:#6B7F99;vertical-align:top;width:34%;border-bottom:1px solid #E4ECF5">${esc(k)}</td><td style="padding:10px 0;vertical-align:top;border-bottom:1px solid #E4ECF5">${v}</td></tr>`).join('\n')}
 </table>
 ${prep.length ? `<div style="margin-top:18px;padding:14px 16px;background:#F4FBF9;border:1px solid #BFE5DE;border-radius:12px;font-size:14px;line-height:1.6;color:#0A6E62"><b>${L('การเตรียมตัว', 'Before your visit')}</b><ul style="margin:6px 0 0;padding-left:20px">${prep.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}
+${slipBtn}
 <p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#3D5674">${L('สอบถามเพิ่มเติม', 'Questions?')}: ${L('โทร', 'Tel')} ${contactPhone} · LINE @medicaltrend · <a href="mailto:lab@medicaltrend.co.th" style="color:#0B4F9E">lab@medicaltrend.co.th</a><br>${L('ตอบกลับอีเมลนี้เพื่อติดต่อเจ้าหน้าที่ได้โดยตรง', 'You can reply to this email to reach our staff.')}</p>
 </td></tr>
 <tr><td style="padding:14px 24px;background:#F7FAFD;font-size:12px;color:#8FA6C0;line-height:1.5">${L('บริษัท เมดิคอลเทรนด์ จำกัด', 'Medical Trend Co., Ltd.')} · <a href="${SITE}" style="color:#8FA6C0">lab.medicaltrend.stream</a><br>${L('อีเมลนี้ส่งถึงคุณเนื่องจากมีการจองบริการด้วยอีเมลนี้', 'You received this email because a booking was made with this address.')}</td></tr>
@@ -255,6 +259,7 @@ ${prep.length ? `<div style="margin-top:18px;padding:14px 16px;background:#F4FBF
     hello, '', intro, '',
     ...rows.map(([k, v]) => `${k}: ${strip(v)}`),
     ...(prep.length ? ['', L('การเตรียมตัว', 'Before your visit') + ':', ...prep.map(p => '- ' + p)] : []),
+    ...(slipUrl ? ['', L('ดู / พิมพ์ใบนัดหมาย', 'View / print appointment slip') + ': ' + slipUrl] : []),
     '', `${L('สอบถามเพิ่มเติม', 'Questions?')}: ${contactPhone} · LINE @medicaltrend · lab@medicaltrend.co.th`,
   ].join('\n');
   return { subject, html, text };

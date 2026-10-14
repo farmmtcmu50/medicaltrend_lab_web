@@ -399,6 +399,7 @@ export default function App() {
             <a href="#how" className="h-nav" style={{ color: '#3D5674' }}>{t.navHow}</a>
             <a href="#branches" className="h-nav" style={{ color: '#3D5674' }}>{t.navBranches}</a>
             <a href="/std?ref=main-nav" className="h-nav" style={{ color: '#3D5674' }}>{t.navStd}</a>
+            <a href="/slip" className="h-nav" style={{ color: '#3D5674' }}>{t.navSlip}</a>
           </nav>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <a className="hdr-tel" href="tel:0952472631" style={{ fontSize: 13, color: '#6B7F99', fontWeight: 500 }}>{t.call} 095 247 2631</a>
@@ -953,7 +954,7 @@ export default function App() {
             </div>
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>{t.footAbout}</p>
           </div>
-          <FooterCol title={t.footServices} links={[['#branches', t.fs1], ['#pricing', t.fs2], ['/std?ref=main-footer', t.fsStd], ['#pricing', t.fs3], ['#pricing', t.fs4]]} />
+          <FooterCol title={t.footServices} links={[['#branches', t.fs1], ['#pricing', t.fs2], ['/std?ref=main-footer', t.fsStd], ['/slip', t.navSlip], ['#pricing', t.fs3], ['#pricing', t.fs4]]} />
           <FooterCol title={t.footHelp} links={[['#how', t.navHow], ['#features', t.faq], ['#features', t.pdpa]]} />
           <div>
             <div style={{ color: '#fff', fontSize: 13.5, fontWeight: 600, marginBottom: 12 }}>{t.contact}</div>

@@ -1,5 +1,6 @@
 // Cloudflare Worker for lab.medicaltrend.stream
 //   GET  /api/catalog   retail price list (Google Sheet -> edge cache -> D1 copy -> bundled snapshot)
+//   POST /api/slip      customer appointment slip by booking ref + phone (worker/slip.ts)
 //   GET  /api/pricing   home-collection fee rules set in the Booking Console (worker/pricing.ts)
 //   POST /api/bookings  multipart booking + optional doctor's lab order -> R2 + D1
 //   POST /api/maps/resolve  expand a Google Maps share link to coordinates
@@ -25,6 +26,7 @@ import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { loadPopular, servePoster } from './popular';
 import { loadHomePricing, pricingResponse } from './pricing';
+import { slipResponse } from './slip';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
@@ -51,6 +53,7 @@ export default {
       if (url.pathname === '/api/std/bookings' && req.method === 'POST') return await createStdBooking(req, env, ctx);
       if (url.pathname.startsWith('/api/posters/') && req.method === 'GET') return await servePoster(url.pathname.slice('/api/posters/'.length), env);
       if (url.pathname === '/api/distance' && req.method === 'GET') return await distanceResponse(url, env, ctx);
+      if (url.pathname === '/api/slip' && req.method === 'POST') return await slipResponse(req, env);
       if (url.pathname === '/api/line/webhook' && req.method === 'POST') return await handleLineWebhook(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);
