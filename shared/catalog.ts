@@ -164,7 +164,10 @@ export function buildCatalog(rows: Test[], source: Catalog['source'], syncedAt: 
   const tests = rows.filter(t => !isPackage(t) && t.c.toLowerCase() !== 'package');
   // A card linked to a sheet code follows the sheet's retail price (unless it is tiered).
   const byCode = new Map(rows.filter(t => t.id).map(t => [t.id!, t.p]));
-  const linked = popular.map(p => (p.code && !p.tiers?.length && byCode.has(p.code.toUpperCase()) ? { ...p, price: byCode.get(p.code.toUpperCase()) } : p));
+  const linked = popular
+    .map(p => (p.code && !p.tiers?.length && byCode.has(p.code.toUpperCase()) ? { ...p, price: byCode.get(p.code.toUpperCase()) } : p))
+    // A card with no price (e.g. its sheet code is missing from the sheet) cannot be booked: leave it off the page.
+    .filter(p => (p.tiers?.length ? p.tiers.every(t => typeof t.price === 'number') : typeof p.price === 'number' && p.price > 0));
   return { tests, packages, popular: linked, source, syncedAt };
 }
 

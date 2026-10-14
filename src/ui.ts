@@ -1,7 +1,7 @@
 // Style builders for stateful controls, ported from the prototype's renderVals().
 import type { CSSProperties } from 'react';
 
-export const fmt = (n: number) => n.toLocaleString('en-US');
+export const fmt = (n: number | null | undefined) => (typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString('en-US') : '—');
 
 export const langBtn = (on: boolean): CSSProperties => ({
   border: 0, borderRadius: 999, padding: '7px 11px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em',

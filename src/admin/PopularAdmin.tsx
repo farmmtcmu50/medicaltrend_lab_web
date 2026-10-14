@@ -113,7 +113,7 @@ export default function PopularAdmin({ toast }: { toast: (m: string) => void }) 
     if (r.code) {
       const c = r.code.toUpperCase();
       const p = catalog?.packages.find(x => x.id === c)?.price ?? catalog?.tests.find(x => x.id === c)?.p;
-      return `ตามชีต ${r.code}` + (p != null ? ' · ฿' + fmt(p) : '');
+      return `ตามชีต ${r.code}` + (p != null ? ' · ฿' + fmt(p) : catalog ? ' · ⚠ ไม่พบรหัสนี้ในชีต จึงไม่แสดงบนหน้าเว็บ' : '');
     }
     return r.price != null ? '฿' + fmt(r.price) : '—';
   };
