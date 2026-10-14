@@ -13,6 +13,7 @@ import ItemEditor from './ItemEditor';
 import LocationEditor from './LocationEditor';
 import RescheduleEditor from './RescheduleEditor';
 import PopularAdmin from './PopularAdmin';
+import PrintSlip from './PrintSlip';
 import SettingsAdmin from './SettingsAdmin';
 
 const fmt = (n: number | null | undefined) => (n || 0).toLocaleString('en-US');
@@ -35,10 +36,11 @@ const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', b
 const cardTitle: CSSProperties = { fontSize: 14, fontWeight: 700, letterSpacing: '-.01em' };
 const outlineBtn: CSSProperties = { border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 999, cursor: 'pointer' };
 
-type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'calendar' } | { view: 'popular' } | { view: 'settings' } | { view: 'detail'; ref: string };
+type Route = { view: 'dash' } | { view: 'bookings' } | { view: 'calendar' } | { view: 'popular' } | { view: 'settings' } | { view: 'detail'; ref: string } | { view: 'print'; ref: string };
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
   if (h.startsWith('b/')) return { view: 'detail', ref: decodeURIComponent(h.slice(2)) };
+  if (h.startsWith('print/')) return { view: 'print', ref: decodeURIComponent(h.slice(6)) };
   if (h === 'bookings') return { view: 'bookings' };
   if (h === 'calendar') return { view: 'calendar' };
   if (h === 'popular') return { view: 'popular' };
@@ -82,6 +84,7 @@ export default function AdminApp() {
     popular: ['Popular tests', 'รูปโฆษณาและรายการตรวจยอดนิยมใน STEP 2 ของหน้าจอง · เก็บไว้หลายรายการแล้วสลับแสดงหรือซ่อนได้'],
     settings: ['ตั้งค่า', 'อัตราค่าบริการเจาะเลือดถึงบ้าน · มีผลกับหน้าจองและการคำนวณในหลังบ้านทันทีหลังบันทึก'],
     detail: ['รายละเอียดการจอง', 'ตรวจรายการของผู้รับบริการแต่ละคน ยืนยันนัด อัปเดตสถานะ และบันทึกหมายเหตุ'],
+    print: ['ใบนัดหมาย', ''],
   };
   const [title, sub] = views[route.view];
 
@@ -104,6 +107,8 @@ export default function AdminApp() {
       </Shell>
     );
   }
+
+  if (route.view === 'print') return <PrintSlip key={route.ref} ref_={route.ref} />;
 
   return (
     <Shell>
@@ -413,7 +418,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
     if (busy || to === b.status) return;
     if (to === 'cancelled' && !confirm('ยืนยันยกเลิกการจอง ' + b.ref + ' ?')) return;
     setBusy(true);
-    try { setB(await api.setStatus(b.ref, to)); toast(b.ref + ' → ' + STATUS_META[to].label); }
+    try { setB(await api.setStatus(b.ref, to)); toast(b.ref + ' → ' + STATUS_META[to].label + (to === 'confirmed' ? ' · กด "พิมพ์ใบนัดหมาย" เพื่อพิมพ์ใบนัด' : '')); }
     catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
     finally { setBusy(false); }
   };
@@ -527,6 +532,8 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                 <button onClick={() => { setEditing(false); setRelocating(false); setMoving(true); }} disabled={moving} aria-pressed={moving}
                   style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1.5px solid #CFE0F1', background: moving ? '#EAF3FF' : '#fff', color: '#0B4F9E' }}>เลื่อน / แก้ไขนัด</button>
+                <a href={'#/print/' + encodeURIComponent(b.ref)} target="_blank" rel="noopener"
+                  style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, border: '1.5px solid ' + (b.status === 'pending' ? '#CFE0F1' : '#1466C7'), background: b.status === 'pending' ? '#fff' : '#1466C7', color: b.status === 'pending' ? '#0B4F9E' : '#fff' }}>🖨 พิมพ์ใบนัดหมาย</a>
               </div>
             </>
           )}
