@@ -1,6 +1,7 @@
 // Catalog + pricing rules shared by the browser app and the Worker.
 // The Worker recomputes every booking total with these same functions, so the
 // price a customer sees and the price stored in D1 can never drift apart.
+import { STD_PACKAGES, STD_PATHOGENS, TIER_CAPS, TIER_PRICES } from './std';
 import snapshot from './catalog-snapshot.json';
 
 export const SHEET_ID = '1YNt4ugp0EVdl7g4yXsMWGYwW-kyl-adVhFT6YaYcMs0';
@@ -103,9 +104,43 @@ export const POPULAR: Popular[] = [
 export const popularKey = (p: Popular, tier?: PopularTier) => tier ? p.name + ' · ' + tier.label : p.name;
 
 /** Price for every selectable package-like key: sheet packages, extras, popular items and tiers. */
+// ---------- STD packages and STI PCR tiers (main page, below Popular tests) ----------
+
+/** Item name of an STI PCR tier, e.g. "STI PCR 7 เชื้อ". The booked item adds the pathogens: "STI PCR 7 เชื้อ: CT, NG, …". */
+export const stiTierName = (cap: number) => `STI PCR ${cap} เชื้อ`;
+export const stiCap = (name: string): number | null => { const m = name.match(/^STI PCR (\d+) เชื้อ$/); return m && TIER_CAPS.includes(+m[1]) ? +m[1] : null; };
+
+export interface StdItem { key: string; name: string; price: number; cap?: number }
+export const STD_ITEMS: StdItem[] = [
+  ...STD_PACKAGES.filter(p => p.key !== 'p1').map(p => ({ key: p.key, name: 'STD ' + p.name, price: p.price })),
+  ...TIER_CAPS.map((cap, i) => ({ key: 'sti' + cap, name: stiTierName(cap), price: TIER_PRICES[i], cap })),
+];
+const STI_NAMES = TIER_CAPS.map(stiTierName);
+/** STD items already contained in a bigger package (Complete = Basic + STI PCR 14, and so on). */
+export const STD_INCLUDES: Record<string, string[]> = {
+  'STD Complete': ['STD Basic', ...STI_NAMES],
+  'STD Complete + HPV': ['STD Basic', 'STD Complete', ...STI_NAMES],
+  'STD Early Detection': ['STD Basic', 'STD Complete', 'STD Complete + HPV', ...STI_NAMES],
+};
+export const STD_PATHOGEN_CODES = STD_PATHOGENS.map(p => p[0]);
+
+/** Why a person's STD selection cannot be booked, or null. Pathogens are required exactly when an STI tier is chosen. */
+export function stdSelectionError(packages: string[], pathogens: string[] | undefined): string | null {
+  const tiers = packages.filter(n => stiCap(n) !== null);
+  if (tiers.length > 1) return 'one STI tier per person';
+  for (const n of packages) if ((STD_INCLUDES[n] ?? []).some(x => packages.includes(x))) return 'STD packages overlap';
+  const picks = pathogens ?? [];
+  if (!tiers.length) return picks.length ? 'pathogens without an STI tier' : null;
+  const cap = stiCap(tiers[0])!;
+  if (new Set(picks).size !== picks.length || !picks.every(c => STD_PATHOGEN_CODES.includes(c))) return 'pathogens';
+  if (picks.length < 1 || picks.length > cap) return 'pathogens: choose 1–' + cap;
+  return null;
+}
+
 export function packagePrices(pkgs: Pkg[], popular: Popular[] = POPULAR): Map<string, number> {
   const m = new Map<string, number>();
   for (const p of pkgs) m.set(p.name, p.price);
+  for (const p of STD_ITEMS) m.set(p.name, p.price);
   for (const p of popular) {
     if (p.tiers) for (const t of p.tiers) m.set(popularKey(p, t), t.price);
     else if (p.price) m.set(p.name, p.price);
@@ -229,7 +264,7 @@ export function travelTierLabel(distanceKm: number, hp: HomePricing = DEFAULT_HO
 }
 
 /** What the browser sends per person: names only. Prices are looked up server-side. */
-export interface PersonSelection { packages: string[]; tests: string[] }
+export interface PersonSelection { packages: string[]; tests: string[]; /** STI PCR pathogen codes when an STI tier is chosen. */ pathogens?: string[] }
 
 export interface PricedItem { kind: 'package' | 'test'; name: string; price: number }
 export interface PricedPerson { items: PricedItem[]; subtotal: number }
@@ -243,7 +278,9 @@ export function priceSelection(cat: Catalog, persons: PersonSelection[]) {
     const items: PricedItem[] = [];
     for (const name of p.packages) {
       const price = pk.get(name);
-      if (price === undefined) unknown.push(name); else items.push({ kind: 'package', name, price });
+      // An STI tier is stored with the pathogens chosen (validated by stdSelectionError).
+      const label = stiCap(name) !== null && p.pathogens?.length ? `${name}: ${p.pathogens.join(', ')}` : name;
+      if (price === undefined) unknown.push(name); else items.push({ kind: 'package', name: label, price });
     }
     for (const name of p.tests) {
       const price = tests.get(name);

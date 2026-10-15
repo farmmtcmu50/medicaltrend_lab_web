@@ -2,8 +2,8 @@
 // The Worker saves it, emails the customer the new appointment and alerts the staff LINE group.
 import { useState, type CSSProperties } from 'react';
 import { BRANCH_NAMES, type AdminBooking } from '../../shared/admin';
-import { BRANCH_IDS, SLOTS, type BranchId } from '../../shared/catalog';
-import { branchHours } from '../../shared/std';
+import { BRANCH_IDS, type BranchId } from '../../shared/catalog';
+import { bookingHours } from '../../shared/std';
 import { api, ApiError } from './api';
 
 const bkkToday = () => new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
@@ -12,14 +12,11 @@ const thDate = (ymd: string) => new Date(ymd + 'T00:00:00+07:00').toLocaleDateSt
 const card: CSSProperties = { background: '#fff', border: '1.5px solid #CFE0F1', borderRadius: 18, padding: 20 };
 const field: CSSProperties = { width: '100%', border: '1.5px solid #DFE8F2', borderRadius: 11, padding: '10px 12px', fontSize: 13, color: '#0F2540', background: '#fff' };
 const label: CSSProperties = { fontSize: 11.5, color: '#7C93AD', fontWeight: 600 };
-const hourly = (slot: string) => /^\d{2}:00$/.test(slot);
 
-/** Time choices: STD branch visits are hourly within opening hours, everything else uses the 2-hour windows. */
+/** Hourly times: branch opening hours for lab visits, home-collection hours otherwise (older 2-hour bookings move to hourly). */
 function slotChoices(b: AdminBooking, date: string, branch: string | null): { list: string[]; closed: boolean } {
-  if (!hourly(b.slot)) return { list: [...SLOTS], closed: false };
-  const hours = branch ? branchHours(branch as BranchId, new Date(date + 'T00:00:00Z').getUTCDay()) : null;
-  if (!hours) return { list: [], closed: true };
-  return { list: Array.from({ length: hours[1] - hours[0] }, (_, i) => String(hours[0] + i).padStart(2, '0') + ':00'), closed: false };
+  const list = bookingHours(b.mode, b.mode === 'lab' ? (branch as BranchId | null) : null, date);
+  return { list, closed: !list.length };
 }
 
 export default function RescheduleEditor({ b, toast, onCancel, onSaved, onConflict }: {
@@ -82,7 +79,7 @@ export default function RescheduleEditor({ b, toast, onCancel, onSaved, onConfli
           </label>
         )}
       </div>
-      {hourly(b.slot) && closed && <div style={{ marginTop: 8, fontSize: 12, color: '#A3242A' }}>สาขานี้ปิดในวันที่เลือก กรุณาเลือกวันอื่นหรือสาขาอื่น</div>}
+      {closed && <div style={{ marginTop: 8, fontSize: 12, color: '#A3242A' }}>สาขานี้ปิดในวันที่เลือก กรุณาเลือกวันอื่นหรือสาขาอื่น</div>}
 
       <label style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={label}>ข้อความถึงลูกค้า (ไม่บังคับ · แสดงในอีเมล)</span>

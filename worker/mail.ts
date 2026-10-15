@@ -145,7 +145,8 @@ function longDate(ymd: string, en: boolean) {
 export function render(b: Row, items: Item[], kind: MailKind, extra?: MailExtra): { subject: string; html: string; text: string } {
   const en = b.lang === 'en';
   const L = (th: string, eng: string) => (en ? eng : th);
-  const std = b.source === 'std';
+  // STD bookings (from /std, or STD items booked on the main page) are worded without test names.
+  const std = b.source === 'std' || items.some(i => /^(STD |STI PCR )/.test(i.name));
   const rxPending = !!b.lab_order_key && items.length === 0;
 
   const subject = {

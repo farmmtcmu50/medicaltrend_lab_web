@@ -12,7 +12,7 @@
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
 import {
-  BRANCH_IDS, PATIENT_TYPES, PRICING, SHEET_ID, maxKm, SHEET_TAB, SLOTS,
+  BRANCH_IDS, PATIENT_TYPES, PRICING, SHEET_ID, maxKm, stdSelectionError, type BranchId, SHEET_TAB,
   buildCatalog, parseSheet, priceSelection, snapshotCatalog, travelFee,
   type Catalog, type PersonSelection, type Test,
 } from '../shared/catalog';
@@ -26,6 +26,7 @@ import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
 import { loadPopular, servePoster } from './popular';
 import { loadHomePricing, pricingResponse } from './pricing';
+import { bookingHours } from '../shared/std';
 import { slipResponse } from './slip';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
@@ -242,11 +243,14 @@ async function createBooking(req: Request, env: Env, ctx: ExecutionContext) {
 function validate(p: BookingPayload, upload: File | null, areaKm: number) {
   need(p && typeof p === 'object', 'payload');
   need(p.mode === 'lab' || p.mode === 'home', 'mode');
-  need((SLOTS as readonly string[]).includes(p.slot), 'slot');
   need(/^\d{4}-\d{2}-\d{2}$/.test(p.visitDate || ''), 'visitDate');
   const today = bangkokToday();
   const last = addDays(today, 90);
   need(p.visitDate >= today && p.visitDate <= last, 'visitDate out of range');
+  // Hourly start times: a branch's opening hours, or the home-collection hours; none in the past today.
+  const hours = bookingHours(p.mode === 'home' ? 'home' : 'lab', p.mode === 'home' ? null : (p.branch as BranchId), p.visitDate);
+  need(hours.includes(p.slot), 'slot');
+  need(p.visitDate !== today || +p.slot.slice(0, 2) > new Date(Date.now() + 7 * 3600_000).getUTCHours(), 'slot');
 
   need(Array.isArray(p.persons) && p.persons.length >= 1 && p.persons.length <= PRICING.maxPeople, 'persons');
   for (const person of p.persons) {
@@ -255,6 +259,9 @@ function validate(p: BookingPayload, upload: File | null, areaKm: number) {
     need(upload || person.packages.length + person.tests.length > 0, 'every person needs at least one item');
     need(person.packages.length + person.tests.length <= 60, 'too many items');
     need([...person.packages, ...person.tests].every(x => typeof x === 'string' && x.length <= 200), 'item');
+    need(person.pathogens === undefined || (Array.isArray(person.pathogens) && person.pathogens.every(x => typeof x === 'string')), 'pathogens');
+    const stdError = stdSelectionError(person.packages, person.pathogens);
+    need(!stdError, stdError || '');
   }
 
   const c = p.contact || ({} as BookingPayload['contact']);

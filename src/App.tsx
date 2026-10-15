@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, PRICING, SLOTS, maxKm, minHomeFee, packagePrices, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
+  BRANCH_IDS, PRICING, STD_INCLUDES, STD_ITEMS, maxKm, minHomeFee, packagePrices, stiCap, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
+import { bookingHours } from '../shared/std';
+import { STD_PATHOGENS } from '../shared/std';
+import { copyAll } from './std/copy';
 import { detectRef } from './ref';
 import { useHomePricing } from './usePricing';
 import type { DistanceResult } from '../shared/geo';
@@ -60,7 +63,7 @@ export default function App() {
   // Distance worked out by the Worker from the customer's coordinates (nearest branch, road km).
   const [distInfo, setDistInfo] = useState<{ status: 'loading' | 'fail' } | (DistanceResult & { status: 'ok' }) | null>(null);
   const [visitDate, setVisitDate] = useState(() => bkkDate(1));
-  const [slot, setSlot] = useState<string>(SLOTS[0]);
+  const [slot, setSlot] = useState<string>('');
   const [testQuery, setTestQuery] = useState('');
   const [testCat, setTestCat] = useState(ALL);
   const [showAllTests, setShowAllTests] = useState(false);
@@ -79,6 +82,7 @@ export default function App() {
   const L = useCallback((th: string, e: string) => (en ? e : th), [en]);
   const pw = (n: number) => (en ? (n === 1 ? ' person' : ' people') : ' ท่าน');
   const personLabel = (i: number) => L('คนที่ ', 'Person ') + (i + 1);
+  const stdCopy = useMemo(() => copyAll()[en ? 'en' : 'th'], [en]);
 
   useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   const setLang = (l: Lang) => {
@@ -131,9 +135,23 @@ export default function App() {
   const rxOnly = hasRx && persons.every(p => p.pks.length + p.picked.length === 0);
   const outOfArea = isHome && distInfo?.status === 'ok' && distInfo.km > maxKm(hp);
   const outOfAreaMsg = t.outOfArea.replace('40', String(maxKm(hp)));
+  // Hourly appointment times: the branch's opening hours (lab) or the home-collection hours; past hours today are hidden.
+  const slotOptions = useMemo(() => {
+    const nowHour = new Date(Date.now() + 7 * 3600_000).getUTCHours();
+    return bookingHours(mode, mode === 'lab' ? branch : null, visitDate).filter(h => visitDate !== bkkDate(0) || +h.slice(0, 2) > nowHour);
+  }, [mode, branch, visitDate]);
+  useEffect(() => { if (!slotOptions.includes(slot)) setSlot(slotOptions[0] ?? ''); }, [slotOptions, slot]);
 
   const updatePerson = (i: number, fn: (p: Person) => Person) =>
     setPersons(ps => ps.map((p, j) => (j === i ? fn(p) : p)));
+  // STD items for the active person: a bigger package replaces what it includes, and only one STI PCR size at a time.
+  const toggleStd = (name: string) => {
+    const p = persons[act];
+    if (p.pks.includes(name)) return updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => k !== name) }));
+    const coveredBy = p.pks.find(k => (STD_INCLUDES[k] ?? []).includes(name));
+    if (coveredBy) return setToast(L(coveredBy.replace(/^STD /, '') + ' รวมรายการนี้อยู่แล้ว', coveredBy.replace(/^STD /, '') + ' already includes this'));
+    updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => !(STD_INCLUDES[name] ?? []).includes(k) && !(stiCap(name) !== null && stiCap(k) !== null)).concat(name) }));
+  };
   const toggleIn = (list: string[], key: string) => (list.includes(key) ? list.filter(k => k !== key) : list.concat(key));
 
   const addPerson = (focus: boolean) => {
@@ -246,6 +264,7 @@ export default function App() {
     if (outOfArea) return setBookError(outOfAreaMsg);
     if (isHome && distInfo?.status === 'loading') return;
     if (!visitDate || visitDate < bkkDate(0)) return setBookError(t.errDate);
+    if (!slotOptions.includes(slot)) return setBookError(L('กรุณาเลือกเวลานัดหมาย', 'Please choose an appointment time'));
     setBookError('');
     setDialogOpen(true);
   };
@@ -319,9 +338,11 @@ export default function App() {
       </div>
       <div>
         <label style={ui.label} htmlFor={'slot-' + mode}>{t.slotLabel}</label>
-        <select id={'slot-' + mode} className="f-plain" value={slot} onChange={e => setSlot(e.target.value)} style={ui.field}>
-          {SLOTS.map((s, i) => <option key={s} value={s}>{s}{i === 0 ? ` (${t.fasting})` : ''}</option>)}
+        <select id={'slot-' + mode} className="f-plain" value={slot} onChange={e => setSlot(e.target.value)} disabled={!slotOptions.length} style={ui.field}>
+          {!slotOptions.length && <option value="">{L('ไม่มีเวลาว่าง', 'No times')}</option>}
+          {slotOptions.map(s => <option key={s} value={s}>{s} {L('น.', '')}{+s.slice(0, 2) < 10 ? ` (${t.fasting})` : ''}</option>)}
         </select>
+        {!slotOptions.length && <div style={{ fontSize: 11.5, color: '#9A5220', marginTop: 5 }}>{mode === 'lab' ? L('สาขาปิดหรือหมดเวลาในวันที่เลือก กรุณาเลือกวันอื่น', 'The branch is closed or fully past on this date. Please pick another day.') : L('หมดเวลาให้บริการของวันนี้ กรุณาเลือกวันอื่น', 'No more times today. Please pick another day.')}</div>}
       </div>
     </div>
   );
@@ -622,7 +643,7 @@ export default function App() {
                             ฿{ui.fmt(p.tiers ? p.tiers[0].price : p.price!)}
                           </span>
                         </span>
-                        <a href="/std?ref=main-popular#packages" className="h-pale" style={{ ...ui.popularBtn(false), textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <a href="#std" className="h-pale" style={{ ...ui.popularBtn(false), textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {t.stdCardCta}
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
                         </a>
@@ -656,11 +677,66 @@ export default function App() {
             );
           })}
         </div>
-              <a href="/std?ref=main-popular-more" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
+              <a href="#std" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
           {L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ครบทุกแพ็กเกจ · เลือกเชื้อ PCR เอง', 'All HIV & STD packages · build your own PCR panel')}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
         </a>
       </section>}
+
+      {/* ---------------------------------------------------------------- STEP 2 · HIV / STD (was the /std page) */}
+      <section id="std" className="wrap" style={{ ...ui.wrap, padding: '64px 24px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <span style={ui.stepBadge}>STEP 2</span>
+          <span style={ui.eyebrow}>HIV / STD testing</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap', marginBottom: 24 }}>
+          <h2 style={{ margin: 0, ...ui.h2Step }}>{L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์', 'HIV & STD testing')}</h2>
+          <p style={{ ...ui.lede, maxWidth: 460, fontSize: 14.5 }}>
+            {L('ผลเป็นความลับ · ไม่ต้องแสดงบัตรประชาชน · STI PCR เลือกจำนวนเชื้อที่นี่ แล้วเลือกชื่อเชื้อในขั้นยืนยันนัด · เพิ่มให้ ', 'Confidential results · no ID needed · pick an STI PCR size here, then the pathogens when you confirm · adding for ')}{personLabel(act)}
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))', gap: 16 }}>
+          {stdCopy.packages.filter(p => p.name !== 'STI PCR 14').map(p => {
+            const name = 'STD ' + p.name;
+            const on = cur.pks.includes(name);
+            const covered = cur.pks.find(k => (STD_INCLUDES[k] ?? []).includes(name));
+            return (
+              <div key={name} style={{ ...ui.popularCard(on || !!covered), padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>{p.name}</span>
+                  {'featured' in p && p.featured && <span style={{ fontSize: 10.5, fontWeight: 700, color: '#0B6E60', background: '#DFF5F0', padding: '3px 8px', borderRadius: 999 }}>{L('แนะนำ', 'Recommended')}</span>}
+                </div>
+                <div style={{ fontSize: 12.5, color: '#536C89' }}>{p.sub} · {p.tat}</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, lineHeight: 1.55, color: '#3D5674' }}>{p.items.map(x => <li key={x}>{x}</li>)}</ul>
+                <div style={{ fontSize: 11.5, color: '#8FA6C0' }}>{p.sample}</div>
+                <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingTop: 6 }}>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: '#0B4F9E' }}>฿{p.price}</span>
+                  {covered && !on
+                    ? <span style={{ fontSize: 11.5, color: '#0B6E60', fontWeight: 600 }}>{L('รวมอยู่ใน ', 'Included in ')}{covered.replace(/^STD /, '')}</span>
+                    : <button onClick={() => toggleStd(name)} style={ui.popularBtn(on)} aria-pressed={on}>{on ? L('เลือกแล้ว ✓', 'Selected ✓') : L('เลือก', 'Select')}</button>}
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ ...ui.popularCard(cur.pks.some(k => stiCap(k) !== null)), padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>STI PCR · {L('เลือกเชื้อเอง', 'choose pathogens')}</span>
+            <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55 }}>{L('Realtime PCR จากตัวอย่างครั้งเดียว · รู้ผลใน 3 วัน · เลือกจำนวนเชื้อ แล้วเลือกชื่อเชื้อในขั้นยืนยันนัด', 'Realtime PCR from one sample · results in 3 days · choose how many here, which ones when you confirm')}</div>
+            <div style={{ fontSize: 11.5, color: '#8FA6C0', lineHeight: 1.5 }}>{STD_PATHOGENS.map(x => en ? x[3] : x[2]).filter((v, i, a) => a.indexOf(v) === i).join(' · ')}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 'auto', paddingTop: 6 }}>
+              {STD_ITEMS.filter(x => x.cap).map(x => {
+                const on = cur.pks.includes(x.name);
+                const covered = cur.pks.find(k => (STD_INCLUDES[k] ?? []).includes(x.name));
+                return (
+                  <button key={x.name} onClick={() => toggleStd(x.name)} disabled={!!covered} style={{ ...ui.tierBtn(on), opacity: covered ? .45 : 1 }} aria-pressed={on}>
+                    <span style={{ fontWeight: 700 }}>{x.cap} {L('เชื้อ', 'pathogens')}</span>
+                    <span style={{ opacity: .72 }}>฿{ui.fmt(x.price)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ---------------------------------------------------------------- STEP 3 packages + STEP 4 tests */}
       <section id="pricing" className="wrap" style={{ ...ui.wrap, padding: '76px 24px 88px' }}>

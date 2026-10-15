@@ -1,7 +1,8 @@
 // Contact details + PDPA consent, then POST /api/bookings. Not part of the original prototype:
 // the design's STEP 5 button had no contact fields, so this dialog collects them in the same visual language.
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
-import type { BranchId, PatientType, PersonSelection } from '../shared/catalog';
+import { stiCap, STD_ITEMS, type BranchId, type PatientType, type PersonSelection } from '../shared/catalog';
+import { STD_PATHOGENS } from '../shared/std';
 import type { Dict, Lang } from './i18n';
 import * as ui from './ui';
 
@@ -45,9 +46,15 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
   const [sending, setSending] = useState(false);
   const [doneRef, setDoneRef] = useState<string | null>(null);
   const firstField = useRef<HTMLInputElement>(null);
+  const th = draft.lang !== 'en';
+  // STI PCR: the customer picks which pathogens here, up to the size chosen on the page (14 = all of them).
+  const stiNeeds = draft.persons.map(p => { const n = p.packages.find(k => stiCap(k) !== null); return n ? stiCap(n)! : 0; });
+  const [pathogens, setPathogens] = useState<string[][]>(() => stiNeeds.map(cap => (cap === STD_PATHOGENS.length ? STD_PATHOGENS.map(x => x[0]) : [])));
+  const togglePathogen = (i: number, code: string) => setPathogens(all => all.map((list, j) => j !== i ? list
+    : list.includes(code) ? list.filter(c => c !== code) : list.length < stiNeeds[i] ? [...list, code] : list));
 
   useEffect(() => {
-    firstField.current?.focus();
+    if (!stiNeeds.some(Boolean)) firstField.current?.focus(); // with STI PCR, start at the pathogen list
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sending) onClose(); };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -62,6 +69,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
     if (!/^(\+66|0)\d{8,9}$/.test(digits)) e.phone = t.errPhone;
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = t.errEmail;
     if (!consent) e.consent = t.errPdpa;
+    if (stiNeeds.some((cap, i) => cap > 0 && pathogens[i].length === 0)) e.pathogens = th ? 'กรุณาเลือกเชื้อที่ต้องการตรวจอย่างน้อย 1 เชื้อ' : 'Please choose at least one pathogen';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -83,7 +91,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
       ref: draft.ref,
       patientType: draft.mode === 'home' ? draft.patientType : undefined,
       distanceKm: draft.mode === 'home' ? draft.distanceKm : undefined,
-      persons: draft.persons,
+      persons: draft.persons.map((p, i) => (stiNeeds[i] ? { ...p, pathogens: pathogens[i] } : p)),
       contact: { name: name.trim(), phone: phone.trim(), line: line.trim(), email: email.trim(), note: note.trim() },
       pdpaConsent: consent,
       expectedTotal: draft.total,
@@ -143,6 +151,41 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
           </div>
         ) : (
           <form onSubmit={submit} noValidate style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+            {stiNeeds.some(Boolean) && (
+              <div style={{ border: '1.5px solid #CFE0F1', background: '#F7FAFD', borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{th ? 'เลือกเชื้อที่ต้องการตรวจ (STI PCR)' : 'Choose pathogens (STI PCR)'}</div>
+                {stiNeeds.map((cap, i) => {
+                  if (!cap) return null;
+                  const picked = pathogens[i];
+                  const all = cap === STD_PATHOGENS.length;
+                  // A smaller size would cover this many pathogens for less.
+                  const cheaper = STD_ITEMS.find(x => x.cap && picked.length > 0 && picked.length <= x.cap && x.cap < cap);
+                  return (
+                    <div key={i}>
+                      <div style={{ fontSize: 12.5, color: '#3D5674', marginBottom: 7 }}>
+                        {draft.persons.length > 1 && <b>{th ? 'คนที่ ' : 'Person '}{i + 1} · </b>}
+                        STI PCR {cap} {th ? 'เชื้อ' : 'pathogens'} · {all ? (th ? 'ตรวจครบทั้ง 14 เชื้อ' : 'all 14 included') : (th ? `เลือกได้ไม่เกิน ${cap} เชื้อ (เลือกแล้ว ${picked.length}/${cap})` : `choose up to ${cap} (${picked.length}/${cap})`)}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 6 }}>
+                        {STD_PATHOGENS.map(([code, sci, thName, enName]) => {
+                          const on = picked.includes(code);
+                          const full = !on && picked.length >= cap;
+                          return (
+                            <label key={code} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, lineHeight: 1.35, padding: '7px 9px', borderRadius: 9, cursor: all || full ? 'default' : 'pointer',
+                              border: '1.5px solid ' + (on ? '#1466C7' : '#E4ECF5'), background: on ? '#EAF3FF' : '#fff', opacity: full ? .5 : 1 }}>
+                              <input type="checkbox" checked={on} disabled={all || full} onChange={() => togglePathogen(i, code)} style={{ marginTop: 2, accentColor: '#1466C7' }} />
+                              <span><b>{code}</b> · {th ? thName : enName}<span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontStyle: 'italic' }}>{sci}</span></span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {cheaper && <div style={{ fontSize: 11.5, color: '#A26A00', marginTop: 6 }}>{th ? `เลือก ${picked.length} เชื้อ ใช้ STI PCR ${cheaper.cap} เชื้อ (฿${ui.fmt(cheaper.price)}) ได้ในราคาที่ถูกกว่า · ปิดหน้าต่างนี้เพื่อเปลี่ยน` : `${picked.length} pathogens fit STI PCR ${cheaper.cap} (฿${ui.fmt(cheaper.price)}) for less · close this window to switch`}</div>}
+                    </div>
+                  );
+                })}
+                {errors.pathogens && <div role="alert" style={{ fontSize: 12.5, color: '#C0392B' }}>{errors.pathogens}</div>}
+              </div>
+            )}
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: '#536C89' }}>{t.contactP}</p>
 
             <Field id="bk-name" label={t.cName} error={errors.name}>

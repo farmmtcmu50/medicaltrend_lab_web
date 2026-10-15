@@ -1,7 +1,8 @@
 // STD testing page (/std): packages, custom PCR tiers, branch hours.
 // Shared by the page and the Worker so the price shown is the price stored.
 // Source: Claude Design "MedicalTrend STD Testing" (Desktop/Mobile boards).
-import { BRANCH_IDS, type BranchId } from './catalog';
+// Type-only import: shared/catalog.ts imports this module for the STD items on the main page.
+import type { BranchId } from './catalog';
 
 export const STD_PACKAGES = [
   { key: 'p0', name: 'Basic', price: 880 },
@@ -49,7 +50,19 @@ export function branchHours(branch: BranchId, dow: number): [number, number] | n
   if (branch === 'phayao') return dow === 0 ? null : [8, 16];
   return null;
 }
-export const STD_BRANCHES: readonly BranchId[] = BRANCH_IDS;
+export const STD_BRANCHES: readonly BranchId[] = ['sankamphaeng', 'hangdong', 'watket', 'phayao'];
+
+/** Hourly home-collection start times (the former 06–08, 08–10, 10–12 and 16–18 windows). */
+export const HOME_HOURS = [6, 7, 8, 9, 10, 11, 16, 17];
+
+/** Hourly appointment times ("07:00") for a date: a branch's opening hours, or the home-collection hours. */
+export function bookingHours(mode: 'lab' | 'home', branch: BranchId | null, ymd: string): string[] {
+  const hours = mode === 'home' ? HOME_HOURS : (() => {
+    const h = branch ? branchHours(branch, new Date(ymd + 'T00:00:00Z').getUTCDay()) : null;
+    return h ? Array.from({ length: h[1] - h[0] }, (_, i) => h[0] + i) : [];
+  })();
+  return hours.map(h => String(h).padStart(2, '0') + ':00');
+}
 
 export const STD_BOOKING_DAYS = 60;
 
