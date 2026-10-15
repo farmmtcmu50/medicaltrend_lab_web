@@ -35,7 +35,7 @@ export const branches = (L: L): Branch[] => [
     id: 'watket', name: L('เมดิคอลเทรนด์แล็บ สาขาไอบลิส สหคลินิก', 'Medical Trend Lab, iBliss Polyclinic branch'), tag: L('วัดเกตุ', 'Wat Ket'),
     address: L('308/8 ถนนเชียงใหม่-ลำพูน ต.วัดเกตุ อ.เมือง จ.เชียงใหม่', '308/8 Chiang Mai–Lamphun Rd, Wat Ket, Mueang, Chiang Mai'),
     landmark: L('เวชกรรม + เทคนิคการแพทย์', 'Medicine + Medical Technology'),
-    phone: '088 564 7132', tel: '0885647132', email: 'medicaltrend.ibliss@gmail.com',
+    phone: '093 383 0339', tel: '0933830339', email: 'medicaltrend.ibliss@gmail.com',
     logo: '/img/logo-mt-center-header.webp', map: 'https://maps.app.goo.gl/fLN92AkvcfVXRNn7A',
   },
   {

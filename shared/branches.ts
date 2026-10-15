@@ -18,7 +18,7 @@ export const BRANCH_INFO: Record<BranchId, BranchInfo> = {
   watket: {
     name: ['เมดิคอลเทรนด์แล็บ สาขาไอบลิส สหคลินิก (วัดเกตุ)', 'Medical Trend Lab, iBliss Polyclinic (Wat Ket)'],
     address: ['308/8 ถนนเชียงใหม่-ลำพูน ต.วัดเกตุ อ.เมือง จ.เชียงใหม่', '308/8 Chiang Mai–Lamphun Rd, Wat Ket, Mueang, Chiang Mai'],
-    phone: '088 564 7132', map: BRANCH_MAP_LINKS.watket,
+    phone: '093 383 0339', map: BRANCH_MAP_LINKS.watket,
   },
   phayao: {
     name: ['เมดิคอลเทรนด์ เฮลธ์แคร์ สหคลินิก (พะเยา)', 'Medical Trend Healthcare Polyclinic (Phayao)'],

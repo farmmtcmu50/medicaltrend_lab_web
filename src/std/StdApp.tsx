@@ -763,7 +763,7 @@ export default function StdApp() {
 }
 
 // Same contact details as the main site's branch cards (src/content.tsx), in STD_BRANCHES order.
-const BRANCH_TEL = ['0952472631', '0857178242', '0885647132', '0902264192'];
+const BRANCH_TEL = ['0952472631', '0857178242', '0933830339', '0902264192'];
 const BRANCH_MAP = [
   'https://maps.app.goo.gl/dHaP2e7HRyN2FW7V6', 'https://maps.app.goo.gl/y9izRjZqGh4rdBw3A',
   'https://maps.app.goo.gl/fLN92AkvcfVXRNn7A', 'https://maps.app.goo.gl/tDfmQh4GsNK9HKAbA',
