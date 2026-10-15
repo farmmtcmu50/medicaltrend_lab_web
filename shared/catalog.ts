@@ -170,13 +170,15 @@ export function csvRows(text: string): string[][] {
 /** Parses the sheet CSV, keeping only the public retail columns. Throws if the layout changed. */
 export function parseSheet(csv: string): Test[] {
   const rows = csvRows(csv);
-  const head = (rows[0] || []).map(h => h.trim());
-  const col = (n: string) => head.indexOf(n);
-  const iCode = col('รหัสการตรวจ'), iName = col('รายชื่อการทดสอบ'), iCat = col('ประเภท'), iDesc = col('คำอธิบาย'),
+  const head = (rows[0] || []).map(h => h.replace(/\s+/g, ' ').trim().toLowerCase());
+  // Headers are matched loosely: staff rename them now and then (the code column was "รหัสการตรวจ", now "รหัส").
+  const col = (...names: string[]) => head.findIndex(h => names.some(n => h === n.toLowerCase()));
+  const iCode = col('รหัสการตรวจ', 'รหัส', 'รหัสรายการ', 'code'), iName = col('รายชื่อการทดสอบ'), iCat = col('ประเภท'), iDesc = col('คำอธิบาย'),
     iRetail = col('Retail'), iWait = col('เวลารอผล');
   if (iName < 0 || iRetail < 0) throw new Error('sheet columns changed');
   const tests = rows.slice(1).map(r => ({
-    id: iCode < 0 ? undefined : (r[iCode] || '').trim().toUpperCase() || undefined,
+    // Codes are normalised ("pac–25 " → "PAC-25") so links typed in the Console match.
+    id: iCode < 0 ? undefined : (r[iCode] || '').replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, '').toUpperCase() || undefined,
     n: (r[iName] || '').trim(),
     c: (r[iCat] || '').trim() || 'อื่นๆ',
     th: (r[iDesc] || '').trim(),

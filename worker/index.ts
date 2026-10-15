@@ -97,7 +97,7 @@ const isAdminPage = (path: string) => path === '/admin' || path.startsWith('/adm
 
 async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
   const cache = caches.default;
-  const key = new Request('https://catalog.internal/v1');
+  const key = new Request('https://catalog.internal/v2');
   const hit = await cache.match(key);
   if (hit) return hit.json();
 

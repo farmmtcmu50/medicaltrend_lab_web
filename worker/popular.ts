@@ -14,7 +14,7 @@ interface Env { DB: D1Database; UPLOADS: R2Bucket }
 
 const POSTER_TYPES: Record<string, string> = { 'image/webp': 'webp', 'image/jpeg': 'jpg', 'image/png': 'png' };
 const MAX_POSTER = 5 * 1024 * 1024;
-const CATALOG_KEY = 'https://catalog.internal/v1';
+const CATALOG_KEY = 'https://catalog.internal/v2';
 
 export const toPopular = (r: PopularRow): Popular => ({
   id: r.id, name: r.name, nameEn: r.name_en || r.name, detail: r.detail, detailEn: r.detail_en || r.detail,
