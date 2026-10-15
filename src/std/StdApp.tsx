@@ -610,7 +610,9 @@ export default function StdApp() {
                   <div><div className="s-sum-l">{c.sumPkg}</div><div className="s-sum-v">{done.pkg}</div></div>
                   <div><div className="s-sum-l">{c.sumTotal}</div><div className="s-sum-v">{done.total}</div></div>
                 </div>
-                <a href={'/slip?ref=' + encodeURIComponent(done.ref)} target="_blank" rel="noopener" style={{ fontSize: 15, fontWeight: 600, color: '#1C75BC' }}>🖨 {lang === 'th' ? 'พิมพ์ใบนัดหมาย (หลังเจ้าหน้าที่ยืนยันนัด)' : 'Print your appointment slip (after we confirm)'}</a>
+                {homeMode
+                  ? <span style={{ fontSize: 15, color: '#3D4F6B' }}>🖨 {lang === 'th' ? 'พิมพ์ใบนัดได้หลังเจ้าหน้าที่ยืนยันนัด (เราจะส่งลิงก์ทางอีเมล)' : 'Your slip can be printed once we confirm the visit (we will email the link)'}</span>
+                  : <a href={'/slip?ref=' + encodeURIComponent(done.ref)} target="_blank" rel="noopener" style={{ height: 50, padding: '0 28px', borderRadius: 999, background: '#1C75BC', color: '#fff', fontSize: 16, fontWeight: 600, display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>🖨 {lang === 'th' ? 'พิมพ์ใบนัดหมาย' : 'Print appointment slip'}</a>}
                 <button type="button" onClick={again} style={{ height: 50, padding: '0 28px', borderRadius: 999, border: '1.5px solid #1D3564', background: '#FFFFFF', color: '#1D3564', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>{c.again}</button>
               </div>
             )}

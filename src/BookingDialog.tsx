@@ -136,7 +136,9 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
               <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: '.02em', color: '#0B4F9E', fontFamily: "'IBM Plex Sans', sans-serif" }}>{doneRef}</div>
             </div>
             <p style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: '#536C89', maxWidth: 380 }}>{t.doneP}</p>
-            <a href={'/slip?ref=' + encodeURIComponent(doneRef)} target="_blank" rel="noopener" style={{ fontSize: 13.5, fontWeight: 600, color: '#0B4F9E' }}>🖨 {t.slipLink}</a>
+            {draft.mode === 'lab'
+              ? <a href={'/slip?ref=' + encodeURIComponent(doneRef)} target="_blank" rel="noopener" className="h-cta" style={{ ...primaryBtn, width: '100%', textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box', background: '#1466C7', color: '#fff' }}>🖨 {t.slipLink}</a>
+              : <span style={{ fontSize: 13, color: '#536C89' }}>🖨 {t.slipLinkHome}</span>}
             <button onClick={onClose} className="h-cta" style={{ ...primaryBtn, width: '100%' }}>{t.doneBtn}</button>
           </div>
         ) : (

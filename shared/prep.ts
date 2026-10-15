@@ -50,3 +50,9 @@ export function prepAdvice(p: PrepInput): string[] {
     : 'นำบัตรประชาชนและใบนัดนี้มาด้วย และมาถึงก่อนเวลานัดประมาณ 10–15 นาที');
   return out;
 }
+
+/**
+ * Can the customer print the appointment slip? Branch visits: as soon as they are booked.
+ * Home collection: only once staff have confirmed the visit. Never for cancelled bookings.
+ */
+export const slipPrintable = (mode: string, status: string) => status !== 'cancelled' && (mode === 'lab' || status !== 'pending');

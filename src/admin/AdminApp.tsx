@@ -6,6 +6,7 @@ import {
   BRANCH_NAMES, PATIENT_LABELS, STATUSES, STATUS_FLOW, STATUS_META, whereShort,
   type AdminBooking, type AdminRow, type AdminSummary, type Status,
 } from '../../shared/admin';
+import { slipPrintable } from '../../shared/prep';
 import { refLabel } from '../../shared/ref';
 import { api, ApiError, type ListQuery } from './api';
 import BookingCalendar from './BookingCalendar';
@@ -533,7 +534,7 @@ function BookingDetail({ ref_: ref, toast }: { ref_: string; toast: (m: string) 
                 <button onClick={() => { setEditing(false); setRelocating(false); setMoving(true); }} disabled={moving} aria-pressed={moving}
                   style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, cursor: 'pointer', border: '1.5px solid #CFE0F1', background: moving ? '#EAF3FF' : '#fff', color: '#0B4F9E' }}>เลื่อน / แก้ไขนัด</button>
                 <a href={'#/print/' + encodeURIComponent(b.ref)} target="_blank" rel="noopener"
-                  style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, border: '1.5px solid ' + (b.status === 'pending' ? '#CFE0F1' : '#1466C7'), background: b.status === 'pending' ? '#fff' : '#1466C7', color: b.status === 'pending' ? '#0B4F9E' : '#fff' }}>🖨 พิมพ์ใบนัดหมาย</a>
+                  style={{ fontSize: 12, fontWeight: 700, padding: '9px 13px', borderRadius: 10, border: '1.5px solid ' + (slipPrintable(b.mode, b.status) ? '#1466C7' : '#CFE0F1'), background: slipPrintable(b.mode, b.status) ? '#1466C7' : '#fff', color: slipPrintable(b.mode, b.status) ? '#fff' : '#0B4F9E' }}>🖨 พิมพ์ใบนัดหมาย</a>
               </div>
             </>
           )}

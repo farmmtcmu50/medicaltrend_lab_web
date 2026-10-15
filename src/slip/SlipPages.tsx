@@ -1,5 +1,5 @@
 // Appointment slip pages (ใบนัดหมาย), one A5 page per person. Shared by the Booking Console (#/print/<ref>,
-// staff may fill in HN / names / preparation) and the customer page /slip (read-only).
+// staff may fill in names / preparation) and the customer page /slip (read-only).
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { BRANCH_INFO } from '../../shared/branches';
 import type { BranchId, Catalog } from '../../shared/catalog';
@@ -18,7 +18,7 @@ export const longDate = (ymd: string) => { const d = new Date(ymd + 'T00:00:00Z'
 const slotText = (slot: string) => /^\d{2}:00$/.test(slot) ? slot + ' น.' : slot.replace('–', ' – ') + ' น.';
 const MAIN_PHONE = '095 247 2631';
 
-type Slip = { name: string; hn: string; prep: string };
+type Slip = { name: string; prep: string };
 
 export default function SlipPages({ b, catalog, editable, toolbar }: { b: SlipData; catalog: Catalog | null; editable: boolean; toolbar: ReactNode }) {
   const [slips, setSlips] = useState<Slip[] | null>(null);
@@ -37,7 +37,7 @@ export default function SlipPages({ b, catalog, editable, toolbar }: { b: SlipDa
     setSlips(Array.from({ length: b.people }, (_, i) => {
       const items = b.items.filter(it => it.person_no === i + 1);
       const prep = prepAdvice({ items: items.map(it => ({ kind: it.kind, text: describe(it.kind, it.name) })), mode: b.mode, hasLabOrder: b.has_lab_order });
-      return { name: i === 0 ? b.contact_name : '', hn: '', prep: prep.join('\n') };
+      return { name: i === 0 ? b.contact_name : '', prep: prep.join('\n') };
     }));
   }, [b, catalog, describe]);
 
@@ -46,8 +46,8 @@ export default function SlipPages({ b, catalog, editable, toolbar }: { b: SlipDa
   const branch = b.branch ? BRANCH_INFO[b.branch as BranchId] : null;
   const setSlip = (i: number, patch: Partial<Slip>) => setSlips(s => s && s.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const input: CSSProperties = { border: '1.5px solid #CFE0F1', borderRadius: 8, padding: '6px 9px', fontSize: 13, fontFamily: 'inherit', width: '100%', background: '#FFFDF5' };
-  const field = (value: string, placeholder: string, onChange: (v: string) => void, style?: CSSProperties) => editable
-    ? <><input className="ps-screen" style={{ ...input, ...style }} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} /><span className="ps-print">{value || '\u00a0'}</span></>
+  const field = (value: string, placeholder: string, onChange: (v: string) => void) => editable
+    ? <><input className="ps-screen" style={input} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} /><span className="ps-print">{value || '\u00a0'}</span></>
     : <span>{value || '\u00a0'}</span>;
 
   return (
@@ -76,7 +76,6 @@ export default function SlipPages({ b, catalog, editable, toolbar }: { b: SlipDa
             <table className="ps-table">
               <tbody>
                 <tr><th>ชื่อ-นามสกุล</th><td>{field(s.name, 'ชื่อ-นามสกุลผู้รับบริการ', v => setSlip(i, { name: v }))}</td></tr>
-                <tr><th>หมายเลขคนไข้ (HN)</th><td>{field(s.hn, 'ถ้าไม่มีให้เว้นว่าง', v => setSlip(i, { hn: v }), { maxWidth: 220 })}</td></tr>
                 <tr>
                   <th>{b.mode === 'home' ? 'สถานที่นัดหมาย' : 'สาขาที่นัดหมาย'}</th>
                   <td>

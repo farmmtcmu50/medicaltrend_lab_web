@@ -1,4 +1,4 @@
-// Booking Console: printable appointment slip at #/print/<ref>. Staff can fill in the patient number (HN), names of
+// Booking Console: printable appointment slip at #/print/<ref>. Staff can fill in the names of
 // other people and adjust the preparation text before printing; those edits are for the printout only.
 import { useEffect, useState } from 'react';
 import type { AdminBooking } from '../../shared/admin';
@@ -23,8 +23,8 @@ export default function PrintSlip({ ref_: ref }: { ref_: string }) {
     <SlipPages b={b} catalog={cat} editable toolbar={<>
       <div>
         <b>ใบนัดหมาย {b.ref}</b> · {b.people} ใบ (1 ใบต่อผู้รับบริการ 1 ท่าน)
-        <div style={{ fontSize: 12, color: '#536C89', marginTop: 3 }}>กรอกหมายเลขคนไข้ (ถ้ามี) และแก้ไขการเตรียมตัวได้ในช่องสีเหลือง · ข้อมูลที่กรอกใช้สำหรับพิมพ์เท่านั้น ไม่ถูกบันทึก</div>
-        {b.status === 'pending' && <div style={{ fontSize: 12, color: '#A26A00', marginTop: 3 }}>⚠ การจองนี้ยังไม่ได้ยืนยันนัด</div>}
+        <div style={{ fontSize: 12, color: '#536C89', marginTop: 3 }}>กรอกชื่อผู้รับบริการและแก้ไขการเตรียมตัวได้ในช่องสีเหลือง · ข้อมูลที่กรอกใช้สำหรับพิมพ์เท่านั้น ไม่ถูกบันทึก</div>
+        {b.mode === 'home' && b.status === 'pending' && <div style={{ fontSize: 12, color: '#A26A00', marginTop: 3 }}>⚠ งานเจาะเลือดถึงบ้านนี้ยังไม่ได้ยืนยันนัด</div>}
       </div>
       <span style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => window.close()} className="ps-btn">ปิด</button>

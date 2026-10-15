@@ -11,6 +11,7 @@
 // STD bookings are worded neutrally (no test or disease names) because subjects show on lock screens.
 import { BRANCH_INFO } from '../shared/branches';
 import type { BranchId } from '../shared/catalog';
+import { slipPrintable } from '../shared/prep';
 import { addDays, bangkokToday } from './util';
 
 export interface MailEnv {
@@ -234,8 +235,10 @@ export function render(b: Row, items: Item[], kind: MailKind, extra?: MailExtra)
   }
 
   const contactPhone = (branch && branch.phone) || MAIN_PHONE;
-  // Confirmed appointments get a link to the printable slip (/slip asks for the booking phone number).
-  const slipUrl = ['confirmed', 'reminder', 'rescheduled'].includes(kind) ? `${SITE}/slip?ref=${encodeURIComponent(b.ref)}` : '';
+  // Link to the printable slip (/slip asks for the booking phone number): branch visits from the booking email on,
+  // home collection once staff have confirmed it.
+  const slipUrl = ['booked', 'confirmed', 'reminder', 'rescheduled'].includes(kind) && slipPrintable(b.mode, kind === 'confirmed' ? 'confirmed' : b.status)
+    ? `${SITE}/slip?ref=${encodeURIComponent(b.ref)}` : '';
   const slipBtn = slipUrl ? `<p style="margin:18px 0 0;text-align:center"><a href="${slipUrl}" style="display:inline-block;background:#1466C7;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 22px;border-radius:999px">${L('ดู / พิมพ์ใบนัดหมาย', 'View / print appointment slip')}</a></p>` : '';
   const html = `<!doctype html><html><body style="margin:0;background:#EEF3F9;font-family:'Sarabun','Tahoma','Segoe UI',Arial,sans-serif;color:#0F2540">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF3F9;padding:24px 12px"><tr><td align="center">

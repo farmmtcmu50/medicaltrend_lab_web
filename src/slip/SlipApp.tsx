@@ -1,9 +1,9 @@
 // /slip — customers look up their booking (reference + phone used to book) and print the appointment slip.
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import type { Catalog } from '../../shared/catalog';
+import { slipPrintable } from '../../shared/prep';
 import SlipPages, { longDate, type SlipData } from './SlipPages';
 
-const PRINTABLE = ['confirmed', 'assigned', 'enroute', 'collected', 'lab', 'result', 'done'];
 const card: CSSProperties = { background: '#fff', border: '1px solid #E4ECF5', borderRadius: 18, padding: 24, boxShadow: '0 20px 40px -30px rgba(4,28,58,.4)' };
 const field: CSSProperties = { width: '100%', boxSizing: 'border-box', border: '1.5px solid #DFE8F2', borderRadius: 12, padding: '12px 14px', fontSize: 16, fontFamily: 'inherit', color: '#0F2540', background: '#fff' };
 const label: CSSProperties = { fontSize: 13, fontWeight: 600, color: '#3D5674', display: 'block', marginBottom: 6 };
@@ -40,7 +40,7 @@ export default function SlipApp() {
     }
   };
 
-  if (b && PRINTABLE.includes(b.status)) {
+  if (b && slipPrintable(b.mode, b.status)) {
     return (
       <SlipPages b={b} catalog={cat} editable={false} toolbar={<>
         <div>
@@ -80,7 +80,7 @@ export default function SlipApp() {
               ? { background: '#FDECEC', color: '#A3242A' } : { background: '#FFF4E0', color: '#7A5200' }) }}>
               {b.status === 'cancelled'
                 ? 'การจองนี้ถูกยกเลิกแล้ว หากต้องการนัดหมายใหม่ กรุณาจองใหม่หรือติดต่อเรา'
-                : 'การจองของคุณอยู่ระหว่างรอเจ้าหน้าที่ยืนยันนัด ใบนัดจะพิมพ์ได้หลังจากยืนยันนัดแล้ว เจ้าหน้าที่จะติดต่อกลับโดยเร็ว'}
+                : 'บริการเจาะเลือดถึงบ้านของคุณอยู่ระหว่างรอเจ้าหน้าที่ยืนยันนัด เมื่อยืนยันแล้วเราจะส่งอีเมลพร้อมลิงก์พิมพ์ใบนัดให้ หรือกลับมาที่หน้านี้อีกครั้ง'}
             </div>
             <button onClick={() => setB(null)} style={{ marginTop: 16, border: '1.5px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 14, fontWeight: 700, padding: '10px 18px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}>ค้นหาใหม่</button>
           </div>
