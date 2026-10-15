@@ -2,7 +2,9 @@
 // Keep a library of cards (poster + tests + price), switch each one on or off, and set the order.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { PopularRow } from '../../shared/admin';
-import type { Catalog } from '../../shared/catalog';
+import { isStiCard, type Catalog } from '../../shared/catalog';
+
+const toCard = (r: PopularRow) => ({ tiers: r.tiers_json ? (JSON.parse(r.tiers_json) as { label: string }[]) : undefined });
 import { api, type ApiError } from './api';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -20,10 +22,10 @@ const ERRORS: Record<string, string> = {
 type Mode = 'price' | 'code' | 'tiers';
 interface Draft {
   id?: string; name: string; nameEn: string; detail: string; detailEn: string; mode: Mode;
-  price: string; was: string; code: string; tiers: { label: string; price: string }[]; stdLink: boolean; active: boolean;
+  price: string; was: string; code: string; tiers: { label: string; price: string }[]; active: boolean;
   poster: string; file: Blob | null; preview: string;
 }
-const blank = (): Draft => ({ name: '', nameEn: '', detail: '', detailEn: '', mode: 'price', price: '', was: '', code: '', tiers: [{ label: '', price: '' }], stdLink: false, active: true, poster: '', file: null, preview: '' });
+const blank = (): Draft => ({ name: '', nameEn: '', detail: '', detailEn: '', mode: 'price', price: '', was: '', code: '', tiers: [{ label: '', price: '' }], active: true, poster: '', file: null, preview: '' });
 const fromRow = (r: PopularRow): Draft => {
   const tiers = r.tiers_json ? (JSON.parse(r.tiers_json) as { label: string; price: number }[]) : [];
   return {
@@ -31,7 +33,7 @@ const fromRow = (r: PopularRow): Draft => {
     mode: tiers.length ? 'tiers' : r.code ? 'code' : 'price',
     price: r.price?.toString() ?? '', was: r.was?.toString() ?? '', code: r.code ?? '',
     tiers: tiers.length ? tiers.map(t => ({ label: t.label, price: String(t.price) })) : [{ label: '', price: '' }],
-    stdLink: !!r.std_link, active: !!r.active, poster: r.poster, file: null, preview: r.poster,
+    active: !!r.active, poster: r.poster, file: null, preview: r.poster,
   };
 };
 
@@ -86,7 +88,7 @@ export default function PopularAdmin({ toast }: { toast: (m: string) => void }) 
     if (!draft) return;
     const d = draft;
     const data: Record<string, unknown> = {
-      id: d.id, name: d.name, nameEn: d.nameEn, detail: d.detail, detailEn: d.detailEn, stdLink: d.stdLink, active: d.active,
+      id: d.id, name: d.name, nameEn: d.nameEn, detail: d.detail, detailEn: d.detailEn, active: d.active,
       price: d.mode === 'price' ? d.price : null, was: d.was || null, code: d.mode === 'code' ? d.code : '',
       tiers: d.mode === 'tiers' ? d.tiers.filter(t => t.label || t.price) : [],
     };
@@ -174,13 +176,10 @@ export default function PopularAdmin({ toast }: { toast: (m: string) => void }) 
                     </div>
                   ))}
                   {draft.tiers.length < 8 && <button type="button" onClick={() => setDraft({ ...draft, tiers: [...draft.tiers, { label: '', price: '' }] })} style={{ ...btn, alignSelf: 'start' }}>+ เพิ่มระดับ</button>}
+                  <span style={{ fontSize: 11.5, color: '#7C93AD' }}>ถ้าตั้งชื่อระดับเป็นจำนวนเชื้อ เช่น "3 เชื้อ", "7 เชื้อ" การ์ดจะเปิดหน้าต่างให้ลูกค้าเลือกเชื้อ STI PCR และคิดราคาตามจำนวนเชื้อ</span>
                 </div>
               </Field>
             )}
-            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer' }}>
-              <input type="checkbox" checked={draft.stdLink} onChange={e => setDraft({ ...draft, stdLink: e.target.checked })} style={{ marginTop: 2 }} />
-              <span>ปุ่มในการ์ดพาไปจองที่หน้า HIV/STD (/std) แทนการเลือกลงรายการจอง</span>
-            </label>
             {!draft.id && (
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
                 <input type="checkbox" checked={draft.active} onChange={e => setDraft({ ...draft, active: e.target.checked })} />
@@ -207,7 +206,7 @@ export default function PopularAdmin({ toast }: { toast: (m: string) => void }) 
             <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.35 }}>{r.name}</div>
               <div style={{ fontSize: 11.5, color: '#536C89', lineHeight: 1.45 }}>{r.detail}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0B4F9E' }}>{priceLabel(r)}{r.std_link ? <span style={{ fontSize: 11, color: '#7A3E9D', fontWeight: 600 }}> · ลิงก์ไปหน้า STD</span> : null}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#0B4F9E' }}>{priceLabel(r)}{isStiCard(toCard(r)) ? <span style={{ fontSize: 11, color: '#7A3E9D', fontWeight: 600 }}> · เปิดหน้าต่างเลือกเชื้อ STI PCR</span> : null}</div>
               <div style={{ marginTop: 'auto', paddingTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button onClick={() => run(() => api.popularActive(r.id, !r.active), r.active ? 'ซ่อนจากหน้าเว็บแล้ว' : 'แสดงบนหน้าเว็บแล้ว')} disabled={busy} style={r.active ? btn : primary}>{r.active ? 'ซ่อน' : 'แสดง'}</button>
                 <button onClick={() => setDraft(fromRow(r))} disabled={busy} style={btn}>แก้ไข</button>

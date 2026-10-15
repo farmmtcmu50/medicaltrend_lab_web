@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, PRICING, STD_INCLUDES, maxKm, minHomeFee, packagePrices, stiCap, stiTierName, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
+  BRANCH_IDS, PRICING, STD_INCLUDES, isStiCard, maxKm, minHomeFee, packagePrices, stiCap, stiTierName, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { bookingHours } from '../shared/std';
@@ -631,7 +631,7 @@ export default function App() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(268px, 100%), 1fr))', gap: 18 }}>
           {(catalog.popular ?? []).map(p => {
-            const on = p.stdLink && p.tiers ? !!curSti : p.tiers ? p.tiers.some(tr => cur.pks.includes(popularKey(p, tr))) : cur.pks.includes(p.name);
+            const on = isStiCard(p) ? !!curSti : p.tiers ? p.tiers.some(tr => cur.pks.includes(popularKey(p, tr))) : cur.pks.includes(p.name);
             const name = en ? p.nameEn : p.name;
             const toggle = (key: string, group: boolean) => updatePerson(act, pp => {
               if (pp.pks.includes(key)) return { ...pp, pks: pp.pks.filter(k => k !== key) };
@@ -646,7 +646,7 @@ export default function App() {
                 <div style={{ padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', lineHeight: 1.35 }}>{name}</div>
                   <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55, textWrap: 'pretty' }}>{en ? p.detailEn : p.detail}</div>
-                  {p.stdLink && p.tiers ? (
+                  {isStiCard(p) ? (
                     <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 6 }}>
                       <span style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: 11.5, color: '#6B7F99' }}>{curSti ? `STI PCR ${stiCap(curSti)} ${L('เชื้อ', 'pathogens')}` : L('เริ่มต้น', 'From')}</span>

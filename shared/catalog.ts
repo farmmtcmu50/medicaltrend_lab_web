@@ -122,6 +122,10 @@ export const STD_INCLUDES: Record<string, string[]> = {
   'STD Complete + HPV': ['STD Basic', 'STD Complete', ...STI_NAMES],
   'STD Early Detection': ['STD Basic', 'STD Complete', 'STD Complete + HPV', ...STI_NAMES],
 };
+/** A popular card whose price tiers are pathogen counts ("3 เชื้อ", "7 เชื้อ"…) books STI PCR through the pathogen popup. */
+export const isStiCard = (p: { tiers?: { label: string }[] }) =>
+  !!p.tiers?.length && p.tiers.every(t => /^\d+\s*(เชื้อ|pathogens?)$/i.test(t.label.trim()));
+
 export const STD_PATHOGEN_CODES = STD_PATHOGENS.map(p => p[0]);
 
 /** Why a person's STD selection cannot be booked, or null. Pathogens are required exactly when an STI tier is chosen. */
