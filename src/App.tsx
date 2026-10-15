@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import {
-  BRANCH_IDS, PRICING, STD_INCLUDES, STD_ITEMS, maxKm, minHomeFee, packagePrices, stiCap, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
+  BRANCH_IDS, PRICING, STD_INCLUDES, maxKm, minHomeFee, packagePrices, stiCap, stiTierName, popularKey, posterFor, snapshotCatalog, travelFee, travelTierLabel,
   type BranchId, type Catalog, type PatientType,
 } from '../shared/catalog';
 import { bookingHours } from '../shared/std';
-import { STD_PATHOGENS } from '../shared/std';
+import { STD_PATHOGENS, TIER_CAPS, TIER_PRICES, tierPrice } from '../shared/std';
 import { copyAll } from './std/copy';
 import { detectRef } from './ref';
 import { useHomePricing } from './usePricing';
@@ -15,8 +15,8 @@ import { branches as branchList, features as featureList, visitSteps } from './c
 import { BookingDialog, type BookingDraft } from './BookingDialog';
 import * as ui from './ui';
 
-export interface Person { pks: string[]; picked: string[] }
-const emptyPerson = (): Person => ({ pks: [], picked: [] });
+export interface Person { pks: string[]; picked: string[]; /** STI PCR pathogen codes (with an STI PCR item in pks). */ pathogens: string[] }
+const emptyPerson = (): Person => ({ pks: [], picked: [], pathogens: [] });
 
 const MAX_FILE = 10 * 1024 * 1024;
 const FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
@@ -75,6 +75,7 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [bookError, setBookError] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [stiOpen, setStiOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const t = DICT[lang];
@@ -127,6 +128,7 @@ export default function App() {
 
   const act = Math.min(active, persons.length - 1);
   const cur = persons[act];
+  const curSti = cur.pks.find(k => stiCap(k) !== null);
   const peopleTotal = persons.reduce((a, p) => a + personSum(p), 0);
   const travel = travelFee(mode, distance, persons.length, hp);
   const total = peopleTotal + travel;
@@ -147,10 +149,21 @@ export default function App() {
   // STD items for the active person: a bigger package replaces what it includes, and only one STI PCR size at a time.
   const toggleStd = (name: string) => {
     const p = persons[act];
-    if (p.pks.includes(name)) return updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => k !== name) }));
+    if (p.pks.includes(name)) return updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => k !== name), pathogens: stiCap(name) !== null ? [] : pp.pathogens }));
     const coveredBy = p.pks.find(k => (STD_INCLUDES[k] ?? []).includes(name));
     if (coveredBy) return setToast(L(coveredBy.replace(/^STD /, '') + ' รวมรายการนี้อยู่แล้ว', coveredBy.replace(/^STD /, '') + ' already includes this'));
-    updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => !(STD_INCLUDES[name] ?? []).includes(k) && !(stiCap(name) !== null && stiCap(k) !== null)).concat(name) }));
+    updatePerson(act, pp => {
+      const pks = pp.pks.filter(k => !(STD_INCLUDES[name] ?? []).includes(k) && !(stiCap(name) !== null && stiCap(k) !== null)).concat(name);
+      return { ...pp, pks, pathogens: pks.some(k => stiCap(k) !== null) ? pp.pathogens : [] };
+    });
+  };
+  // STI PCR from the pathogen popup: the number picked sets the size (3 / 7 / 11 / 14) and so the price.
+  const saveSti = (codes: string[]) => {
+    const covered = cur.pks.find(k => (STD_INCLUDES[k] ?? []).some(x => stiCap(x) !== null));
+    if (codes.length && covered) { setStiOpen(false); return setToast(L(covered.replace(/^STD /, '') + ' รวม STI PCR 14 เชื้ออยู่แล้ว', covered.replace(/^STD /, '') + ' already includes STI PCR 14')); }
+    const cap = TIER_CAPS.find(c => codes.length <= c)!;
+    updatePerson(act, pp => ({ ...pp, pks: pp.pks.filter(k => stiCap(k) === null).concat(codes.length ? [stiTierName(cap)] : []), pathogens: codes }));
+    setStiOpen(false);
   };
   const toggleIn = (list: string[], key: string) => (list.includes(key) ? list.filter(k => k !== key) : list.concat(key));
 
@@ -270,7 +283,7 @@ export default function App() {
   };
   const draft: BookingDraft = {
     mode, branch, visitDate, slot, address, coords, mapUrl: mapLink?.url ?? null, ref, patientType: patient, distanceKm: distance, file, lang,
-    persons: persons.map(p => ({ packages: p.pks, tests: p.picked })),
+    persons: persons.map(p => ({ packages: p.pks, tests: p.picked, ...(p.pks.some(k => stiCap(k) !== null) ? { pathogens: p.pathogens } : {}) })),
     total,
     rxPending: hasRx,
   };
@@ -293,7 +306,7 @@ export default function App() {
     const cnt = p.picked.length;
     if (hasRx && p.pks.length + cnt === 0) return { label: personLabel(i) + ' · ' + t.rxPersonLabel, note: t.rxPendingNote, value: t.rxPending };
     return {
-      label: personLabel(i) + ' · ' + (p.pks.length ? p.pks.join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')),
+      label: personLabel(i) + ' · ' + (p.pks.length ? p.pks.map(k => (stiCap(k) !== null ? k + ' (' + p.pathogens.join(', ') + ')' : k)).join(' + ') : L('ไม่เลือกแพ็กเกจ', 'No package')),
       note: (p.pks.length ? L('แพ็กเกจ ฿', 'Package ฿') + ui.fmt(pkgSum(p)) : L('เฉพาะรายการเดี่ยว', 'Single tests only')) +
         (cnt ? L(' + รายการเดี่ยว ', ' + ') + cnt + L(' รายการ', ' single tests') : ''),
       value: '฿' + ui.fmt(personSum(p)),
@@ -618,7 +631,7 @@ export default function App() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(268px, 100%), 1fr))', gap: 18 }}>
           {(catalog.popular ?? []).map(p => {
-            const on = p.tiers ? p.tiers.some(tr => cur.pks.includes(popularKey(p, tr))) : cur.pks.includes(p.name);
+            const on = p.stdLink && p.tiers ? !!curSti : p.tiers ? p.tiers.some(tr => cur.pks.includes(popularKey(p, tr))) : cur.pks.includes(p.name);
             const name = en ? p.nameEn : p.name;
             const toggle = (key: string, group: boolean) => updatePerson(act, pp => {
               if (pp.pks.includes(key)) return { ...pp, pks: pp.pks.filter(k => k !== key) };
@@ -633,22 +646,13 @@ export default function App() {
                 <div style={{ padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', lineHeight: 1.35 }}>{name}</div>
                   <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55, textWrap: 'pretty' }}>{en ? p.detailEn : p.detail}</div>
-                  {p.stdLink ? (
-                    <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ display: 'flex', flexDirection: 'column' }}>
-                          {p.was && <span style={{ fontSize: 11.5, color: '#93AEC4', textDecoration: 'line-through' }}>฿{ui.fmt(p.was)}</span>}
-                          {p.tiers && <span style={{ fontSize: 11.5, color: '#6B7F99' }}>{L('เริ่มต้น', 'From')}</span>}
-                          <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em', color: '#0B4F9E', whiteSpace: 'nowrap' }}>
-                            ฿{ui.fmt(p.tiers ? p.tiers[0].price : p.price!)}
-                          </span>
-                        </span>
-                        <a href="#std" className="h-pale" style={{ ...ui.popularBtn(false), textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          {t.stdCardCta}
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
-                        </a>
-                      </div>
-                      <div style={{ fontSize: 11.5, color: '#8FA6C0', lineHeight: 1.5 }}>{t.stdCardNote}</div>
+                  {p.stdLink && p.tiers ? (
+                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 6 }}>
+                      <span style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: 11.5, color: '#6B7F99' }}>{curSti ? `STI PCR ${stiCap(curSti)} ${L('เชื้อ', 'pathogens')}` : L('เริ่มต้น', 'From')}</span>
+                        <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-.02em', color: '#0B4F9E', whiteSpace: 'nowrap' }}>฿{ui.fmt(curSti ? pkPrice.get(curSti) : TIER_PRICES[0])}</span>
+                      </span>
+                      <button onClick={() => setStiOpen(true)} style={ui.popularBtn(!!curSti)} aria-pressed={!!curSti}>{curSti ? L('แก้ไขเชื้อ', 'Edit pathogens') : L('เลือกเชื้อ', 'Choose pathogens')}</button>
                     </div>
                   ) : p.tiers ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 'auto', paddingTop: 4 }}>
@@ -677,10 +681,6 @@ export default function App() {
             );
           })}
         </div>
-              <a href="#std" style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14.5, fontWeight: 600, color: '#0B4F9E' }}>
-          {L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์ครบทุกแพ็กเกจ · เลือกเชื้อ PCR เอง', 'All HIV & STD packages · build your own PCR panel')}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 5 7 7-7 7" /></svg>
-        </a>
       </section>}
 
       {/* ---------------------------------------------------------------- STEP 2 · HIV / STD (was the /std page) */}
@@ -692,7 +692,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap', marginBottom: 24 }}>
           <h2 style={{ margin: 0, ...ui.h2Step }}>{L('ตรวจ HIV และโรคติดต่อทางเพศสัมพันธ์', 'HIV & STD testing')}</h2>
           <p style={{ ...ui.lede, maxWidth: 460, fontSize: 14.5 }}>
-            {L('ผลเป็นความลับ · ไม่ต้องแสดงบัตรประชาชน · STI PCR เลือกจำนวนเชื้อที่นี่ แล้วเลือกชื่อเชื้อในขั้นยืนยันนัด · เพิ่มให้ ', 'Confidential results · no ID needed · pick an STI PCR size here, then the pathogens when you confirm · adding for ')}{personLabel(act)}
+            {L('ผลเป็นความลับ · ไม่ต้องแสดงบัตรประชาชน · เพิ่มให้ ', 'Confidential results · no ID needed · adding for ')}{personLabel(act)}
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))', gap: 16 }}>
@@ -720,19 +720,18 @@ export default function App() {
           })}
           <div style={{ ...ui.popularCard(cur.pks.some(k => stiCap(k) !== null)), padding: '18px 18px 20px', display: 'flex', flexDirection: 'column', gap: 9 }}>
             <span style={{ fontSize: 16, fontWeight: 700 }}>STI PCR · {L('เลือกเชื้อเอง', 'choose pathogens')}</span>
-            <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55 }}>{L('Realtime PCR จากตัวอย่างครั้งเดียว · รู้ผลใน 3 วัน · เลือกจำนวนเชื้อ แล้วเลือกชื่อเชื้อในขั้นยืนยันนัด', 'Realtime PCR from one sample · results in 3 days · choose how many here, which ones when you confirm')}</div>
+            <div style={{ fontSize: 12.5, color: '#536C89', lineHeight: 1.55 }}>{L('Realtime PCR จากตัวอย่างครั้งเดียว · รู้ผลใน 3 วัน · เลือกเชื้อที่ต้องการ ราคาคิดตามจำนวนเชื้อ', 'Realtime PCR from one sample · results in 3 days · pick the pathogens, priced by how many')}</div>
             <div style={{ fontSize: 11.5, color: '#8FA6C0', lineHeight: 1.5 }}>{STD_PATHOGENS.map(x => en ? x[3] : x[2]).filter((v, i, a) => a.indexOf(v) === i).join(' · ')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 'auto', paddingTop: 6 }}>
-              {STD_ITEMS.filter(x => x.cap).map(x => {
-                const on = cur.pks.includes(x.name);
-                const covered = cur.pks.find(k => (STD_INCLUDES[k] ?? []).includes(x.name));
-                return (
-                  <button key={x.name} onClick={() => toggleStd(x.name)} disabled={!!covered} style={{ ...ui.tierBtn(on), opacity: covered ? .45 : 1 }} aria-pressed={on}>
-                    <span style={{ fontWeight: 700 }}>{x.cap} {L('เชื้อ', 'pathogens')}</span>
-                    <span style={{ opacity: .72 }}>฿{ui.fmt(x.price)}</span>
-                  </button>
-                );
-              })}
+              {TIER_CAPS.map((cap, i) => (
+                <span key={cap} style={{ ...ui.tierBtn(curSti === stiTierName(cap)), cursor: 'default' }}>
+                  <span style={{ fontWeight: 700 }}>{L('≤ ', 'up to ')}{cap} {L('เชื้อ', 'pathogens')}</span>
+                  <span style={{ opacity: .72 }}>฿{ui.fmt(TIER_PRICES[i])}</span>
+                </span>
+              ))}
+              <button onClick={() => setStiOpen(true)} style={{ ...ui.popularBtn(!!curSti), marginTop: 6, width: '100%' }} aria-pressed={!!curSti}>
+                {curSti ? L(`แก้ไขเชื้อ (เลือกแล้ว ${cur.pathogens.length} เชื้อ)`, `Edit pathogens (${cur.pathogens.length} chosen)`) : L('เลือกเชื้อที่ต้องการตรวจ', 'Choose pathogens')}
+              </button>
             </div>
           </div>
         </div>
@@ -1060,6 +1059,9 @@ export default function App() {
         </div>
       </footer>
 
+      {/* ---------------------------------------------------------------- STI PCR pathogen popup */}
+      {stiOpen && <StiPicker en={en} who={personLabel(act)} initial={cur.pathogens} onClose={() => setStiOpen(false)} onSave={saveSti} />}
+
       {/* ---------------------------------------------------------------- poster popup */}
       {poster && (
         <div onClick={() => setPoster(null)} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(4,28,58,.72)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', padding: 24, animation: 'riseIn .2s ease both' }}>
@@ -1114,6 +1116,69 @@ export default function App() {
 }
 
 const stepperBtn: CSSProperties = { width: 34, height: 34, border: 0, borderRadius: 999, background: '#EAF3FF', color: '#0B4F9E', fontSize: 18, fontWeight: 700, lineHeight: 1, cursor: 'pointer' };
+
+/** Choose STI PCR pathogens; the count sets the size and price (≤3 ฿1,200 · ≤7 ฿1,600 · ≤11 ฿1,800 · 14 ฿2,100). */
+function StiPicker({ en, who, initial, onClose, onSave }: { en: boolean; who: string; initial: string[]; onClose: () => void; onSave: (codes: string[]) => void }) {
+  const L = (th: string, e: string) => (en ? e : th);
+  const [picked, setPicked] = useState<string[]>(initial);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+  const n = picked.length;
+  const cap = TIER_CAPS.find(c => n <= c) ?? 14;
+  const toggle = (code: string) => setPicked(list => (list.includes(code) ? list.filter(c => c !== code) : [...list, code]));
+  const all = n === STD_PATHOGENS.length;
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(4,28,58,.72)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', padding: 16 }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="sti-title" onClick={e => e.stopPropagation()}
+        style={{ width: 'min(100%, 620px)', maxHeight: 'calc(100dvh - 32px)', background: '#fff', borderRadius: 22, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 40px 90px -30px rgba(0,0,0,.6)' }}>
+        <div style={{ padding: '18px 22px', borderBottom: '1px solid #EEF3F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <h2 id="sti-title" style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{L('เลือกเชื้อที่ต้องการตรวจ · STI PCR', 'Choose pathogens · STI PCR')}</h2>
+            <div style={{ fontSize: 12.5, color: '#536C89', marginTop: 3 }}>{who} · {L('ราคาคิดตามจำนวนเชื้อที่เลือก', 'priced by how many you pick')}</div>
+          </div>
+          <button onClick={onClose} aria-label={L('ปิด', 'Close')} style={{ width: 32, height: 32, border: 0, borderRadius: 10, background: '#EEF3F9', color: '#3D5674', fontSize: 17, cursor: 'pointer', flexShrink: 0 }}>×</button>
+        </div>
+        <div style={{ padding: '14px 22px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {TIER_CAPS.map((c, i) => (
+              <span key={c} style={{ fontSize: 12, padding: '6px 10px', borderRadius: 999, border: '1.5px solid ' + (n && c === cap ? '#1466C7' : '#E4ECF5'), background: n && c === cap ? '#EAF3FF' : '#fff', color: n && c === cap ? '#0B4F9E' : '#6B7F99', fontWeight: n && c === cap ? 700 : 500 }}>
+                {i === 0 ? '1–3' : `${TIER_CAPS[i - 1] + 1}–${c}`} {L('เชื้อ', 'pathogens')} ฿{TIER_PRICES[i].toLocaleString('en-US')}
+              </span>
+            ))}
+            <button onClick={() => setPicked(all ? [] : STD_PATHOGENS.map(x => x[0]))} style={{ marginLeft: 'auto', border: 0, background: 'transparent', color: '#0B4F9E', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>{all ? L('ล้างทั้งหมด', 'Clear all') : L('เลือกครบ 14 เชื้อ', 'Select all 14')}</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))', gap: 7 }}>
+            {STD_PATHOGENS.map(([code, sci, th, eng]) => {
+              const on = picked.includes(code);
+              return (
+                <label key={code} style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '9px 11px', borderRadius: 11, cursor: 'pointer', fontSize: 13, lineHeight: 1.35,
+                  border: '1.5px solid ' + (on ? '#1466C7' : '#E4ECF5'), background: on ? '#EAF3FF' : '#fff' }}>
+                  <input type="checkbox" checked={on} onChange={() => toggle(code)} style={{ marginTop: 2, accentColor: '#1466C7' }} />
+                  <span><b>{code}</b> · {en ? eng : th}<span style={{ display: 'block', fontSize: 11, color: '#7C93AD', fontStyle: 'italic' }}>{sci}</span></span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <div style={{ padding: '14px 22px 18px', borderTop: '1px solid #EEF3F9', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', flexDirection: 'column', marginRight: 'auto' }}>
+            <span style={{ fontSize: 12, color: '#6B7F99' }}>{n ? L(`เลือก ${n} เชื้อ · STI PCR ${cap} เชื้อ`, `${n} chosen · STI PCR ${cap}`) : L('ยังไม่ได้เลือกเชื้อ', 'No pathogens chosen')}</span>
+            <span style={{ fontSize: 22, fontWeight: 700, color: '#0B4F9E' }}>฿{tierPrice(n).toLocaleString('en-US')}</span>
+          </span>
+          {initial.length > 0 && <button onClick={() => onSave([])} style={{ border: '1.5px solid #F3CFD1', background: '#fff', color: '#A3242A', fontSize: 13, fontWeight: 700, padding: '11px 16px', borderRadius: 12, cursor: 'pointer' }}>{L('นำออก', 'Remove')}</button>}
+          <button onClick={() => onSave(picked)} disabled={!n} style={{ border: 0, background: n ? '#17B8A6' : '#B9CDE3', color: n ? '#042F2A' : '#fff', fontSize: 14, fontWeight: 700, padding: '12px 20px', borderRadius: 12, cursor: n ? 'pointer' : 'default' }}>
+            {initial.length ? L('บันทึกการเลือก', 'Save') : L('เพิ่มลงรายการตรวจ', 'Add to my tests')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
   return (
