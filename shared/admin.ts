@@ -75,3 +75,9 @@ export interface PopularRow {
   price: number | null; was: number | null; tiers_json: string | null; code: string | null; poster: string;
   std_link: number; updated_at: string; updated_by: string;
 }
+
+/** A row of package_items (STEP 3 packages managed in the Booking Console). */
+export interface PackageRow {
+  id: string; sort: number; active: number; code: string | null; name: string; name_en: string; detail: string; detail_en: string;
+  price: number | null; poster: string; updated_at: string; updated_by: string;
+}

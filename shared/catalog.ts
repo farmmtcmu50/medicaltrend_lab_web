@@ -10,10 +10,15 @@ export const SHEET_TAB = 'Master Capital';
 /** One row of the price list (retail price only — cost columns never leave the Worker). */
 /** `id` is the sheet's รหัสการตรวจ, e.g. "CHEM-01" or "PAC-03" (rows cached before it was read have none). */
 export interface Test { id?: string; c: string; n: string; th: string; p: number; w: string }
-export interface Pkg { id?: string; name: string; detail: string; price: number }
+export interface Pkg { id?: string; name: string; detail: string; price: number; nameEn?: string; detailEn?: string; /** '' or missing = built-in poster by name. */ poster?: string }
+
+/** A STEP 3 package as set in the Booking Console (package_items). */
+export interface PackageConfig { code: string | null; name: string; nameEn: string; detail: string; detailEn: string; price: number | null; poster: string }
 export interface Catalog {
   tests: Test[];
   packages: Pkg[];
+  /** Every PAC-xx row of the sheet, shown or not: for code look-ups in the Console. */
+  pacs?: Pkg[];
   /** STEP 2 "popular" cards, managed in the Booking Console (D1 popular_items); POPULAR is the fallback. */
   popular: Popular[];
   source: 'live' | 'cache' | 'snapshot';
@@ -198,21 +203,33 @@ const PAC_RE = /^PAC-(\d+)/;
 const isPackage = (t: Test) => t.id ? PAC_RE.test(t.id) : t.c.toLowerCase() === 'package';
 const pacNo = (t: Test) => Number(t.id?.match(PAC_RE)?.[1] ?? 9999);
 
-export function buildCatalog(rows: Test[], source: Catalog['source'], syncedAt: string | null, popular: Popular[] = POPULAR): Catalog {
-  const packages = rows.filter(isPackage)
+export function buildCatalog(
+  rows: Test[], source: Catalog['source'], syncedAt: string | null, popular: Popular[] = POPULAR, pkgConfig: PackageConfig[] | null = null,
+): Catalog {
+  const pacs = rows.filter(isPackage)
     .sort((a, b) => pacNo(a) - pacNo(b))
     .map(t => ({ id: t.id, name: t.n.replace(/^Package\s+/i, ''), detail: t.th, price: t.p }));
   const tests = rows.filter(t => !isPackage(t) && t.c.toLowerCase() !== 'package');
   // A card linked to a sheet code follows the sheet's retail price (unless it is tiered).
   const byCode = new Map(rows.filter(t => t.id).map(t => [t.id!, t.p]));
+  // Packages set in the Console (price from the sheet code when there is one); none configured = every PAC-xx row.
+  const packages: Pkg[] = pkgConfig
+    ? pkgConfig.map(c => ({
+      id: c.code || undefined, name: c.name, nameEn: c.nameEn || c.name, detail: c.detail, detailEn: c.detailEn || c.detail,
+      price: (c.code && byCode.get(c.code.toUpperCase())) || c.price || 0,
+      // Uploaded poster, else the built-in one matched by the Thai / English name or the sheet's name for the code.
+      poster: c.poster || posterFor(c.name) || posterFor(c.nameEn) || posterFor(rows.find(r => r.id && r.id === c.code?.toUpperCase())?.n ?? ''),
+    })).filter(p => p.price > 0)
+    : pacs;
   const linked = popular
     .map(p => (p.code && !p.tiers?.length && byCode.has(p.code.toUpperCase()) ? { ...p, price: byCode.get(p.code.toUpperCase()) } : p))
     // A card with no price (e.g. its sheet code is missing from the sheet) cannot be booked: leave it off the page.
     .filter(p => (p.tiers?.length ? p.tiers.every(t => typeof t.price === 'number') : typeof p.price === 'number' && p.price > 0));
-  return { tests, packages, popular: linked, source, syncedAt };
+  return { tests, packages, pacs, popular: linked, source, syncedAt };
 }
 
-export const snapshotCatalog = (popular?: Popular[]): Catalog => buildCatalog(snapshot as Test[], 'snapshot', null, popular);
+export const snapshotCatalog = (popular?: Popular[], pkgConfig?: PackageConfig[] | null): Catalog =>
+  buildCatalog(snapshot as Test[], 'snapshot', null, popular, pkgConfig ?? null);
 
 // ---------- ordering / posters ----------
 

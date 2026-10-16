@@ -1,4 +1,4 @@
-import type { AdminBooking, AdminRow, AdminSummary, PopularRow, Status } from '../../shared/admin';
+import type { AdminBooking, AdminRow, AdminSummary, PackageRow, PopularRow, Status } from '../../shared/admin';
 import type { Catalog, HomePricing } from '../../shared/catalog';
 import type { EditItem } from '../../shared/itemEdit';
 
@@ -61,5 +61,16 @@ export const api = {
   settings: () => call<PricingSetting>('/settings'),
   saveHomePricing: (pricing: HomePricing) => post<PricingSetting>('/settings/home-pricing', { pricing }),
   resetHomePricing: () => post<PricingSetting>('/settings/home-pricing', { reset: true }),
+  packages: () => call<{ items: PackageRow[] }>('/packages'),
+  savePackage: (data: Record<string, unknown>, poster: Blob | null) => {
+    const form = new FormData();
+    form.set('data', JSON.stringify(data));
+    if (poster) form.set('poster', poster, 'poster.webp');
+    return call<{ items: PackageRow[] }>('/packages', { method: 'POST', body: form });
+  },
+  packagesImport: () => post<{ items: PackageRow[]; added: number }>('/packages/import', {}),
+  packageOrder: (ids: string[]) => post<{ items: PackageRow[] }>('/packages/order', { ids }),
+  packageActive: (id: string, active: boolean) => post<{ items: PackageRow[] }>('/packages/' + id + '/active', { active }),
+  packageDelete: (id: string) => post<{ items: PackageRow[] }>('/packages/' + id + '/delete', {}),
   labOrderUrl: (ref: string) => '/api/admin/bookings/' + ref + '/lab-order',
 };

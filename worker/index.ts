@@ -24,6 +24,7 @@ import { handleAdmin } from './admin';
 import { distanceFrom, distanceResponse, expandMapLink } from './geo';
 import { mailCustomer, sendReminders, type MailEnv } from './mail';
 import { handleLineWebhook, notifyBooking, type LineEnv } from './line';
+import { loadPackageConfig } from './packages';
 import { loadPopular, servePoster } from './popular';
 import { loadHomePricing, pricingResponse } from './pricing';
 import { bookingHours } from '../shared/std';
@@ -102,6 +103,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
   if (hit) return hit.json();
 
   const popular = (await loadPopular(env)) ?? undefined;
+  const pkgConfig = await loadPackageConfig(env);
   let cat: Catalog;
   try {
     const res = await fetch(
@@ -111,7 +113,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
     if (!res.ok) throw new Error('sheet http ' + res.status);
     const rows = parseSheet(await res.text());
     const now = new Date().toISOString();
-    cat = buildCatalog(rows, 'live', now, popular);
+    cat = buildCatalog(rows, 'live', now, popular, pkgConfig);
     ctx.waitUntil(env.DB.prepare(
       'INSERT INTO catalog_cache (id, rows_json, synced_at) VALUES (1, ?1, ?2) ' +
       'ON CONFLICT (id) DO UPDATE SET rows_json = excluded.rows_json, synced_at = excluded.synced_at',
@@ -120,7 +122,7 @@ async function loadCatalog(env: Env, ctx: ExecutionContext): Promise<Catalog> {
     console.warn('sheet unavailable, falling back', err);
     const row = await env.DB.prepare('SELECT rows_json, synced_at FROM catalog_cache WHERE id = 1')
       .first<{ rows_json: string; synced_at: string }>().catch(() => null);
-    cat = row ? buildCatalog(JSON.parse(row.rows_json) as Test[], 'cache', row.synced_at, popular) : snapshotCatalog(popular);
+    cat = row ? buildCatalog(JSON.parse(row.rows_json) as Test[], 'cache', row.synced_at, popular, pkgConfig) : snapshotCatalog(popular, pkgConfig);
   }
 
   ctx.waitUntil(cache.put(key, new Response(JSON.stringify(cat), {

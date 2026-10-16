@@ -786,7 +786,8 @@ export default function App() {
             <div className="pkg-list" style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 26, maxHeight: 302, overflowY: 'auto', paddingRight: 4 }}>
               {catalog.packages.map(p => {
                 const on = cur.pks.includes(p.name);
-                const poster = posterFor(p.name);
+                const poster = p.poster || posterFor(p.name);
+                const label = en ? p.nameEn || p.name : p.name;
                 return (
                   <div key={p.name} role="button" tabIndex={0} aria-pressed={on}
                     onClick={() => updatePerson(act, pp => ({ ...pp, pks: toggleIn(pp.pks, p.name) }))}
@@ -795,13 +796,13 @@ export default function App() {
                     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 5, minWidth: 0 }}>
                       <span style={{ fontSize: 14.5, fontWeight: 600 }}>
                         {p.id && <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', opacity: .55, marginRight: 8 }}>{p.id}</span>}
-                        {p.name}
+                        {label}
                       </span>
-                      <span style={{ fontSize: 11.5, opacity: .68 }}>{p.detail}</span>
+                      <span style={{ fontSize: 11.5, opacity: .68 }}>{en ? p.detailEn || p.detail : p.detail}</span>
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                       {poster && (
-                        <button onClick={e => { e.stopPropagation(); openPoster(poster, p.name); }} className="h-pale" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 11.5, fontWeight: 600, padding: '6px 11px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        <button onClick={e => { e.stopPropagation(); openPoster(poster, label); }} className="h-pale" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #CFE0F1', background: '#fff', color: '#0B4F9E', fontSize: 11.5, fontWeight: 600, padding: '6px 11px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
                           {t.viewTests}
                         </button>

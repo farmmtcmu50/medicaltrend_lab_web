@@ -2,6 +2,7 @@
 //   GET  /api/admin/me
 //   GET  /api/admin/summary
 //   /api/admin/popular…              popular cards on the booking page (worker/popular.ts)
+//   /api/admin/packages…             STEP 3 packages (worker/packages.ts)
 //   GET  /api/admin/mail-check      is RESEND_API_KEY accepted by Resend? (shape of the key, never the key)
 //   GET  /api/admin/bookings?status=&branch=&q=&from=&to=&page=   (+ calendar=1: whole from–to range, no paging)
 //   GET  /api/admin/bookings/:ref
@@ -21,6 +22,7 @@ import { MAX_ITEMS_PER_PERSON, MAX_PERSONS, describeEdit, editedTravelFee, price
 import { notifyBranchChanged, notifyItemsChanged, notifyLocationChanged, notifyRescheduled, type LineEnv } from './line';
 import { mailCheck, mailCustomer, type MailEnv } from './mail';
 import { addDays, bangkokToday } from './util';
+import { handlePackagesAdmin } from './packages';
 import { handlePopularAdmin } from './popular';
 import { handleSettingsAdmin, loadHomePricing } from './pricing';
 
@@ -45,13 +47,14 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
     if (origin && origin !== url.origin) return json({ error: 'bad_origin' }, 403);
     const ctype = req.headers.get('content-type') || '';
     // The only multipart endpoint (poster upload) must also prove it came from this page.
-    const upload = parts.length === 1 && parts[0] === 'popular' && ctype.includes('multipart/form-data') && origin === url.origin;
+    const upload = parts.length === 1 && (parts[0] === 'popular' || parts[0] === 'packages') && ctype.includes('multipart/form-data') && origin === url.origin;
     if (!upload && !ctype.includes('application/json')) return json({ error: 'json_required' }, 415);
   }
 
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'me') return json({ email });
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
   if (parts[0] === 'popular') return handlePopularAdmin(req, env, email, parts, ctx.waitUntil);
+  if (parts[0] === 'packages') return handlePackagesAdmin(req, env, email, parts, ctx);
   if (parts[0] === 'settings') return handleSettingsAdmin(req, env, email, parts);
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);
