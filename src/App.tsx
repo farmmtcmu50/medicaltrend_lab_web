@@ -602,7 +602,7 @@ export default function App() {
       <section id="features" className="wrap" style={{ ...ui.wrap, padding: '84px 24px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap', marginBottom: 36 }}>
           <div>
-            <div style={ui.eyebrow}>Why MediTrend</div>
+            <div style={ui.eyebrow}>Why MedicalTrend</div>
             <h2 style={{ margin: '12px 0 0', ...ui.h2Big }}>{t.featH2a}<br />{t.featH2b}</h2>
           </div>
           <p style={{ ...ui.lede, maxWidth: 380 }}>{t.featP}</p>
