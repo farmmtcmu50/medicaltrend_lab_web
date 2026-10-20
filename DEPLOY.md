@@ -51,6 +51,13 @@ npm run dev:worker        # build + wrangler dev ที่ http://127.0.0.1:8787
 npm run typecheck
 ```
 
+## Deploy อัตโนมัติ (Cloudflare Workers Builds)
+
+ทุกครั้งที่ push ขึ้น branch `main` ของ GitHub, Cloudflare จะ build และ deploy ให้เอง (ตั้งค่าที่ Workers & Pages → medical-trend-lab-booking → Settings → Build):
+- Build command: `npm run build` · Deploy command: `npx wrangler deploy` · Build variable: `NODE_VERSION=22`
+- ดูผลและ log ได้ที่แท็บ Deployments · ถ้า build ไม่ผ่าน เว็บจะยังเป็นเวอร์ชันเดิม
+- migration ของ D1 ไม่ได้รันอัตโนมัติ ต้อง apply แยก (`npm run db:migrate`)
+
 ## Deploy ครั้งแรก
 
 1. `npx wrangler login` (หรือตั้งค่า `CLOUDFLARE_API_TOKEN`) ด้วยบัญชี Cloudflare เดียวกับที่มี D1/R2 ข้างต้น
