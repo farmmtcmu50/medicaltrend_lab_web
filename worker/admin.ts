@@ -25,6 +25,7 @@ import { addDays, bangkokToday } from './util';
 import { handlePackagesAdmin } from './packages';
 import { handlePopularAdmin } from './popular';
 import { handleSettingsAdmin, loadHomePricing } from './pricing';
+import { handleAnalyticsAdmin } from './analytics';
 
 interface Env extends LineEnv, MailEnv { UPLOADS: R2Bucket }
 export interface AdminCtx {
@@ -55,6 +56,7 @@ export async function handleAdmin(req: Request, env: Env, email: string, ctx: Ad
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'summary') return json(await summary(env));
   if (parts[0] === 'popular') return handlePopularAdmin(req, env, email, parts, ctx.waitUntil);
   if (parts[0] === 'packages') return handlePackagesAdmin(req, env, email, parts, ctx);
+  if (parts[0] === 'settings' && parts[1] === 'analytics' && parts.length === 2) return handleAnalyticsAdmin(req, env, email);
   if (parts[0] === 'settings') return handleSettingsAdmin(req, env, email, parts);
   if (req.method === 'GET' && parts.length === 1 && parts[0] === 'mail-check') return json(await mailCheck(env));
   if (parts[0] !== 'bookings') return json({ error: 'not_found' }, 404);

@@ -8,6 +8,7 @@
 //   GET  /api/distance?lat=&lng=  nearest branch + road distance for the home-collection fee (worker/geo.ts)
 //   POST /api/std/bookings  booking from the STD testing page (/std), see worker/std.ts
 //   cron (daily 11:00 UTC = 18:00 Bangkok): email reminders for tomorrow's visits (worker/mail.ts)
+//   GET  /booking-success  thank-you page after a booking; the only page with Google Analytics tags (worker/analytics.ts)
 //   POST /api/line/webhook  LINE OA events; new bookings are pushed to the staff LINE group (see worker/line.ts)
 //   /admin, /api/admin/* back office, behind Cloudflare Access (see worker/access.ts, worker/admin.ts)
 // Every other path is served straight from static assets (see wrangler.jsonc).
@@ -29,6 +30,7 @@ import { loadPopular, servePoster } from './popular';
 import { loadHomePricing, pricingResponse } from './pricing';
 import { bookingHours } from '../shared/std';
 import { slipResponse } from './slip';
+import { bookingSuccessPage } from './analytics';
 import { createStdBooking } from './std';
 import { addDays, bangkokToday, bookingRef, json } from './util';
 
@@ -56,6 +58,7 @@ export default {
       if (url.pathname.startsWith('/api/posters/') && req.method === 'GET') return await servePoster(url.pathname.slice('/api/posters/'.length), env);
       if (url.pathname === '/api/distance' && req.method === 'GET') return await distanceResponse(url, env, ctx);
       if (url.pathname === '/api/slip' && req.method === 'POST') return await slipResponse(req, env);
+      if (url.pathname === '/booking-success' && (req.method === 'GET' || req.method === 'HEAD')) return await bookingSuccessPage(req, env);
       if (url.pathname === '/api/line/webhook' && req.method === 'POST') return await handleLineWebhook(req, env);
       if (url.pathname.startsWith('/api/admin') || isAdminPage(url.pathname)) {
         const auth = await authenticateAdmin(req, env);

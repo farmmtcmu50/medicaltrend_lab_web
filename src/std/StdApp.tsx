@@ -9,6 +9,7 @@ import { PRICING, SLOTS, maxKm, minHomeFee, travelFee, travelTierLabel } from '.
 import { useHomePricing } from '../usePricing';
 import { BRANCH_INFO } from '../../shared/branches';
 import { detectRef } from '../ref';
+import { successUrl } from '../success/url';
 import { useHomeLocation } from '../useHomeLocation';
 import { bookingCopy, copyAll, noticeCopy, stiCopy, type StdLang } from './copy';
 
@@ -220,7 +221,7 @@ export default function StdApp() {
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.ref) {
         setDone({ ref: body.ref, date: fmtDate(f.date), time: f.slot, branch: homeMode ? L('เจาะเลือดถึงบ้าน', 'Home collection') : t.branches[+f.branch].name, pkg: cartName, total: money(body.total ?? grand) + ' ' + t.baht });
-        document.getElementById('booking')?.scrollIntoView({ block: 'start' });
+        location.assign(successUrl({ ref: body.ref, mode: homeMode ? 'home' : 'lab', lang, total: Number(body.total ?? grand), src: 'std' }));
       } else if (body.error === 'out_of_area') {
         setErrs({ address: L('ตำแหน่งนี้อยู่นอกพื้นที่ให้บริการเจาะเลือดถึงบ้าน กรุณาโทร 095-247-2631', 'This location is outside our home-collection area. Please call 095-247-2631') });
         document.getElementById('booking')?.scrollIntoView({ block: 'start' });

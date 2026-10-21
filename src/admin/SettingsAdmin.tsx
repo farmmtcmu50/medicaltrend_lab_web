@@ -1,8 +1,10 @@
-// Booking Console → Settings: home-collection fee rules (distance tiers, people covered, extra-person fee).
+// Booking Console → Settings: home-collection fee rules (distance tiers, people covered, extra-person fee)
+// and the Google tag IDs for the booking-success page.
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { DEFAULT_HOME_PRICING, PRICING, travelFee, validateHomePricing, type HomePricing } from '../../shared/catalog';
 import { fetchHomePricing } from '../usePricing';
-import { api, ApiError, type PricingSetting } from './api';
+import { MAX_TAG_IDS, parseTagIds } from '../../shared/analytics';
+import { api, ApiError, type AnalyticsSetting, type PricingSetting } from './api';
 
 const fmt = (n: number) => '฿' + n.toLocaleString('en-US');
 const thDateTime = (iso: string) => new Date(iso).toLocaleString('th-TH', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
@@ -156,9 +158,62 @@ export default function SettingsAdmin({ toast }: { toast: (m: string) => void })
         </div>
       </div>
 
+      <AnalyticsCard toast={toast} />
+
       <div style={{ fontSize: 12, color: '#7C93AD', lineHeight: 1.7, padding: '0 4px' }}>
         • อัตราใหม่มีผลกับการจองใหม่ทันที (หน้าเว็บที่ลูกค้าเปิดค้างไว้จะอัปเดตภายใน 1 นาที และระบบตรวจยอดซ้ำตอนกดจอง)<br />
         • การจองที่มีอยู่แล้วยังคงค่าบริการเดิม · จะคิดตามอัตราใหม่เฉพาะเมื่อเจ้าหน้าที่แก้หมุดตำแหน่ง หรือเปลี่ยนจำนวนผู้รับบริการ
+      </div>
+    </div>
+  );
+}
+
+/** Google Analytics / Ads tag IDs. The Worker writes the Google snippet into /booking-success only. */
+function AnalyticsCard({ toast }: { toast: (m: string) => void }) {
+  const [setting, setSetting] = useState<AnalyticsSetting | null>(null);
+  const [text, setText] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const apply = (s: AnalyticsSetting) => { setSetting(s); setText(s.ids.join(', ')); };
+  useEffect(() => { api.analytics().then(apply).catch(e => setErr((e as ApiError).code || 'network')); }, []);
+
+  if (!setting) return <div style={{ ...card, fontSize: 13, color: err ? '#A3242A' : '#7C93AD' }}>{err ? 'โหลดการตั้งค่า Google Analytics ไม่สำเร็จ (' + err + ')' : 'กำลังโหลด…'}</div>;
+
+  const check = parseTagIds(text);
+  const dirty = !check.ok || check.ids.join(',') !== setting.ids.join(',');
+  const save = async () => {
+    if (!check.ok || !dirty) return;
+    if (!confirm(check.ids.length ? 'บันทึก Google tag: ' + check.ids.join(', ') + '\nมีผลกับหน้า "การจองสำเร็จ" ทันที' : 'ลบ Google tag ออกจากหน้า "การจองสำเร็จ"?')) return;
+    setBusy(true);
+    try { apply(await api.saveAnalytics(check.ids.join(','))); toast(check.ids.length ? 'บันทึก Google tag แล้ว' : 'ลบ Google tag แล้ว'); }
+    catch (e) { toast('บันทึกไม่สำเร็จ (' + ((e as ApiError).code || 'network') + ')'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Google Analytics · หน้าการจองสำเร็จ</div>
+        <div style={{ fontSize: 11.5, color: '#7C93AD' }}>
+          {setting.updatedAt ? 'แก้ไขล่าสุด ' + thDateTime(setting.updatedAt) + ' · ' + (setting.updatedBy || '') : 'ยังไม่ได้ตั้งค่า'}
+        </div>
+      </div>
+      <div style={{ marginTop: 6, fontSize: 12.5, color: '#536C89', lineHeight: 1.6 }}>
+        ระบบใส่ Google tag เฉพาะหน้า <a href="/booking-success" target="_blank" rel="noopener" style={{ color: '#0B4F9E' }}>/booking-success</a> ซึ่งลูกค้าจะถูกพาไปหลังจองสำเร็จ
+        และส่ง event <code>generate_lead</code> (มูลค่าเป็นบาท, transaction_id = เลขที่การจอง) ครั้งเดียวต่อการจอง · ไม่ส่งชื่อ เบอร์โทร หรือรายการตรวจไปที่ Google
+      </div>
+      <label style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#7C93AD', fontWeight: 600 }}>
+        Tag ID (คั่นด้วยจุลภาค ได้สูงสุด {MAX_TAG_IDS} รหัส) เช่น G-XXXXXXXXXX, AW-123456789 หรือ GTM-XXXXXXX
+        <input value={text} onChange={e => setText(e.target.value)} placeholder="G-XXXXXXXXXX" spellCheck={false}
+          style={{ border: '1.5px solid ' + (check.ok ? '#DFE8F2' : '#E8A5A8'), borderRadius: 10, padding: '10px 12px', fontSize: 13.5, fontWeight: 600, color: '#0F2540', fontFamily: "'IBM Plex Sans', monospace" }} />
+      </label>
+      {!check.ok && <div role="alert" style={{ marginTop: 8, fontSize: 12.5, color: '#A3242A' }}>{check.error === 'too_many' ? 'ใส่ได้สูงสุด ' + MAX_TAG_IDS + ' รหัส' : 'รูปแบบรหัสไม่ถูกต้อง ต้องขึ้นต้นด้วย G-, GT-, AW-, DC- หรือ GTM-'}</div>}
+      <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        {dirty && <button onClick={() => setText(setting.ids.join(', '))} disabled={busy} style={{ border: 0, background: 'transparent', color: '#7C93AD', fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}>ยกเลิกการแก้ไข</button>}
+        <button onClick={save} disabled={!check.ok || !dirty || busy}
+          style={{ border: 0, background: check.ok && dirty && !busy ? '#1466C7' : '#B9CDE3', color: '#fff', fontSize: 13, fontWeight: 700, padding: '10px 20px', borderRadius: 999, cursor: check.ok && dirty && !busy ? 'pointer' : 'default' }}>
+          {busy ? 'กำลังบันทึก…' : 'บันทึก Google tag'}
+        </button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import type { BranchId, PatientType, PersonSelection } from '../shared/catalog';
 import type { Dict, Lang } from './i18n';
+import { successUrl } from './success/url';
 import * as ui from './ui';
 
 export interface BookingDraft {
@@ -99,6 +100,7 @@ export function BookingDialog({ t, draft, ctaLabel, onClose, onDone, onRepriced 
       if (res.ok && body.ref) {
         setDoneRef(body.ref);
         onDone();
+        location.assign(successUrl({ ref: body.ref, mode: draft.mode, lang: draft.lang, total: Number(body.total ?? draft.total), src: 'main' }));
       } else if (res.status === 409) {
         await onRepriced();
         setServerError(body.error === 'price_changed' ? t.errPrice : t.errCatalog);

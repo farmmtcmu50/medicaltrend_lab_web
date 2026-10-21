@@ -18,6 +18,8 @@ const post = <T>(path: string, data: unknown) =>
 
 export interface PricingSetting { pricing: HomePricing; isDefault: boolean; updatedAt: string | null; updatedBy: string | null }
 
+export interface AnalyticsSetting { ids: string[]; updatedAt: string | null; updatedBy: string | null }
+
 export interface ListQuery { status?: string; branch?: string; source?: string; q?: string; from?: string; to?: string; page?: number }
 
 export const api = {
@@ -61,6 +63,8 @@ export const api = {
   settings: () => call<PricingSetting>('/settings'),
   saveHomePricing: (pricing: HomePricing) => post<PricingSetting>('/settings/home-pricing', { pricing }),
   resetHomePricing: () => post<PricingSetting>('/settings/home-pricing', { reset: true }),
+  analytics: () => call<AnalyticsSetting>('/settings/analytics'),
+  saveAnalytics: (ids: string) => post<AnalyticsSetting>('/settings/analytics', { ids }),
   packages: () => call<{ items: PackageRow[] }>('/packages'),
   savePackage: (data: Record<string, unknown>, poster: Blob | null) => {
     const form = new FormData();
