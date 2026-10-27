@@ -725,6 +725,7 @@ export default function StdApp() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
               <a href="/">{lang === 'th' ? 'ตรวจเลือด ตรวจสุขภาพ และเจาะเลือดถึงบ้าน →' : 'Blood tests, health checks & home collection →'}</a>
+              <a href="#cookie-settings">{lang === 'th' ? 'ตั้งค่าคุกกี้' : 'Cookie settings'}</a>
             </div>
           </div>
         </div>

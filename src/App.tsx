@@ -1031,7 +1031,7 @@ export default function App() {
             <p style={{ margin: 0, fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>{t.footAbout}</p>
           </div>
           <FooterCol title={t.footServices} links={[['#branches', t.fs1], ['#pricing', t.fs2], ['/std?ref=main-footer', t.fsStd], ['/slip', t.navSlip], ['#pricing', t.fs3], ['#pricing', t.fs4]]} />
-          <FooterCol title={t.footHelp} links={[['#how', t.navHow], ['#features', t.faq], ['#features', t.pdpa]]} />
+          <FooterCol title={t.footHelp} links={[['#how', t.navHow], ['#features', t.faq], ['#features', t.pdpa], ['#cookie-settings', t.cookies]]} />
           <div>
             <div style={{ color: '#fff', fontSize: 13.5, fontWeight: 600, marginBottom: 12 }}>{t.contact}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
