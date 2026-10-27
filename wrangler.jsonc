@@ -9,12 +9,13 @@
   "routes": [{ "pattern": "lab.medicaltrend.stream", "custom_domain": true }],
   "workers_dev": true,
 
-  // Vite builds the page into dist/. Only /api/* runs the Worker; everything else is served as a static asset.
+  // Vite builds the page into dist/. /api/*, /admin and the customer HTML pages (Google tag, see worker/analytics.ts)
+  // run the Worker; everything else is served as a static asset.
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/booking-success", "/admin", "/admin/*", "/admin.html"]
+    "run_worker_first": ["/api/*", "/", "/index.html", "/std", "/slip", "/booking-success", "/admin", "/admin/*", "/admin.html"]
   },
 
   // Back office (/admin). Cloudflare Access is the login; the Worker re-checks the Access token

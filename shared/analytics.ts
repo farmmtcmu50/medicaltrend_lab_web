@@ -1,4 +1,5 @@
-// Google tag IDs for the booking-success page (/booking-success), set in the Booking Console → Settings.
+// Google tag IDs for the customer pages, set in the Booking Console → Settings.
+// Scope 'success': only /booking-success carries the tag. Scope 'all': every customer page (never /admin).
 // Only IDs are stored, never pasted script: the Worker writes the standard Google snippet itself.
 
 /** GA4 (G-), Google tag (GT-), Google Ads (AW-), Floodlight (DC-) or Tag Manager (GTM-). */
@@ -15,3 +16,9 @@ export function parseTagIds(input: unknown): TagCheck {
   if (ids.some(id => !TAG_ID.test(id))) return { ok: false, error: 'tag_id' };
   return { ok: true, ids };
 }
+
+export type TagScope = 'all' | 'success';
+export const parseScope = (v: unknown): TagScope => (v === 'all' ? 'all' : 'success');
+
+/** Customer pages the Worker adds the tag to when the scope is 'all' (keep in sync with run_worker_first in wrangler.jsonc). */
+export const TAGGED_PAGES = ['/', '/index.html', '/std', '/slip', '/booking-success'];
